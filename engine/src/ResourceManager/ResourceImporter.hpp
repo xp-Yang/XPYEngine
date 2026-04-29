@@ -1,20 +1,20 @@
 #ifndef ResourceImporter_hpp
 #define ResourceImporter_hpp
 
-// import files in formats other than WaveEngin Asset file
+// import files in formats other than XPYEngin Asset file
 
 #include "Base/Common.hpp"
 
-class aiNode;
-class aiScene;
-class aiMesh;
-class aiMaterial;
+struct aiNode;
+struct aiScene;
+struct aiMesh;
+struct aiMaterial;
 namespace Assimp {
 	class Importer;
 }
 
-class Mesh;
-class Material;
+struct Mesh;
+struct Material;
 
 struct BoneInfo
 {

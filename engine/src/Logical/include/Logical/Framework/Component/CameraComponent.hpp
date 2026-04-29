@@ -3,58 +3,62 @@
 
 #include "Logical/Framework/Component/Component.hpp"
 
-enum class Mode {
+enum class Mode
+{
 	Orbit,
 	FPS,
 };
 
-enum class Projection {
+enum class Projection
+{
 	Perspective,
 	Ortho,
 };
 
-enum class ZoomMode {
+enum class ZoomMode
+{
 	ZoomToCenter,
 	ZoomToMouse,
 };
 
-struct CameraComponent : public Component {
-	inline static Vec3 global_up = Vec3(0.0f, 1.0f, 0.0f); //vec3(0.0f, 1.0f, 0.0f) (yÎªÉÏ) or vec3(0.0f, 0.0f, 1.0f) (zÎªÉÏ)
+struct CameraComponent : public Component
+{
+	inline static Vec3 global_up = Vec3(0.0f, 1.0f, 0.0f); // vec3(0.0f, 1.0f, 0.0f) (yä¸ºä¸Š) or vec3(0.0f, 0.0f, 1.0f) (zä¸ºä¸Š)
 
-	CameraComponent(GObject* parent) : Component(parent) {}
-	CameraComponent(const CameraComponent&) = delete;
-	CameraComponent& operator=(const CameraComponent&) = delete;
+	CameraComponent(GObject *parent) : Component(parent) {}
+	CameraComponent(const CameraComponent &) = delete;
+	CameraComponent &operator=(const CameraComponent &) = delete;
 
-	Mode mode{ Mode::Orbit };
+	Mode mode{Mode::Orbit};
 
-	Projection projection_mode{ Projection::Perspective };
+	Projection projection_mode{Projection::Perspective};
 
-	ZoomMode zoom_mode{ ZoomMode::ZoomToCenter };
+	ZoomMode zoom_mode{ZoomMode::ZoomToCenter};
 
 	// FPS style
-	// Å·À­½Ç±íÊ¾£º
-	struct FPSParams {
-		float pitch = 0.0f; // ·½ÏòÏòÁ¿ÓëÊÀ½ç×ø±êÏµ x-z Æ½ÃæµÄ¼Ğ½Ç
-		float yaw = 0.0f; // ·½ÏòÏòÁ¿ÔÚÊÀ½ç×ø±êÏµ x-z Æ½ÃæµÄÍ¶Ó°Ê¸Á¿Ïà¶ÔÊÀ½ç×ø±êÏµ -z ÖáµÄ¼Ğ½Ç
+	// æ¬§æ‹‰è§’è¡¨ç¤ºï¼š
+	struct FPSParams
+	{
+		float pitch = 0.0f; // æ–¹å‘å‘é‡ä¸ä¸–ç•Œåæ ‡ç³» x-z å¹³é¢çš„å¤¹è§’
+		float yaw = 0.0f;	// æ–¹å‘å‘é‡åœ¨ä¸–ç•Œåæ ‡ç³» x-z å¹³é¢çš„æŠ•å½±çŸ¢é‡ç›¸å¯¹ä¸–ç•Œåæ ‡ç³» -z è½´çš„å¤¹è§’
 		float roll = 0.0f;
 	} fps_params;
 
-	float originFov = Math::deg2rad(45.0f); //ÊúÖ±fov
+	float originFov = Math::deg2rad(45.0f); // ç«–ç›´fov
 
 	float fov = originFov;
 	float nearPlane = 0.1f;
 	float farPlane = 1000.0f;
 	Vec3 direction = Math::Normalize(Vec3(0.0f, -0.6f, -0.8f));
-	Vec3 upDirection = Math::Normalize(global_up - Math::Dot(global_up, direction) * direction); // camera µÄ y Öá
-	Vec3 getRightDirection() const { // camera µÄ x Öá
+	Vec3 upDirection = Math::Normalize(global_up - Math::Dot(global_up, direction) * direction); // camera çš„ y è½´
+	Vec3 getRightDirection() const
+	{ // camera çš„ x è½´
 		return Math::Cross(direction, upDirection);
 	}
 	Vec3 pos = Vec3(0.0f) - 115.0f * direction;
 	Mat4 view = Math::LookAt(pos, pos + direction, global_up);
-	float aspectRatio{ 16.0f / 9.0f }; // TODO should on window size change
-	Mat4 projection = projection_mode == Projection::Perspective ?
-		Math::Perspective(fov, aspectRatio, nearPlane, farPlane) :
-		Math::Ortho(-15.0f * aspectRatio, 15.0f * aspectRatio, -15.0f, 15.0f, nearPlane, farPlane);
+	float aspectRatio{16.0f / 9.0f}; // response on window size change, by sync_camera_projection_to_content()
+	Mat4 projection = projection_mode == Projection::Perspective ? Math::Perspective(fov, aspectRatio, nearPlane, farPlane) : Math::Ortho(-15.0f * aspectRatio, 15.0f * aspectRatio, -15.0f, 15.0f, nearPlane, farPlane);
 };
 
 #endif // !CameraComponent_hpp

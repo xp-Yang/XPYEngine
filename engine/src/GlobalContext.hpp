@@ -9,6 +9,7 @@ class Scene;
 class RenderSystem;
 class Window;
 class AnimationSystem;
+class ProjectManager;
 
 struct GlobalContext {
     GlobalContext();
@@ -20,6 +21,7 @@ struct GlobalContext {
     std::shared_ptr<RenderSystem> render_system{ nullptr };
     std::shared_ptr<Window> window{ nullptr };
     std::shared_ptr<AnimationSystem> animation_system{ nullptr };
+    std::shared_ptr<ProjectManager> project_manager{ nullptr };
 };
 
 extern GlobalContext g_context;

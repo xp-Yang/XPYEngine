@@ -7,6 +7,8 @@
 struct MeshComponent : public Component {
 	MeshComponent(GObject* parent) : Component(parent) {}
 
+	// Source model file used to build sub_meshes.
+	std::string source_filepath;
 	std::vector<std::shared_ptr<Mesh>> sub_meshes;
 };
 

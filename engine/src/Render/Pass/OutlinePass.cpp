@@ -72,9 +72,9 @@ void OutlinePass::draw()
 
     m_input_passes[0]->getFrameBuffer()->bind();
     auto obj_depth_map = m_source_framebuffer->depthAttachment()->texture()->id();
-    static RenderShaderObject* edge_shader = RenderShaderObject::getShaderObject(ShaderType::OutlineShader);
-    edge_shader->start_using();
-    edge_shader->setTexture("objMap", 0, source_map);
-    edge_shader->setTexture("objDepthMap", 1, obj_depth_map);
+    static RenderShaderObject* outline_shader = RenderShaderObject::getShaderObject(ShaderType::OutlineShader);
+    outline_shader->start_using();
+    outline_shader->setTexture("objMap", 0, source_map);
+    outline_shader->setTexture("objDepthMap", 1, obj_depth_map);
     m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
 }

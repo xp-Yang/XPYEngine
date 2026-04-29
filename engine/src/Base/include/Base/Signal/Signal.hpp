@@ -9,28 +9,28 @@
 #define slots
 #define signals public
 
-template<typename... Args>
+template <typename... Args>
 class Signal
 {
 public:
     using onFunc = std::function<void(Args...)>;
 
-    void bind(const onFunc& func)
+    void bind(const onFunc &func)
     {
         m_slots.push_back(std::make_unique<Slot<Args...>>(func));
     }
 
-    //void operator()(Args&&... args) // ÕâÀï²»ÊÇÍòÄÜÒýÓÃ£¬SignalÒ»ÉùÃ÷£¬Args¾ÍÈ·¶¨ÁË¡£ÍòÄÜÒýÓÃ·¢ÉúÔÚÄ£°åÀàÐÍÍÆµ¼Ê±
+    // void operator()(Args&&... args) // è¿™é‡Œä¸æ˜¯ä¸‡èƒ½å¼•ç”¨ï¼ŒSignalä¸€å£°æ˜Žï¼ŒArgså°±ç¡®å®šäº†ã€‚ä¸‡èƒ½å¼•ç”¨å‘ç”Ÿåœ¨æ¨¡æ¿ç±»åž‹æŽ¨å¯¼æ—¶
     //{
-    //    for (auto& iter : m_slots)
-    //    {
-    //        iter->exec(std::forward<Args>(args)...);
-    //    }
-    //}
+    //     for (auto& iter : m_slots)
+    //     {
+    //         iter->exec(std::forward<Args>(args)...);
+    //     }
+    // }
 
-    void operator()(const Args&... args)
+    void operator()(const Args &...args)
     {
-        for (auto& iter : m_slots)
+        for (auto &iter : m_slots)
         {
             iter->exec(args...);
         }
@@ -40,16 +40,17 @@ private:
     std::vector<std::unique_ptr<Slot<Args...>>> m_slots;
 };
 
-template<class Sender, typename... Args>
-void connect(Sender* sender, Signal<Args...>* signal, std::function<void(Args...)> slot)
+template <class Sender, typename... Args>
+void connect(Sender *sender, Signal<Args...> *signal, std::function<void(Args...)> slot)
 {
     signal->bind(slot);
 }
 
-template<class Sender, class Receiver, typename... Args>
-void connect(Sender* sender, Signal<Args...>* signal, Receiver* receiver, void (Receiver::* slot)(Args...))
+template <class Sender, class Receiver, typename... Args>
+void connect(Sender *sender, Signal<Args...> *signal, Receiver *receiver, void (Receiver::*slot)(Args...))
 {
-    std::function<void(Args...)> func = [receiver, slot](Args... args) { (receiver->*slot)(std::forward<Args>(args)...); };
+    std::function<void(Args...)> func = [receiver, slot](Args... args)
+    { (receiver->*slot)(std::forward<Args>(args)...); };
     signal->bind(func);
 }
 

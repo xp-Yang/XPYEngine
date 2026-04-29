@@ -24,7 +24,7 @@ struct PostProcessingParams {
     bool bloom = false;
     bool hdr = true;
     bool gamma = true;
-    bool fxaa = true;
+    bool fxaa = false;
 };
 
 struct EffectParams {

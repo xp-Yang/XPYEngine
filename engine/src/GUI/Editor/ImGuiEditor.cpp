@@ -8,6 +8,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "Project/ProjectManager.hpp"
+
 #include "GUI/Editor/ImGuiCanvas.hpp"
 #include "GUI/Editor/ImGuiContextMenu.hpp"
 #include "GUI/Editor/ImGuiSceneHierarchy.hpp"
@@ -19,7 +21,10 @@
 #include "Render/RenderSystem.hpp"
 #include "Logical/FrameWork/World/Scene.hpp"
 #include "Logical/Gcode/GcodeViewer.hpp"
+#include "Base/Logger/Logger.hpp"
 #include "GlobalContext.hpp"
+
+static const char* XPY_PROJECT_FILE_FILTER = "(*.proj)\0*.proj\0";
 
 ImGuiEditor::ImGuiEditor()
     : m_main_canvas(std::make_unique<MainCanvas>(this))
@@ -115,6 +120,20 @@ void ImGuiEditor::renderMenuBar()
     {
         if (ImGui::BeginMenu("File"))
         {
+            if (ImGui::MenuItem("Open Project...", "Ctrl+Shift+O")) {
+                FileDialog* file_dlg = g_context.window->createFileDialog();
+                auto project_path = file_dlg->OpenFile(XPY_PROJECT_FILE_FILTER);
+                if (!project_path.empty()) {
+                    if (!g_context.project_manager->openProject(project_path)) {
+                        Logger::error("Open Project failed: {}", project_path);
+                    } else {
+                        if (!g_context.scene->loadProject(project_path)) {
+                            Logger::warn("Open Project: failed to load scene payload from: {}", project_path);
+                        }
+                    }
+                }
+            }
+            ImGui::Separator();
             if (ImGui::MenuItem("Open", "Ctrl+O")) {
                 FileDialog* file_dlg = g_context.window->createFileDialog();
                 auto filepath = file_dlg->OpenFile("");
@@ -135,10 +154,27 @@ void ImGuiEditor::renderMenuBar()
                     g_context.scene->loadModel(filepath);
                 }
             }
-            if (ImGui::MenuItem("Save As..", "Ctrl+S")) {
+            if (ImGui::MenuItem("Save Project", "Ctrl+S")) {
+                const std::string& project_path = g_context.scene->currentProjectFilepath();
+                if (project_path.empty()) {
+                    Logger::warn("Save Project: no current project, use Save Project As...");
+                } else {
+                    if (!g_context.scene->saveProject(project_path)) {
+                        Logger::error("Save Project failed: {}", project_path);
+                    }
+                }
+            }
+            if (ImGui::MenuItem("Save Project As...", "Ctrl+Shift+S")) {
                 FileDialog* file_dlg = g_context.window->createFileDialog();
-                auto filepath = file_dlg->SaveFile("");
-                // TODO
+                auto project_path = file_dlg->SaveFile(XPY_PROJECT_FILE_FILTER);
+                if (!project_path.empty()) {
+                    g_context.project_manager->setProjectFilepath(project_path);
+                    if (!g_context.scene->saveProject(project_path)) {
+                        Logger::error("Save Project As failed: {}", project_path);
+                    } else {
+                        Logger::info("Saved Project: {}", project_path);
+                    }
+                }
             }
             ImGui::EndMenu();
         }
@@ -167,7 +203,7 @@ void ImGuiEditor::renderEmptyMainDockerSpaceWindow()
         ImGuiWindowFlags_MenuBar;
     ImGui::SetNextWindowSize(ImVec2(1920, 1080), ImGuiCond_Appearing);
     static bool show = true;
-    ImGui::Begin("WaveEngine", &show, window_flags);
+    ImGui::Begin("XPYEngine", &show, window_flags);
     ImGuiID main_dock_id = ImGui::GetID("Main Dock");
     ImGui::DockSpace(main_dock_id);
     renderMenuBar();
@@ -185,7 +221,7 @@ void ImGuiEditor::renderEmptyMainDockerSpaceWindow()
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
     ImGui::SetNextWindowViewport(viewport->ID);
-    ImGui::Begin("WaveEngine", nullptr, window_flags);
+    ImGui::Begin("XPYEngine", nullptr, window_flags);
     ImGuiID main_dock_id = ImGui::GetID("Main Dock");
     if (!ImGui::DockBuilderGetNode(main_dock_id))
     {

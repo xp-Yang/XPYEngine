@@ -12,6 +12,7 @@
 
 #include "Logical/Framework/World/Scene.hpp"
 #include "Logical/Shader.hpp"
+#include "ResourceManager/DTO.hpp"
 
 namespace Meta {
 
@@ -61,10 +62,10 @@ inline void allMetaRegister()
 		registerProperty(&Material::metallic_texture, "metallic_texture").
 		registerProperty(&Material::roughness_texture, "roughness_texture").
 		registerProperty(&Material::ao_texture, "ao_texture").
-		registerProperty(&Material::albedo, "albedo").
-		registerProperty(&Material::metallic, "metallic").
-		registerProperty(&Material::roughness, "roughness").
-		registerProperty(&Material::ao, "ao").
+		//registerProperty(&Material::albedo, "albedo").
+		//registerProperty(&Material::metallic, "metallic").
+		//registerProperty(&Material::roughness, "roughness").
+		//registerProperty(&Material::ao, "ao").
 		registerProperty(&Material::diffuse_texture, "diffuse_texture").
 		registerProperty(&Material::specular_texture, "specular_texture").
 		registerProperty(&Material::normal_texture, "normal_texture").
@@ -72,6 +73,39 @@ inline void allMetaRegister()
 		registerProperty(&Material::alpha, "alpha");
 	registerClass<Shader>("Shader");
 	registerClass<CubeTexture>("CubeTexture");
+
+	// DTOs
+	registerClass<TransformDTO>("TransformDTO")
+		.registerProperty(&TransformDTO::translation, "translation")
+		.registerProperty(&TransformDTO::rotation, "rotation")
+		.registerProperty(&TransformDTO::scale, "scale");
+	registerClass<MaterialTexturesDTO>("MaterialTexturesDTO")
+		.registerProperty(&MaterialTexturesDTO::diffuse, "diffuse")
+		.registerProperty(&MaterialTexturesDTO::specular, "specular")
+		.registerProperty(&MaterialTexturesDTO::normal, "normal")
+		.registerProperty(&MaterialTexturesDTO::height, "height")
+		.registerProperty(&MaterialTexturesDTO::albedo, "albedo")
+		.registerProperty(&MaterialTexturesDTO::metallic, "metallic")
+		.registerProperty(&MaterialTexturesDTO::roughness, "roughness")
+		.registerProperty(&MaterialTexturesDTO::ao, "ao");
+	registerClass<MaterialDTO>("MaterialDTO")
+		.registerProperty(&MaterialDTO::alpha, "alpha")
+		.registerProperty(&MaterialDTO::textures, "textures");
+	registerClass<SubMeshDTO>("SubMeshDTO")
+		.registerProperty(&SubMeshDTO::sub_mesh_index, "index")
+		.registerProperty(&SubMeshDTO::local_transform, "local_transform");
+	registerClass<ObjectDTO>("ObjectDTO")
+		.registerProperty(&ObjectDTO::name, "name")
+		.registerProperty(&ObjectDTO::visible, "visible")
+		.registerProperty(&ObjectDTO::transform, "transform")
+		.registerProperty(&ObjectDTO::filepath, "filepath")
+		.registerProperty(&ObjectDTO::file_type, "file_type")
+		.registerProperty(&ObjectDTO::sub_meshes, "sub_meshes")
+		.registerProperty(&ObjectDTO::materials, "materials");
+	registerClass<ProjectDTO>("ProjectDTO")
+		.registerProperty(&ProjectDTO::schema_version, "schema_version")
+		.registerProperty(&ProjectDTO::project_name, "project_name")
+		.registerProperty(&ProjectDTO::objects, "objects");
 
 #if ENABLE_ECS
 	// Name

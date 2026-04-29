@@ -15,6 +15,6 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT $
 #    MACOSX_BUNDLE ON
 #)
 
-target_link_libraries(${SAMPLES_EXEC_NAME} WaveRuntime)
+target_link_libraries(${SAMPLES_EXEC_NAME} EngineRuntime)
 
 target_compile_features(${SAMPLES_EXEC_NAME} PRIVATE cxx_std_17)

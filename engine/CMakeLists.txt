@@ -1,7 +1,3 @@
-#导致assimp 编译失败
-#set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(ENGINE_DIR ${PROJECT_SOURCE_DIR}/engine)
 set(ENGINE_INCLUDE_DIR ${ENGINE_DIR}/include)
 set(THIRD_PARTY_DIR ${ENGINE_DIR}/thirdparty)

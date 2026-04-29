@@ -51,10 +51,15 @@ void GBufferPass::draw()
         g_shader->setMatrix("model", 1, render_node->model_matrix);
         auto& material = render_node->material;
         if (m_pbr) {
-            g_shader->setFloat3("albedo", material.albedo);
-            g_shader->setFloat("metallic", material.metallic);
-            g_shader->setFloat("roughness", material.roughness);
-            g_shader->setFloat("ao", material.ao);
+            //g_shader->setFloat3("albedo", Vec3(0.25f));
+            //g_shader->setFloat("metallic", 0.0f);
+            //g_shader->setFloat("roughness", 1.0f);
+            //g_shader->setFloat("ao", 0.0f);
+
+            g_shader->setTexture("albedo_map", 0, material.albedo_map);
+            g_shader->setTexture("metallic_map", 1, material.metallic_map);
+            g_shader->setTexture("roughness_map", 2, material.roughness_map);
+            g_shader->setTexture("ao_map", 3, material.ao_map);
         }
         else {
             g_shader->setTexture("diffuse_map", 0, material.diffuse_map);

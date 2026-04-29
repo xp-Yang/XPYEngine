@@ -1,0 +1,384 @@
+{
+  "objects": [
+    {
+      "file_type": 1,
+      "filepath": "model/nanosuit/nanosuit.obj",
+      "materials": [
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/glass_dif.png",
+            "height": "model/nanosuit/glass_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": ""
+          }
+        },
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/leg_dif.png",
+            "height": "model/nanosuit/leg_showroom_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": "model/nanosuit/leg_showroom_spec.png"
+          }
+        },
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/hand_dif.png",
+            "height": "model/nanosuit/hand_showroom_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": "model/nanosuit/hand_showroom_spec.png"
+          }
+        },
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/glass_dif.png",
+            "height": "model/nanosuit/glass_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": ""
+          }
+        },
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/arm_dif.png",
+            "height": "model/nanosuit/arm_showroom_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": "model/nanosuit/arm_showroom_spec.png"
+          }
+        },
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/helmet_diff.png",
+            "height": "model/nanosuit/helmet_showroom_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": "model/nanosuit/helmet_showroom_spec.png"
+          }
+        },
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/nanosuit/body_dif.png",
+            "height": "model/nanosuit/body_showroom_ddn.png",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": "model/nanosuit/body_showroom_spec.png"
+          }
+        }
+      ],
+      "name": "nanosuit",
+      "sub_meshes": [
+        {
+          "index": 0,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "index": 1,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "index": 2,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "index": 3,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "index": 4,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "index": 5,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "index": 6,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      ],
+      "transform": {
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "translation": {
+          "x": -12.721484184265137,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "visible": true
+    },
+    {
+      "file_type": 1,
+      "filepath": "model/bunny.obj",
+      "materials": [
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "",
+            "height": "",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": ""
+          }
+        }
+      ],
+      "name": "bunny",
+      "sub_meshes": [
+        {
+          "index": 0,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      ],
+      "transform": {
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 44.82684326171875,
+          "y": 44.82684326171875,
+          "z": 44.82684326171875
+        },
+        "translation": {
+          "x": 5.9529070854187012,
+          "y": 0,
+          "z": 17.326705932617188
+        }
+      },
+      "visible": true
+    },
+    {
+      "file_type": 1,
+      "filepath": "model/dragon.obj",
+      "materials": [
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "",
+            "height": "",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": ""
+          }
+        }
+      ],
+      "name": "dragon",
+      "sub_meshes": [
+        {
+          "index": 0,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      ],
+      "transform": {
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "translation": {
+          "x": 13.631111145019531,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "visible": true
+    }
+  ],
+  "project_name": "XPYProject",
+  "schema_version": 1
+}

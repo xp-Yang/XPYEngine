@@ -21,11 +21,12 @@ struct Material {
     std::shared_ptr<Texture> metallic_texture;
     std::shared_ptr<Texture> roughness_texture;
     std::shared_ptr<Texture> ao_texture;
-    // temp
-    Vec3 albedo{ Vec3(1.0f) };
-    float metallic{ 1.0f };
-    float roughness{ 0.5f };
-    float ao{ 0.01f };
+
+    //// temp
+    //Vec3 albedo{ Vec3(1.0f) };
+    //float metallic{ 1.0f };
+    //float roughness{ 0.5f };
+    //float ao{ 0.01f };
 
     // blinn phong
     std::shared_ptr<Texture> diffuse_texture;

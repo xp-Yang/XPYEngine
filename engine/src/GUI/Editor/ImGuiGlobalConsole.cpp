@@ -5,6 +5,7 @@
 
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "Render/RenderSystem.hpp"
+#include "Logical/Framework/World/Scene.hpp"
 #include "GlobalContext.hpp"
 
 void ImGuiGlobalConsole::render() {
@@ -99,30 +100,21 @@ void ImGuiGlobalConsole::render() {
 
     separator();
 
-    // TODO Add/Delete point light
-    //ImGui::Text("Add/Delete point light:");
-    //auto scene_hierarchy = scene();
-    //int point_light_count = scene_hierarchy->pointLightCount();
-    //float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-    //ImGui::PushButtonRepeat(true);
-    //if (ImGui::Button((std::string("+") + "##pointLight").c_str())) {
-    //    scene_hierarchy->addPointLight();
-    //}
-    //ImGui::SameLine(0.0f, spacing);
-    //if (ImGui::Button((std::string("-") + "##pointLight").c_str())) {
-    //    int last_point_entity_id = -1;
-    //    auto it = world.entityView<ecs::PointLightComponent>().begin();
-    //    while(it != world.entityView<ecs::PointLightComponent>().end())
-    //    {
-    //        last_point_entity_id = (*it).getId();
-    //        it++;
-    //    }
-    //    if (last_point_entity_id != -1)
-    //        scene_hierarchy->removeObject(ecs::Entity(last_point_entity_id));
-    //}
-    //ImGui::PopButtonRepeat();
-    //ImGui::SameLine();
-    //ImGui::Text("point light number: %d", point_light_count);
+    ImGui::Text("Add/Delete point light:");
+    auto light_manager = g_context.scene->getLightManager();
+    int point_light_count = light_manager ? light_manager->pointLights().size() : 0;
+    float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+    ImGui::PushButtonRepeat(true);
+    if (ImGui::Button("+##pointLight") && light_manager) {
+        light_manager->addPointLight();
+    }
+    ImGui::SameLine(0.0f, spacing);
+    if (ImGui::Button("-##pointLight") && light_manager) {
+        light_manager->removeLastPointLight();
+    }
+    ImGui::PopButtonRepeat();
+    ImGui::SameLine();
+    ImGui::Text("point light number: %d", point_light_count);
 
     ImGui::End();
 }

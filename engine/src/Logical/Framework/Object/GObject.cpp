@@ -1,36 +1,43 @@
 #include "Logical/Framework/Object/GObject.hpp"
 
-GObject* GObject::create(GObject* parent, const std::string& name)
+GObject *GObject::create(GObject *parent, const std::string &name)
 {
-	GObject* obj = new GObject(parent, name);
+	GObject *obj = new GObject(parent, name);
 	return obj;
 }
 
 GObject::~GObject()
 {
-	for (auto child : m_children) {
+	for (auto child : m_children)
+	{
 		delete child;
 	}
 }
 
-int GObject::indexOf(const GObject* child) const {
+int GObject::indexOf(const GObject *child) const
+{
 	if (!child)
 		return -1;
-	for (int i = 0; i < m_children.size(); i++) {
-		if (m_children[i]->m_id == child->m_id) {
+	for (int i = 0; i < m_children.size(); i++)
+	{
+		if (m_children[i]->m_id == child->m_id)
+		{
 			return i;
 		}
 	}
 	return -1;
 }
 
-bool GObject::remove(GObject* node)
+bool GObject::remove(GObject *node)
 {
-	if (node == nullptr) {
+	if (node == nullptr)
+	{
 		node = this;
 	}
-	if (include(node)) {
-		if (node->m_parent) {
+	if (include(node))
+	{
+		if (node->m_parent)
+		{
 			node->m_parent->m_children.erase(node->m_parent->m_children.begin() + node->index());
 		}
 		delete node;
@@ -39,46 +46,52 @@ bool GObject::remove(GObject* node)
 	return false;
 }
 
-bool GObject::include(const GObject* node)
+bool GObject::include(const GObject *node)
 {
 	if (node == this)
 		return true;
-	for (auto child : m_children) {
+	for (auto child : m_children)
+	{
 		if (child->include(node))
 			return true;
 	}
 	return false;
 }
 
-const std::vector<GObject*> GObject::allLeaves2()
+const std::vector<GObject *> GObject::allLeaves2()
 {
 	if (isLeaf())
-		return { this };
+		return {this};
 	// depth-first
-	std::vector<GObject*> leaves;
-	for (auto child : m_children) {
+	std::vector<GObject *> leaves;
+	for (auto child : m_children)
+	{
 		auto child_leaves = child->allLeaves2();
 		leaves.insert(leaves.end(), child_leaves.begin(), child_leaves.end());
 	}
 	return leaves;
 }
 
-const std::vector<GObject*> GObject::allLeaves()
+const std::vector<GObject *> GObject::allLeaves()
 {
 	if (isLeaf())
-		return { this };
+		return {this};
 	// breadth-first
-	std::vector<GObject*> leaves;
-	std::vector<GObject*> nodes;
+	std::vector<GObject *> leaves;
+	std::vector<GObject *> nodes;
 	nodes.push_back(this);
-	while (!nodes.empty()) {
+	while (!nodes.empty())
+	{
 		auto node = nodes.front();
 		nodes.erase(nodes.begin());
-		for (auto child : node->children()) {
-			if (!child->children().empty()) {
+		for (auto child : node->children())
+		{
+			if (!child->children().empty())
+			{
 				nodes.push_back(child);
 			}
-			else {
+			else
+			{
 				leaves.push_back(child);
 			}
 		}
@@ -97,16 +110,16 @@ void GObject::save()
 
 void GObject::tick(float delta_time)
 {
-	//auto& world = World::get();
+	// auto& world = World::get();
 	//// light
-	//float avrg_frame_time = 1.0f / ImGui::GetIO().Framerate;
-	//// Ã¿Ò»Ö¡³ÖĞøÊ±¼äÔ½³¤£¬ÒâÎ¶×ÅÉÏÒ»Ö¡µÄäÖÈ¾»¨·ÑÁËÔ½¶àÊ±¼ä£¬ËùÒÔÕâÒ»Ö¡µÄËÙ¶ÈÓ¦¸ÃÔ½´ó£¬À´Æ½ºâäÖÈ¾Ëù»¨È¥µÄÊ±¼ä
-	//float delta = avrg_frame_time / 2.0f;
-	//Mat4 rotate = Rotate(delta, Vec3(0.0f, 1.0f, 0.0f));
-	//for (auto entity : world.entityView<PointLightComponent>()) {
+	// float avrg_frame_time = 1.0f / ImGui::GetIO().Framerate;
+	//// æ¯ä¸€å¸§æŒç»­æ—¶é—´è¶Šé•¿ï¼Œæ„å‘³ç€ä¸Šä¸€å¸§çš„æ¸²æŸ“èŠ±è´¹äº†è¶Šå¤šæ—¶é—´ï¼Œæ‰€ä»¥è¿™ä¸€å¸§çš„é€Ÿåº¦åº”è¯¥è¶Šå¤§ï¼Œæ¥å¹³è¡¡æ¸²æŸ“æ‰€èŠ±å»çš„æ—¶é—´
+	// float delta = avrg_frame_time / 2.0f;
+	// Mat4 rotate = Rotate(delta, Vec3(0.0f, 1.0f, 0.0f));
+	// for (auto entity : world.entityView<PointLightComponent>()) {
 	//	auto& light_transform = *world.getComponent<TransformComponent>(entity);
 	//	light_transform.translation = Vec3(rotate * Vec4(light_transform.translation, 1.0f));
-	//}
+	// }
 	////auto dir_light_component = world.getMainDirectionalLightComponent();
 	////dir_light_component->direction = Vec3(rotate * Vec4(dir_light_component->direction, 1.0f));
 }

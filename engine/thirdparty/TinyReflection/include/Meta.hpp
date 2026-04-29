@@ -13,37 +13,37 @@
 
 namespace Meta {
 
-//0.×¢²áÀàĞÍ
+//0.æ³¨å†Œç±»å‹
 //     registerClass<DerivObj>("DerivObj").
 //         registerConstructor<DerivObj, int, std::string>().
 //         registerProperty(&DerivObj::x, "x").
 //         registerProperty(&DerivObj::y, "y").
 //         registerMethod(&DerivObj::getId, "getId");
-//     // ÏÔÊ½×¢²áÀàÃû
+//     // æ˜¾å¼æ³¨å†Œç±»å
 //     // registerClass<DerivObj>("DerivObj");
-//     // ÒşÊ½×¢²áÀàÃû
+//     // éšå¼æ³¨å†Œç±»å
 //     // registerClass<DerivObj>("");
-//1.¸ù¾İÃû³Æ¶ÁĞ´¶ÔÏóµÄÊôĞÔ
+//1.æ ¹æ®åç§°è¯»å†™å¯¹è±¡çš„å±æ€§
 //     DerivObj obj;
 //     MetaType metaType = MetaTypeOf(obj);
 //     Property prop = metaType.property(propertyName);
 //     U val = prop.getValue<U>(obj);
 //     prop.setValue(obj, newVal);
-//2.¸ù¾İÃû³Æµ÷ÓÃº¯Êı
+//2.æ ¹æ®åç§°è°ƒç”¨å‡½æ•°
 //     Method method = metaType.method(methodName);
 //     ReturnType ret = method.invoke<ReturnType>(obj, args...);
-//3.¸ù¾İÀàÃû³Æ´´½¨ÊµÀı
+//3.æ ¹æ®ç±»åç§°åˆ›å»ºå®ä¾‹
 //     Constructor ctor = metaType.constructor<int, std::string>();
 //     Variant v = ctor.invoke(222, std::string("deriv"));
 //     DerivObj& d = v.getValue<DerivObj&>();
-//4.µü´ú¶ÔÏóµÄËùÓĞÊôĞÔ¡¢·½·¨
+//4.è¿­ä»£å¯¹è±¡çš„æ‰€æœ‰å±æ€§ã€æ–¹æ³•
 //     for (int i = 0; i < metaType.propertyCount(); i++) {
 //         auto property = metaType.property(i);
 //     }
 //     for (int i = 0; i < metaType.methodCount(); i++) {
 //         auto method = metaType.method(i);
 //     }
-//5.ÎªÀàĞÍ£¬ÊôĞÔ£¬º¯Êı£¬²ÎÊı×·¼ÓÔªÊı¾İ
+//5.ä¸ºç±»å‹ï¼Œå±æ€§ï¼Œå‡½æ•°ï¼Œå‚æ•°è¿½åŠ å…ƒæ•°æ®
 //     TODO
 
 class Instance;
@@ -70,6 +70,11 @@ struct Property {
     size_t size;
     std::string type_name;
     std::string name;
+    // For sequence containers (currently std::vector<T> path)
+    std::string value_type_name;
+    std::function<size_t(Instance&)> sequence_size;
+    std::function<void(Instance&, size_t)> sequence_resize;
+    std::function<Instance(Instance&, size_t)> sequence_element_ptr;
 
     template<typename T>
     bool isType() const { return type_name == MetaTypeOf<T>().typeName(); }
@@ -146,6 +151,23 @@ struct ClassInfo {
             prop_type = prop_type | Property::Type::Pointer;
         }
         Property property_info = { prop_type, offset, sizeof(ValueType), property_type_name_, property_name };
+        if constexpr (traits::is_std_vector_v<ValueType>) {
+            using ElemType = typename ValueType::value_type;
+            property_info.value_type_name = MetaTypeOf<ElemType>().typeName();
+            property_info.sequence_size = [](Instance& instance) -> size_t {
+                auto& vec = instance.getValue<ValueType&>();
+                return vec.size();
+                };
+            property_info.sequence_resize = [](Instance& instance, size_t n) {
+                auto& vec = instance.getValue<ValueType&>();
+                vec.resize(n);
+                };
+            property_info.sequence_element_ptr = [](Instance& instance, size_t i) -> Instance {
+                auto& vec = instance.getValue<ValueType&>();
+                return Instance(vec[i]);
+                };
+        }
+
         property_infos.emplace_back(property_info);
         return *this;
     }
@@ -291,18 +313,26 @@ inline MetaType MetaTypeOf(T&& obj) {
 }
 
 
-// InstanceÒıÓÃÔ­Ê¼¶ÔÏó£¬²»¹ÜÀíÆäÉúÃüÖÜÆÚ
+// Instanceå¼•ç”¨åŸå§‹å¯¹è±¡ï¼Œä¸ç®¡ç†å…¶ç”Ÿå‘½å‘¨æœŸ
 class Instance {
 public:
-    template <typename T>
+    template <typename T,
+        typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, Instance>>>
     Instance(T&& obj)
         : m_meta(MetaTypeOf(std::forward<T>(obj)))
         , m_data((void*)(&obj))
     {}
-    Instance(const Instance& rhs) = default;
+    Instance(const Instance& rhs)
+        : m_meta(rhs.m_meta)
+        , m_data(rhs.m_data)
+    {}
+    Instance(Instance&& rhs)
+        : m_meta(rhs.m_meta)
+        , m_data(rhs.m_data)
+    {}
 
 public:
-    void* instance() const { return m_data; }
+    void* rawData() const { return m_data; }
     std::string typeName() const { return m_meta.typeName(); }
     MetaType metaType() const { return m_meta; }
 
@@ -312,26 +342,26 @@ public:
 
     template<typename T>
     T getValue() const {
-        // TÊÇÖ¸ÕëÀàĞÍ£¬ËµÃ÷Êı¾İ±¾Éí¾ÍÊÇÖ¸ÕëÀàĞÍ£¬×ßTÎªÖµÀàĞÍµÄ·ÖÖ§
+        // Tæ˜¯æŒ‡é’ˆç±»å‹ï¼Œè¯´æ˜æ•°æ®æœ¬èº«å°±æ˜¯æŒ‡é’ˆç±»å‹ï¼Œèµ°Tä¸ºå€¼ç±»å‹çš„åˆ†æ”¯
         using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
         if (!isType<ValueType>())
             throw std::exception();
         if constexpr (std::is_lvalue_reference_v<T>) {
             if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
-                // TÊÇconst×óÖµÒıÓÃ
+                // Tæ˜¯constå·¦å€¼å¼•ç”¨
                 return *reinterpret_cast<const ValueType*>(m_data);
             }
             else {
-                // TÊÇ·Çconst×óÖµÒıÓÃ
+                // Tæ˜¯éconstå·¦å€¼å¼•ç”¨
                 return *reinterpret_cast<ValueType*>(m_data);
             }
         }
         else if constexpr (std::is_rvalue_reference_v<T>) {
-            // TÊÇÓÒÖµÒıÓÃ
+            // Tæ˜¯å³å€¼å¼•ç”¨
             return std::move(*reinterpret_cast<ValueType*>(m_data));
         }
         else {
-            // TÊÇÖµÀàĞÍ
+            // Tæ˜¯å€¼ç±»å‹
             return *reinterpret_cast<T*>(m_data);
         }
     }
@@ -343,16 +373,16 @@ public:
             throw std::exception();
         if constexpr (std::is_lvalue_reference_v<T>) {
             if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
-                // const×óÖµÒıÓÃ
+                // constå·¦å€¼å¼•ç”¨
                 getValue<ValueType&>() = value;
             }
             else {
-                // ·Çconst×óÖµÒıÓÃ
+                // éconstå·¦å€¼å¼•ç”¨
                 getValue<T>() = value;
             }
         }
         else if constexpr (std::is_rvalue_reference_v<T&&>) {
-            // ÓÒÖµÒıÓÃ
+            // å³å€¼å¼•ç”¨
             getValue<T&>() = value;
         }
     }
@@ -370,7 +400,7 @@ private:
     MetaType m_meta;
 };
 
-// Variant¿½±´Ô­¶ÔÏó£¬ÓµÓĞ¿½±´µÄĞÂ¶ÔÏóµÄËùÓĞÈ¨
+// Variantæ‹·è´åŸå¯¹è±¡ï¼Œæ‹¥æœ‰æ‹·è´çš„æ–°å¯¹è±¡çš„æ‰€æœ‰æƒ
 class Variant {
 public:
     Variant() = default;
@@ -380,7 +410,7 @@ public:
         m_meta = MetaTypeOf(std::forward<T>(obj));
         m_data_size = sizeof(T);
         using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
-        // µ÷ÓÃTµÄ¿½±´orÒÆ¶¯¹¹Ôì
+        // è°ƒç”¨Tçš„æ‹·è´orç§»åŠ¨æ„é€ 
         m_data = new ValueType(std::forward<T>(obj));
     }
     
@@ -390,7 +420,7 @@ public:
     std::string typeName() const { return m_meta.typeName(); }
     void* rawData() const { return m_data; }
     void clear() {
-        // TODO ÊÍ·Åm_data
+        // TODO é‡Šæ”¾m_data
         m_data = nullptr;
         m_data_size = 0;
         m_meta = MetaType();
@@ -405,7 +435,7 @@ public:
 
     template<typename T>
     void setValue(T&& value) {
-        // TODO ÊÍ·Åm_data
+        // TODO é‡Šæ”¾m_data
         *this = Variant(value);
     }
 
@@ -416,7 +446,7 @@ private:
 };
 
 inline Instance Property::getValue(const Instance& instance) const {
-    return Instance(type_name, ((char*)instance.instance() + offset));
+    return Instance(type_name, ((char*)instance.rawData() + offset));
 }
 
 }

@@ -1,6 +1,6 @@
 #include "GcodeViewerPass.hpp"
 
-#include <glad/glad.h>// TODO remove
+#include <glad/glad.h>
 
 GcodeViewerPass::GcodeViewerPass() {
 	init();
@@ -146,10 +146,10 @@ void GcodeViewerPass::draw()
 
 			const auto& render_node = pair.second;
 			auto& material = render_node->material;
-			shader->setFloat3("albedo", material.albedo);
-			shader->setFloat("metallic", material.metallic);
-			shader->setFloat("roughness", material.roughness);
-			shader->setFloat("ao", material.ao);
+			shader->setFloat3("albedo", Vec3(0.25f));
+			shader->setFloat("metallic", 0.0f);
+			shader->setFloat("roughness", 1.0f);
+			shader->setFloat("ao", 0.0f);
 
 			shader->setMatrix("model", 1, render_node->model_matrix);
 			shader->setMatrix("view", 1, m_render_source_data->view_matrix);

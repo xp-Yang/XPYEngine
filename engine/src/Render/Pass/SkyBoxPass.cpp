@@ -1,6 +1,4 @@
 #include "SkyBoxPass.hpp"
-// TODO remove
-#include <glad/glad.h>
 
 SkyBoxPass::SkyBoxPass()
 {
@@ -16,7 +14,7 @@ void SkyBoxPass::draw()
 {
     m_input_passes[0]->getFrameBuffer()->bind();
 
-    glFrontFace(GL_CW);
+    m_rhi->setFrontFaceCW(true);
 
     static RenderShaderObject* skybox_shader = RenderShaderObject::getShaderObject(ShaderType::SkyboxShader);
     const auto& render_skybox_sub_mesh_data = m_render_source_data->render_skybox_node.mesh;
@@ -29,5 +27,5 @@ void SkyBoxPass::draw()
     m_rhi->drawIndexed(render_skybox_sub_mesh_data->getVAO(), render_skybox_sub_mesh_data->indicesCount());
     skybox_shader->stop_using();
 
-    glFrontFace(GL_CCW);
+    m_rhi->setFrontFaceCW(false);
 }

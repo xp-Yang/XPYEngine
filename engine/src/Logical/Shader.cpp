@@ -6,28 +6,35 @@
 #include "Base/Utils/Utils.hpp"
 #include "Base/Logger/Logger.hpp"
 
-class ShaderParser {
+class ShaderParser
+{
 public:
-    struct GlslLine {
-        enum Tag {
+    struct GlslLine
+    {
+        enum Tag
+        {
             Include,
             Code,
         };
         Tag tag;
         std::string line;
-        GlslLine(Tag tag_, const std::string& line_) :tag(tag_), line(line_) {}
+        GlslLine(Tag tag_, const std::string &line_) : tag(tag_), line(line_) {}
     };
 
 public:
-    ShaderParser(const std::string& filepath) {
+    ShaderParser(const std::string &filepath)
+    {
         Logger::info("parsing the shader file {}", filepath);
         load_file(filepath);
     }
 
-    std::string getProcessedSourceCode() {
+    std::string getProcessedSourceCode()
+    {
         std::string res;
-        for (const auto& line : m_lines) {
-            if (line.tag == GlslLine::Code) {
+        for (const auto &line : m_lines)
+        {
+            if (line.tag == GlslLine::Code)
+            {
                 res += (line.line + "\n");
             }
         }
@@ -35,7 +42,8 @@ public:
     }
 
 protected:
-    bool load_file(const std::string& filepath) {
+    bool load_file(const std::string &filepath)
+    {
         std::string directory = filepath.substr(0, filepath.find_last_of("/\\"));
 
         std::stringstream buffer;
@@ -43,15 +51,16 @@ protected:
         {
             std::ifstream file_stream;
             file_stream.open(filepath);
-            if (file_stream.is_open()) {
+            if (file_stream.is_open())
+            {
                 buffer << file_stream.rdbuf();
                 file_stream.close();
             }
-            else {
+            else
+            {
                 assert(false);
                 return false;
             }
-
         }
         catch (...)
         {
@@ -60,17 +69,20 @@ protected:
             return false;
         }
 
-        while (!buffer.eof()) {
+        while (!buffer.eof())
+        {
             std::string line;
             std::getline(buffer, line);
 
             size_t pos = line.find_first_not_of(" ");
-            if (pos == std::string::npos) {
+            if (pos == std::string::npos)
+            {
                 m_lines.push_back(GlslLine(GlslLine::Code, line));
                 continue;
             }
 
-            if (line[pos] != '#') {
+            if (line[pos] != '#')
+            {
                 m_lines.push_back(GlslLine(GlslLine::Code, line));
                 continue;
             }
@@ -80,21 +92,24 @@ protected:
             std::string tag;
             stm >> tag;
 
-            if (tag == "#include") {
+            if (tag == "#include")
+            {
                 stm >> tag;
-                tag = tag.substr(0, tag.find("//")); // ¹ýÂË×¢ÊÍ
+                tag = tag.substr(0, tag.find("//")); // è¿‡æ»¤æ³¨é‡Š
                 tag = Utils::trim(tag, " \t\r\n\"<>");
 
-                // ¼ÓÔØ include ÎÄ¼þ
+                // åŠ è½½ include æ–‡ä»¶
                 std::string include_filepath = directory + '/' + tag;
-                if (!this->load_file(include_filepath)) {
+                if (!this->load_file(include_filepath))
+                {
                     assert(false);
                     return false;
                 }
 
                 m_lines.push_back(GlslLine(GlslLine::Include, std::string("// #include ") + include_filepath));
             }
-            else {
+            else
+            {
                 m_lines.push_back(GlslLine(GlslLine::Code, line));
             }
         }
@@ -106,18 +121,19 @@ private:
     std::vector<GlslLine> m_lines;
 };
 
-
-Shader::Shader(const std::string& vs_filepath, const std::string& fs_filepath)
+Shader::Shader(const std::string &vs_filepath, const std::string &fs_filepath)
 {
-    if (vs_filepath.empty()) {
+    if (vs_filepath.empty())
+    {
         Logger::error("vertex shader is empty!");
         assert(false);
     }
-    if (fs_filepath.empty()) {
+    if (fs_filepath.empty())
+    {
         Logger::error("fragment shader is empty!");
         assert(false);
     }
-    
+
     // read the source code and process file include
     ShaderParser v_parser(vs_filepath);
     vsCode = v_parser.getProcessedSourceCode();
@@ -126,17 +142,20 @@ Shader::Shader(const std::string& vs_filepath, const std::string& fs_filepath)
     fsCode = f_parser.getProcessedSourceCode();
 }
 
-Shader::Shader(const std::string& vs_filepath, const std::string& fs_filepath, const std::string& gs_filepath)
+Shader::Shader(const std::string &vs_filepath, const std::string &fs_filepath, const std::string &gs_filepath)
 {
-    if (vs_filepath.empty()) {
+    if (vs_filepath.empty())
+    {
         Logger::error("vertex shader is empty!");
         assert(false);
     }
-    if (fs_filepath.empty()) {
+    if (fs_filepath.empty())
+    {
         Logger::error("fragment shader is empty!");
         assert(false);
     }
-    if (gs_filepath.empty()) {
+    if (gs_filepath.empty())
+    {
         Logger::error("geometry shader is empty!");
         assert(false);
     }

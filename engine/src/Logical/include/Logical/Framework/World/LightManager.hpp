@@ -4,15 +4,17 @@
 #include "Base/Math/Math.hpp"
 #include "Logical/Framework/World/IDAllocator.hpp"
 
-class LightID : public IDAllocator<LightID> {
+class LightID : public IDAllocator<LightID>
+{
 public:
 	LightID() = default;
 };
 
-class Light {
+class Light
+{
 public:
-	Light(const std::string& name) : m_name(name) {}
-	Color4 luminousColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	Light(const std::string &name) : m_name(name) {}
+	Color4 luminousColor = {1.0f, 1.0f, 1.0f, 1.0f};
 	LightID ID() const { return m_id; }
 	std::string name() const { return m_name; }
 	virtual Mat4 lightProjMatrix() const = 0;
@@ -22,7 +24,8 @@ protected:
 	std::string m_name;
 };
 
-class PointLight : public Light {
+class PointLight : public Light
+{
 public:
 	PointLight() : Light("Point Light") {}
 
@@ -39,14 +42,14 @@ public:
 	{
 		Vec3 light_pos = position;
 
-		// ÕâÀïupÏòÁ¿³¯ÏÂ£¬ÒòÎªcubeMap´ÓÄÚ²¿²ÉÑù£¬ÊÇ·´¹ıÀ´µÄ
-		// TODO µãÒõÓ°ÌùÍ¼upÊ¸Á¿³¯ÏÂ£¬ÄÇÃ´ÉÏÏÂ²»Ò²µßµ¹ÁË
-		Mat4 light_view_right = Math::LookAt(light_pos, light_pos + Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f)); //ÓÒ
-		Mat4 light_view_left = Math::LookAt(light_pos, light_pos + Vec3(-1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f));//×ó
-		Mat4 light_view_up = Math::LookAt(light_pos, light_pos + Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f)); //ÉÏ
-		Mat4 light_view_down = Math::LookAt(light_pos, light_pos + Vec3(0.0f, -1.0f, 0.0f), Vec3(0.0f, 0.0f, -1.0f));//ÏÂ
-		Mat4 light_view_front = Math::LookAt(light_pos, light_pos + Vec3(0.0f, 0.0f, 1.0f), Vec3(0.0f, -1.0f, 0.0f)); //½ü
-		Mat4 light_view_back = Math::LookAt(light_pos, light_pos + Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, -1.0f, 0.0f));//Ô¶
+		// è¿™é‡Œupå‘é‡æœä¸‹ï¼Œå› ä¸ºcubeMapä»å†…éƒ¨é‡‡æ ·ï¼Œæ˜¯åè¿‡æ¥çš„
+		// TODO ç‚¹é˜´å½±è´´å›¾upçŸ¢é‡æœä¸‹ï¼Œé‚£ä¹ˆä¸Šä¸‹ä¸ä¹Ÿé¢ å€’äº†
+		Mat4 light_view_right = Math::LookAt(light_pos, light_pos + Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f)); // å³
+		Mat4 light_view_left = Math::LookAt(light_pos, light_pos + Vec3(-1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f)); // å·¦
+		Mat4 light_view_up = Math::LookAt(light_pos, light_pos + Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f));	  // ä¸Š
+		Mat4 light_view_down = Math::LookAt(light_pos, light_pos + Vec3(0.0f, -1.0f, 0.0f), Vec3(0.0f, 0.0f, -1.0f)); // ä¸‹
+		Mat4 light_view_front = Math::LookAt(light_pos, light_pos + Vec3(0.0f, 0.0f, 1.0f), Vec3(0.0f, -1.0f, 0.0f)); // è¿‘
+		Mat4 light_view_back = Math::LookAt(light_pos, light_pos + Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, -1.0f, 0.0f)); // è¿œ
 
 		std::array<Mat4, 6> result;
 		result[0] = light_view_right;
@@ -59,12 +62,16 @@ public:
 	}
 };
 
-class DirectionalLight : public Light {
+class DirectionalLight : public Light
+{
 public:
 	DirectionalLight() : Light("Directional Light") {}
 
 	Vec3 direction;
-	float aspectRatio{ 16.0f / 9.0f }; // TODO should on window size change
+	// TODO 
+	// é—®é¢˜ï¼šé˜´å½±è¦†ç›–è¿‡çª„/è¿‡å®½ã€è¾¹ç¼˜è£å‰ªã€åˆ†è¾¨ç‡åˆ©ç”¨ç‡å˜å·®ã€‚
+	// è§£å†³æ–¹æ¡ˆï¼š â€œæŒ‰ç›¸æœºå¯è§ä½“æ‹Ÿåˆâ€çš„ CSM/åŠ¨æ€é˜´å½±è§†é”¥
+	float aspectRatio{16.0f / 9.0f}; 
 
 	Mat4 lightProjMatrix() const override
 	{
@@ -79,24 +86,28 @@ public:
 	}
 };
 
-class LightManager {
+class LightManager
+{
 public:
 	LightManager();
-	std::shared_ptr<DirectionalLight> mainDirectionalLight() const {
+	std::shared_ptr<DirectionalLight> mainDirectionalLight() const
+	{
 		return std::dynamic_pointer_cast<DirectionalLight>(m_lights[0]);
 	}
-	std::vector<std::shared_ptr<PointLight>> pointLights() const {
+	std::vector<std::shared_ptr<PointLight>> pointLights() const
+	{
 		std::vector<std::shared_ptr<PointLight>> res;
-		for (const auto& light : m_lights) {
+		for (const auto &light : m_lights)
+		{
 			if (light != mainDirectionalLight())
 				res.push_back(std::dynamic_pointer_cast<PointLight>(light));
 		}
 		return res;
 	}
-	const std::vector<std::shared_ptr<Light>>& lights() const { return m_lights; }
+	const std::vector<std::shared_ptr<Light>> &lights() const { return m_lights; }
 
-protected:
 	void addPointLight();
+	void removeLastPointLight();
 	void addDirectionalLight();
 
 private:

@@ -15,7 +15,8 @@ class RhiImpl;
 class RhiResource
 {
 public:
-    enum Type {
+    enum Type
+    {
         Buffer,
         Texture,
         Sampler,
@@ -34,13 +35,15 @@ public:
 class RhiBuffer
 {
 public:
-    enum Type {
+    enum Type
+    {
         Immutable,
         Static,
         Dynamic
     };
 
-    enum UsageFlag {
+    enum UsageFlag
+    {
         VertexBuffer = 1 << 0,
         IndexBuffer = 1 << 1,
         UniformBuffer = 1 << 2,
@@ -61,18 +64,19 @@ public:
     virtual bool create() = 0;
 
 protected:
-    RhiBuffer(Type type_, UsageFlag usage_, void* data, int size_);
+    RhiBuffer(Type type_, UsageFlag usage_, void *data, int size_);
     Type m_type;
     UsageFlag m_usage;
-    void* m_data{ nullptr };
+    void *m_data{nullptr};
     int m_size;
-    unsigned int m_id{ 0 };
+    unsigned int m_id{0};
 };
 
 class RhiTexture
 {
 public:
-    enum Flag {
+    enum Flag
+    {
         RenderTarget = 1 << 0,
         CubeMap = 1 << 2,
         MipMapped = 1 << 3,
@@ -88,7 +92,8 @@ public:
         OneDimensional = 1 << 13
     };
 
-    enum Format {
+    enum Format
+    {
         UnknownFormat,
 
         R8,
@@ -107,7 +112,7 @@ public:
     void setFormat(Format fmt) { m_format = fmt; }
 
     Vec2 pixelSize() const { return m_pixelSize; }
-    void setPixelSize(const Vec2& sz) { m_pixelSize = sz; }
+    void setPixelSize(const Vec2 &sz) { m_pixelSize = sz; }
 
     Flag flags() const { return m_flags; }
     void setFlags(Flag f) { m_flags = f; }
@@ -120,140 +125,149 @@ public:
     virtual bool create() = 0; // true generate and bind texture
 
 protected:
-    RhiTexture(Format format_, const Vec2& pixelSize_, int sampleCount_, Flag flags_, unsigned char* data_);
+    RhiTexture(Format format_, const Vec2 &pixelSize_, int sampleCount_, Flag flags_, unsigned char *data_);
     Format m_format;
     Vec2 m_pixelSize;
     int m_sampleCount;
     Flag m_flags;
-    unsigned char* m_data{ nullptr };
-    unsigned int m_id{ 0 };
+    unsigned char *m_data{nullptr};
+    unsigned int m_id{0};
 };
 
 class RhiCommandBuffer
 {
 public:
-    enum IndexFormat {
+    enum IndexFormat
+    {
         IndexUInt16,
         IndexUInt32
     };
 
-    enum BeginPassFlag {
+    enum BeginPassFlag
+    {
         ExternalContent = 0x01,
         DoNotTrackResourcesForCompute = 0x02
     };
 
-    //void resourceUpdate(QRhiResourceUpdateBatch* resourceUpdates);
+    // void resourceUpdate(QRhiResourceUpdateBatch* resourceUpdates);
 
-    //void beginPass(RhiRenderTarget* rt,
-    //    const Color4& colorClearValue,
-    //    const QRhiDepthStencilClearValue& depthStencilClearValue,
-    //    QRhiResourceUpdateBatch* resourceUpdates = nullptr,
-    //    BeginPassFlags flags = {});
-    //void endPass(QRhiResourceUpdateBatch* resourceUpdates = nullptr);
+    // void beginPass(RhiRenderTarget* rt,
+    //     const Color4& colorClearValue,
+    //     const QRhiDepthStencilClearValue& depthStencilClearValue,
+    //     QRhiResourceUpdateBatch* resourceUpdates = nullptr,
+    //     BeginPassFlags flags = {});
+    // void endPass(QRhiResourceUpdateBatch* resourceUpdates = nullptr);
 
-    //using VertexInput = std::pair<RhiBuffer*, int>; // buffer, offset
-    //void setVertexInput(int startBinding, int bindingCount, const VertexInput* bindings,
-    //    RhiBuffer* indexBuf = nullptr, int indexOffset = 0,
-    //    IndexFormat indexFormat = IndexUInt16);
+    // using VertexInput = std::pair<RhiBuffer*, int>; // buffer, offset
+    // void setVertexInput(int startBinding, int bindingCount, const VertexInput* bindings,
+    //     RhiBuffer* indexBuf = nullptr, int indexOffset = 0,
+    //     IndexFormat indexFormat = IndexUInt16);
 
-    //void setViewport(const RhiViewport& viewport);
-    //void setScissor(const RhiScissor& scissor);
-    void setBlendConstants(const Color4& c);
+    // void setViewport(const RhiViewport& viewport);
+    // void setScissor(const RhiScissor& scissor);
+    void setBlendConstants(const Color4 &c);
     void setStencilRef(int refValue);
 
     void draw(int vertexCount,
-        int instanceCount = 1,
-        int firstVertex = 0,
-        int firstInstance = 0);
+              int instanceCount = 1,
+              int firstVertex = 0,
+              int firstInstance = 0);
 
     void drawIndexed(int indexCount,
-        int instanceCount = 1,
-        int firstIndex = 0,
-        int vertexOffset = 0,
-        int firstInstance = 0);
+                     int instanceCount = 1,
+                     int firstIndex = 0,
+                     int vertexOffset = 0,
+                     int firstInstance = 0);
 
 protected:
     RhiCommandBuffer();
 };
 
-class RhiAttachment {
+class RhiAttachment
+{
 public:
     RhiAttachment() = default;
-    RhiAttachment(RhiTexture* texture);
-    RhiTexture* texture() const { return m_texture; }
+    RhiAttachment(RhiTexture *texture);
+    RhiTexture *texture() const { return m_texture; }
 
 protected:
-    RhiTexture* m_texture{ nullptr };
+    RhiTexture *m_texture{nullptr};
 };
 
-class RhiFrameBuffer {
+class RhiFrameBuffer
+{
 public:
     Vec2 pixelSize() const { return m_pixelSize; }
-    void setPixelSize(const Vec2& sz) { m_pixelSize = sz; }
+    void setPixelSize(const Vec2 &sz) { m_pixelSize = sz; }
 
     void setSampleCount(int sampleCount_) { m_sampleCount = sampleCount_; }
     int sampleCount() const { return m_sampleCount; }
 
     unsigned int id() const { return m_id; }
 
-    const RhiAttachment* colorAttachmentAt(int index) const { return &m_colorAttachments.at(index); }
-    void setColorAttachments(std::initializer_list<RhiAttachment> list) {
+    const RhiAttachment *colorAttachmentAt(int index) const { return &m_colorAttachments.at(index); }
+    void setColorAttachments(std::initializer_list<RhiAttachment> list)
+    {
         std::array<RhiAttachment, 8> attachments;
         int i = 0;
-        for (auto it = list.begin(); it != list.end(); ++it) {
+        for (auto it = list.begin(); it != list.end(); ++it)
+        {
             if (i < attachments.size())
                 attachments[i++] = *it;
         }
         m_colorAttachments.swap(attachments);
     }
-    void setColorAttachments(const std::array<RhiAttachment, 8>& list) { m_colorAttachments = list; }
+    void setColorAttachments(const std::array<RhiAttachment, 8> &list) { m_colorAttachments = list; }
 
-    const RhiAttachment* depthAttachment() const { return &m_depthAttachment; }
+    const RhiAttachment *depthAttachment() const { return &m_depthAttachment; }
     void setDepthAttachment(RhiAttachment depthAttachment_) { m_depthAttachment = depthAttachment_; }
 
-    const RhiAttachment* depthStencilAttachment() const { return &m_depthStencilAttachment; }
+    const RhiAttachment *depthStencilAttachment() const { return &m_depthStencilAttachment; }
     void setDepthStencilAttachment(RhiAttachment depthStencilAttachment_) { m_depthStencilAttachment = depthStencilAttachment_; }
 
     virtual bool create() = 0; // truely generate and bind a frameBuffer
     virtual void bind() = 0;
     virtual void unBind() = 0;
     virtual void clear(Color4 clear_color = Color4(0.f, 0.f, 0.f, 1.0f)) = 0;
-    virtual void blitTo(RhiFrameBuffer* dest, RhiTexture::Format format = RhiTexture::Format::RGBA16F) = 0;
+    virtual void blitTo(RhiFrameBuffer *dest, RhiTexture::Format format = RhiTexture::Format::RGBA16F) = 0;
 
 protected:
     RhiFrameBuffer() = default;
-    RhiFrameBuffer(const RhiAttachment& colorAttachment, const Vec2& pixelSize_, int sampleCount_ = 1);
+    RhiFrameBuffer(const RhiAttachment &colorAttachment, const Vec2 &pixelSize_, int sampleCount_ = 1);
     std::array<RhiAttachment, 8> m_colorAttachments;
     RhiAttachment m_depthAttachment;
     RhiAttachment m_depthStencilAttachment;
     Vec2 m_pixelSize;
-    int m_sampleCount{ 1 };
-    unsigned int m_id{ 0 };
+    int m_sampleCount{1};
+    unsigned int m_id{0};
 };
 
 class RhiSwapChain
 {
 public:
-    enum Flag {
+    enum Flag
+    {
         sRGB = 1 << 2,
         UsedAsTransferSource = 1 << 3,
         NoVSync = 1 << 4,
         MinimalBufferCount = 1 << 5
     };
 
-    enum Format {
+    enum Format
+    {
         SDR,
         HDRExtendedSrgbLinear,
         HDR10
     };
 
-    enum StereoTargetBuffer {
+    enum StereoTargetBuffer
+    {
         LeftBuffer,
         RightBuffer
     };
 
-    Window* window() const { return m_window; }
-    void setWindow(Window* window) { m_window = window; }
+    Window *window() const { return m_window; }
+    void setWindow(Window *window) { m_window = window; }
 
     Flag flags() const { return m_flags; }
     void setFlags(Flag f) { m_flags = f; }
@@ -261,7 +275,7 @@ public:
     Format format() const { return m_format; }
     void setFormat(Format f) { m_format = f; }
 
-    const RhiAttachment* depthStencil() const { return &m_depthStencilAttachment; }
+    const RhiAttachment *depthStencil() const { return &m_depthStencilAttachment; }
     void setDepthStencil(RhiAttachment depthStencilAttachment_) { m_depthStencilAttachment = depthStencilAttachment_; }
 
     int sampleCount() const { return m_sampleCount; }
@@ -269,16 +283,16 @@ public:
 
     Vec2 currentPixelSize() const { return m_currentPixelSize; }
 
-    virtual RhiCommandBuffer* currentFrameCommandBuffer() = 0;
-    //virtual RhiRenderTarget* currentFrameRenderTarget() = 0;
-    //virtual RhiRenderTarget* currentFrameRenderTarget(StereoTargetBuffer targetBuffer);
+    virtual RhiCommandBuffer *currentFrameCommandBuffer() = 0;
+    // virtual RhiRenderTarget* currentFrameRenderTarget() = 0;
+    // virtual RhiRenderTarget* currentFrameRenderTarget(StereoTargetBuffer targetBuffer);
     virtual Vec2 surfacePixelSize() = 0;
     virtual bool isFormatSupported(Format f) = 0;
     virtual bool createOrResize() = 0;
 
 protected:
     RhiSwapChain();
-    Window* m_window = nullptr;
+    Window *m_window = nullptr;
     Flag m_flags;
     Format m_format = SDR;
     RhiAttachment m_depthStencilAttachment;
@@ -288,7 +302,8 @@ protected:
 
 struct RhiVertexAttribute
 {
-    enum Format {
+    enum Format
+    {
         Float4,
         Float3,
         Float2,
@@ -312,50 +327,54 @@ struct RhiVertexAttribute
 class RhiVertexLayout
 {
 public:
-    void setAttributes(std::initializer_list<RhiVertexAttribute> list) {
+    void setAttributes(std::initializer_list<RhiVertexAttribute> list)
+    {
         std::array<RhiVertexAttribute, 8> attributes;
         int i = 0;
-        for (auto it = list.begin(); it != list.end(); ++it) {
+        for (auto it = list.begin(); it != list.end(); ++it)
+        {
             if (i < attributes.size())
                 attributes[i++] = *it;
         }
         m_attributes.swap(attributes);
     }
-    template<typename InputIterator>
+    template <typename InputIterator>
     void setAttributes(InputIterator first, InputIterator last)
     {
         m_attributes.clear();
         std::copy(first, last, std::back_inserter(m_attributes));
     }
-    const RhiVertexAttribute* cbeginAttributes() const { return &m_attributes.front(); }
-    const RhiVertexAttribute* cendAttributes() const { return &m_attributes.back(); }
+    const RhiVertexAttribute *cbeginAttributes() const { return &m_attributes.front(); }
+    const RhiVertexAttribute *cendAttributes() const { return &m_attributes.back(); }
 
     unsigned int id() const { return m_id; }
 
     virtual bool create() = 0;
 
-    virtual bool createInstancing(RhiBuffer* inst_buffer, int instancin_location) = 0;
+    virtual bool createInstancing(RhiBuffer *inst_buffer, int instancin_location) = 0;
 
 protected:
     RhiVertexLayout() = default;
-    RhiVertexLayout(RhiBuffer* vbuffer, RhiBuffer* ibuffer);
+    RhiVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer);
     std::array<RhiVertexAttribute, 8> m_attributes;
-    RhiBuffer* m_vbuffer;
-    RhiBuffer* m_ibuffer;
+    RhiBuffer *m_vbuffer;
+    RhiBuffer *m_ibuffer;
     unsigned int m_id;
 };
 
 class RhiGraphicsPipeline
 {
 public:
-    enum Flag {
+    enum Flag
+    {
         UsesBlendConstants = 1 << 0,
         UsesStencilRef = 1 << 1,
         UsesScissor = 1 << 2,
         CompileShadersWithDebugInfo = 1 << 3
     };
 
-    enum Topology {
+    enum Topology
+    {
         Triangles,
         TriangleStrip,
         TriangleFan,
@@ -365,25 +384,29 @@ public:
         Patches
     };
 
-    enum CullMode {
+    enum CullMode
+    {
         None,
         Front,
         Back
     };
 
-    enum FrontFace {
+    enum FrontFace
+    {
         CCW,
         CW
     };
 
-    enum ColorMask {
+    enum ColorMask
+    {
         R = 1 << 0,
         G = 1 << 1,
         B = 1 << 2,
         A = 1 << 3
     };
 
-    enum BlendFactor {
+    enum BlendFactor
+    {
         Zero,
         One,
         SrcColor,
@@ -405,7 +428,8 @@ public:
         OneMinusSrc1Alpha
     };
 
-    enum BlendOp {
+    enum BlendOp
+    {
         Add,
         Subtract,
         ReverseSubtract,
@@ -413,7 +437,8 @@ public:
         Max
     };
 
-    struct TargetBlend {
+    struct TargetBlend
+    {
         ColorMask colorWrite = ColorMask(0xF); // R | G | B | A
         bool enable = false;
         BlendFactor srcColor = One;
@@ -424,7 +449,8 @@ public:
         BlendOp opAlpha = Add;
     };
 
-    enum CompareOp {
+    enum CompareOp
+    {
         Never,
         Less,
         Equal,
@@ -435,7 +461,8 @@ public:
         Always
     };
 
-    enum StencilOp {
+    enum StencilOp
+    {
         StencilZero,
         Keep,
         Replace,
@@ -446,7 +473,8 @@ public:
         DecrementAndWrap
     };
 
-    struct StencilOpState {
+    struct StencilOpState
+    {
         StencilOp failOp = Keep;
         StencilOp depthFailOp = Keep;
         StencilOp passOp = Keep;
@@ -465,14 +493,14 @@ public:
     FrontFace frontFace() const { return m_frontFace; }
     void setFrontFace(FrontFace f) { m_frontFace = f; }
 
-    template<typename InputIterator>
+    template <typename InputIterator>
     void setTargetBlends(InputIterator first, InputIterator last)
     {
         m_targetBlends.clear();
         std::copy(first, last, std::back_inserter(m_targetBlends));
     }
-    const TargetBlend* cbeginTargetBlends() const { return &m_targetBlends.front(); }
-    const TargetBlend* cendTargetBlends() const { return &m_targetBlends.back(); }
+    const TargetBlend *cbeginTargetBlends() const { return &m_targetBlends.front(); }
+    const TargetBlend *cendTargetBlends() const { return &m_targetBlends.back(); }
 
     bool hasDepthTest() const { return m_depthTest; }
     void setDepthTest(bool enable) { m_depthTest = enable; }
@@ -487,10 +515,10 @@ public:
     void setStencilTest(bool enable) { m_stencilTest = enable; }
 
     StencilOpState stencilFront() const { return m_stencilFront; }
-    void setStencilFront(const StencilOpState& state) { m_stencilFront = state; }
+    void setStencilFront(const StencilOpState &state) { m_stencilFront = state; }
 
     StencilOpState stencilBack() const { return m_stencilBack; }
-    void setStencilBack(const StencilOpState& state) { m_stencilBack = state; }
+    void setStencilBack(const StencilOpState &state) { m_stencilBack = state; }
 
     int stencilReadMask() const { return m_stencilReadMask; }
     void setStencilReadMask(int mask) { m_stencilReadMask = mask; }
@@ -510,24 +538,24 @@ public:
     float slopeScaledDepthBias() const { return m_slopeScaledDepthBias; }
     void setSlopeScaledDepthBias(float bias) { m_slopeScaledDepthBias = bias; }
 
-    //void setShaderStages(std::initializer_list<QRhiShaderStage> list) { m_shaderStages = list; }
-    //template<typename InputIterator>
-    //void setShaderStages(InputIterator first, InputIterator last)
+    // void setShaderStages(std::initializer_list<QRhiShaderStage> list) { m_shaderStages = list; }
+    // template<typename InputIterator>
+    // void setShaderStages(InputIterator first, InputIterator last)
     //{
-    //    m_shaderStages.clear();
-    //    std::copy(first, last, std::back_inserter(m_shaderStages));
-    //}
-    //const RhiShaderStage* cbeginShaderStages() const { return m_shaderStages.cbegin(); }
-    //const RhiShaderStage* cendShaderStages() const { return m_shaderStages.cend(); }
+    //     m_shaderStages.clear();
+    //     std::copy(first, last, std::back_inserter(m_shaderStages));
+    // }
+    // const RhiShaderStage* cbeginShaderStages() const { return m_shaderStages.cbegin(); }
+    // const RhiShaderStage* cendShaderStages() const { return m_shaderStages.cend(); }
 
-    RhiVertexLayout* vertexInputLayout() const { return m_vertexInputLayout; }
-    void setVertexInputLayout(RhiVertexLayout* layout) { m_vertexInputLayout = layout; }
+    RhiVertexLayout *vertexInputLayout() const { return m_vertexInputLayout; }
+    void setVertexInputLayout(RhiVertexLayout *layout) { m_vertexInputLayout = layout; }
 
-    //RhiShaderResourceBindings* shaderResourceBindings() const { return m_shaderResourceBindings; }
-    //void setShaderResourceBindings(RhiShaderResourceBindings* srb) { m_shaderResourceBindings = srb; }
+    // RhiShaderResourceBindings* shaderResourceBindings() const { return m_shaderResourceBindings; }
+    // void setShaderResourceBindings(RhiShaderResourceBindings* srb) { m_shaderResourceBindings = srb; }
 
-    //RhiRenderPassDescriptor* renderPassDescriptor() const { return m_renderPassDesc; }
-    //void setRenderPassDescriptor(RhiRenderPassDescriptor* desc) { m_renderPassDesc = desc; }
+    // RhiRenderPassDescriptor* renderPassDescriptor() const { return m_renderPassDesc; }
+    // void setRenderPassDescriptor(RhiRenderPassDescriptor* desc) { m_renderPassDesc = desc; }
 
     int patchControlPointCount() const { return m_patchControlPointCount; }
     void setPatchControlPointCount(int count) { m_patchControlPointCount = count; }
@@ -554,46 +582,59 @@ protected:
     int m_depthBias = 0;
     float m_slopeScaledDepthBias = 0.0f;
     int m_patchControlPointCount = 3;
-    //std::array<RhiShaderStage, 4> m_shaderStages;
-    RhiVertexLayout* m_vertexInputLayout;
-    //RhiShaderResourceBindings* m_shaderResourceBindings = nullptr;
-    //RhiRenderPassDescriptor* m_renderPassDesc = nullptr;
+    // std::array<RhiShaderStage, 4> m_shaderStages;
+    RhiVertexLayout *m_vertexInputLayout;
+    // RhiShaderResourceBindings* m_shaderResourceBindings = nullptr;
+    // RhiRenderPassDescriptor* m_renderPassDesc = nullptr;
 };
 
-class Rhi {
+class Rhi
+{
 public:
-    static Rhi* create();
+    static Rhi *create();
 
-	// renderœ‡πÿ
-	void drawIndexed(unsigned int vao_id, size_t indices_count, int inst_amount = -1);
-	void drawTriangles(unsigned int vao_id, size_t array_count);
-	// context »´æ÷◊¥Ã¨
-	void setViewport();
-	//// binding resource
-	//virtual void bindTexture(/*TextureData*/) = 0;
-	//virtual void bindVertexArray() = 0;
-	//virtual void bindBuffer(/*BufferData*/) = 0;
+    // renderÁõ∏ÂÖ≥
+    void drawIndexed(unsigned int vao_id, size_t indices_count, int inst_amount = -1);
+    void drawTriangles(unsigned int vao_id, size_t array_count);
+    // context ÂÖ®Â±ÄÁä∂ÊÄÅ
+    void setViewport(int x, int y, int width, int height);
+    void setDepthMask(bool enable);
+    void setFrontFaceCW(bool cw);
+    void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]);
+    unsigned int newFramebufferHandle();
+    void bindFramebuffer(unsigned int framebuffer);
+    void bindDefaultFramebuffer();
+    void setFramebufferDrawReadNone();
+    void attachDepthCubeFace(unsigned int cube_map, int face);
+    void clearColorDepthStencil(float r, float g, float b, float a);
+    unsigned int newDepthCubeMap(int size);
+    //// binding resource
+    // virtual void bindTexture(/*TextureData*/) = 0;
+    // virtual void bindVertexArray() = 0;
+    // virtual void bindBuffer(/*BufferData*/) = 0;
+    
+    RhiBuffer *newBuffer(RhiBuffer::Type type,
+                         RhiBuffer::UsageFlag usage,
+                         void *data,
+                         int size);
 
-    RhiBuffer* newBuffer(RhiBuffer::Type type,
-        RhiBuffer::UsageFlag usage,
-        void* data,
-        int size);
+    RhiVertexLayout *newVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer);
 
-    RhiVertexLayout* newVertexLayout(RhiBuffer* vbuffer, RhiBuffer* ibuffer);
+    RhiTexture *newTexture(RhiTexture::Format format,
+                           const Vec2 &pixelSize,
+                           int sampleCount = 1,
+                           RhiTexture::Flag flags = {},
+                           unsigned char *data = nullptr);
 
-    RhiTexture* newTexture(RhiTexture::Format format,
-        const Vec2& pixelSize,
-        int sampleCount = 1,
-        RhiTexture::Flag flags = {},
-        unsigned char* data = nullptr);
+    unsigned int newCubeTexture(int width, int height, const std::array<unsigned char*, 6>& datas);
 
-    RhiFrameBuffer* newFrameBuffer(const RhiAttachment& colorAttachment, const Vec2& pixelSize_, int sampleCount_ = 1);
+    RhiFrameBuffer *newFrameBuffer(const RhiAttachment &colorAttachment, const Vec2 &pixelSize_, int sampleCount_ = 1);
 
-    //virtual RhiTextureRenderTarget* newTextureRenderTarget(const RhiTextureRenderTargetDescription& desc,
-    //    RhiTextureRenderTarget::Flags flags = {});
+    // virtual RhiTextureRenderTarget* newTextureRenderTarget(const RhiTextureRenderTargetDescription& desc,
+    //     RhiTextureRenderTarget::Flags flags = {});
 
-    //virtual RhiSwapChain* newSwapChain();
+    // virtual RhiSwapChain* newSwapChain();
 
 private:
-    RhiImpl* m_impl{ nullptr };
+    RhiImpl *m_impl{nullptr};
 };

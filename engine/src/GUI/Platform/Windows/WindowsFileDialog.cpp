@@ -9,7 +9,7 @@
 
 std::string WindowsFileDialog::OpenFile(const char* filter)
 {
-	// ´ò¿ªËÑË÷ÎÄ¼þµÄ´°¿Ú, ÐèÒª´«ÈëÒ»¸öOPENFILENAMEA¶ÔÏó
+	// æ‰“å¼€æœç´¢æ–‡ä»¶çš„çª—å£, éœ€è¦ä¼ å…¥ä¸€ä¸ªOPENFILENAMEAå¯¹è±¡
 	OPENFILENAMEA ofn;
 	CHAR szFile[260] = { 0 };
 	ZeroMemory(&ofn, sizeof(OPENFILENAME));
@@ -21,7 +21,7 @@ std::string WindowsFileDialog::OpenFile(const char* filter)
 	ofn.nFilterIndex = 1;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
-	// µ÷ÓÃwin32 api
+	// è°ƒç”¨win32 api
 	if (GetOpenFileNameA(&ofn) == TRUE)
 		return ofn.lpstrFile;
 
@@ -41,9 +41,12 @@ std::string WindowsFileDialog::SaveFile(const char* filter)
 	ofn.nFilterIndex = 1;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
-	// µ÷ÓÃwin32 api
+	// è°ƒç”¨win32 api
 	// Sets the default extension by extracting it from the filter
-	ofn.lpstrDefExt = strchr(filter, '\0') + 1;
+	const char* ext = strchr(filter, '\0') + 1; // e.g. "*.proj"
+	if (ext[0] == '*' && ext[1] == '.')
+		ext += 2; // -> "proj"
+	ofn.lpstrDefExt = ext;
 
 	if (GetSaveFileNameA(&ofn) == TRUE)
 		return ofn.lpstrFile;

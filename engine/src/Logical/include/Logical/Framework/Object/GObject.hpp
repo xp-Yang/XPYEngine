@@ -137,7 +137,7 @@ public:
 	const std::vector<GObject*> allLeaves2() {
 		if (isLeaf())
 			return { this };
-		// 深度优先
+		// 娣卞害浼樺厛
 		std::vector<GObject*> leaves;
 		for (auto child : m_children) {
 			if (child->children().empty()) {
@@ -153,7 +153,7 @@ public:
 	const std::vector<GObject*> allLeaves() {
 		if (isLeaf())
 			return { this };
-		// 广度优先
+		// 骞垮害浼樺厛
 		std::vector<GObject*> leaves;
 		std::vector<GObject*> nodes;
 		nodes.push_back(this);

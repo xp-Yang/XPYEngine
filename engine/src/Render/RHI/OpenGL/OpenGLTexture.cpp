@@ -1,35 +1,38 @@
 #include "OpenGLTexture.hpp"
 
-OpenGLTexture::OpenGLTexture(Format format_, const Vec2& pixelSize_, int sampleCount_, Flag flags_, unsigned char* data)
+OpenGLTexture::OpenGLTexture(Format format_, const Vec2 &pixelSize_, int sampleCount_, Flag flags_, unsigned char *data)
     : RhiTexture(format_, pixelSize_, sampleCount_, flags_, data)
 {
 }
 
 bool OpenGLTexture::create()
 {
-    //unsigned int pbo;
-    //glGenBuffers(1, &pbo);
-    //glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-    //glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * nrComponents, 0, GL_STREAM_DRAW);
-    //GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE);
-    //if (ptr)
+    // unsigned int pbo;
+    // glGenBuffers(1, &pbo);
+    // glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    // glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * nrComponents, 0, GL_STREAM_DRAW);
+    // GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE);
+    // if (ptr)
     //{
-    //    memcpy(ptr, data, width * height * nrComponents);
-    //    glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
-    //}
+    //     memcpy(ptr, data, width * height * nrComponents);
+    //     glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
+    // }
 
     unsigned int textureID;
     switch (m_format)
     {
-    case RhiTexture::Format::RGB8: {
-        if (m_sampleCount > 1) {
+    case RhiTexture::Format::RGB8:
+    {
+        if (m_sampleCount > 1)
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGB8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         }
-        else {
+        else
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_FLOAT, NULL);
@@ -38,15 +41,18 @@ bool OpenGLTexture::create()
         }
         break;
     }
-    case RhiTexture::Format::RGB16F: {
-        if (m_sampleCount > 1) {
+    case RhiTexture::Format::RGB16F:
+    {
+        if (m_sampleCount > 1)
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGB16F, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         }
-        else {
+        else
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_FLOAT, NULL);
@@ -55,15 +61,18 @@ bool OpenGLTexture::create()
         }
         break;
     }
-    case RhiTexture::Format::RGBA8: {
-        if (m_sampleCount > 1) {
+    case RhiTexture::Format::RGBA8:
+    {
+        if (m_sampleCount > 1)
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGBA8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         }
-        else {
+        else
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -72,15 +81,18 @@ bool OpenGLTexture::create()
         }
         break;
     }
-    case RhiTexture::Format::RGBA16F: {
-        if (m_sampleCount > 1) {
+    case RhiTexture::Format::RGBA16F:
+    {
+        if (m_sampleCount > 1)
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGBA16F, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         }
-        else {
+        else
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_FLOAT, NULL);
@@ -89,14 +101,16 @@ bool OpenGLTexture::create()
         }
         break;
     }
-    case RhiTexture::Format::DEPTH24STENCIL8: {
-        // Í³Ò»ÓÃtexture¸½¼ş£¬²»Ê¹ÓÃrbo¸½¼ş
-        //glGenRenderbuffers(1, &rbo);
-        //glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-        //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_width, m_height);
-        //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+    case RhiTexture::Format::DEPTH24STENCIL8:
+    {
+        // ç»Ÿä¸€ç”¨textureé™„ä»¶ï¼Œä¸ä½¿ç”¨rboé™„ä»¶
+        // glGenRenderbuffers(1, &rbo);
+        // glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+        // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_width, m_height);
+        // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
-        if (m_sampleCount > 1) {
+        if (m_sampleCount > 1)
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_DEPTH24_STENCIL8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
@@ -113,8 +127,10 @@ bool OpenGLTexture::create()
         }
         break;
     }
-    case RhiTexture::Format::DEPTH: {
-        if (m_sampleCount > 1) {
+    case RhiTexture::Format::DEPTH:
+    {
+        if (m_sampleCount > 1)
+        {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_DEPTH_COMPONENT, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
@@ -122,10 +138,10 @@ bool OpenGLTexture::create()
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-            GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+            GLfloat borderColor[] = {1.0, 1.0, 1.0, 1.0};
             glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
         }
-        else 
+        else
         {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
@@ -134,13 +150,13 @@ bool OpenGLTexture::create()
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-            GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+            GLfloat borderColor[] = {1.0, 1.0, 1.0, 1.0};
             glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
         }
         // if depth only:
-        //²»°üº¬ÑÕÉ«»º³åµÄÖ¡»º³å¶ÔÏóÊÇ²»ÍêÕûµÄ£¬ËùÒÔĞèÒªÏÔÊ½¸æËßOpenGL²»Ê¹ÓÃÈÎºÎÑÕÉ«»º³å
-        //glDrawBuffer(GL_NONE);
-        //glReadBuffer(GL_NONE);
+        // ä¸åŒ…å«é¢œè‰²ç¼“å†²çš„å¸§ç¼“å†²å¯¹è±¡æ˜¯ä¸å®Œæ•´çš„ï¼Œæ‰€ä»¥éœ€è¦æ˜¾å¼å‘Šè¯‰OpenGLä¸ä½¿ç”¨ä»»ä½•é¢œè‰²ç¼“å†²
+        // glDrawBuffer(GL_NONE);
+        // glReadBuffer(GL_NONE);
         break;
     }
     default:
@@ -182,8 +198,7 @@ bool OpenGLTexture::create()
     else
     {
     }
-    //glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
+    // glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     m_id = textureID;
 

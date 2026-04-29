@@ -6,31 +6,31 @@
 #include <assert.h>
 #include <utility>
 
-static void drop_file_callback(GLFWwindow* window, int count, const char** paths)
+static void drop_file_callback(GLFWwindow *window, int count, const char **paths)
 {
-	for (int i = 0; i < count; i++) {
-		//std::string filepath = paths[i];
-		//getSceneHierarchy()->loadModel(filepath);
+	for (int i = 0; i < count; i++)
+	{
+		// std::string filepath = paths[i];
+		// getSceneHierarchy()->loadModel(filepath);
 	}
 }
 
 Window::Window(int width, int height)
-	: m_width(width)
-	, m_height(height)
+	: m_width(width), m_height(height)
 {
-	glfwInit();//³õÊ¼»¯GLFW;
+	glfwInit(); // åˆå§‹åŒ–GLFW;
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);//²»ÔÊĞíÓÃ»§µ÷Õû´°¿ÚµÄ´óĞ¡
-	//glEnable(GL_MULTISAMPLE);
-	//glfwWindowHint(GLFW_SAMPLES, 16);
+	// glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);//ä¸å…è®¸ç”¨æˆ·è°ƒæ•´çª—å£çš„å¤§å°
+	// glEnable(GL_MULTISAMPLE);
+	// glfwWindowHint(GLFW_SAMPLES, 16);
 #if NO_TITLE_BAR
-	// ÉèÖÃ offscreen context µÄ±êÖ¾Î»£¬Òş²Ø±êÌâÀ¸
+	// è®¾ç½® offscreen context çš„æ ‡å¿—ä½ï¼Œéšè—æ ‡é¢˜æ 
 	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 #endif
 
-	m_window = glfwCreateWindow(width, height, "WaveEngine", nullptr, nullptr);
+	m_window = glfwCreateWindow(width, height, "XPYEngine", nullptr, nullptr);
 	if (m_window == nullptr)
 	{
 		assert(false);
@@ -41,13 +41,13 @@ Window::Window(int width, int height)
 
 	glfwSetWindowUserPointer(m_window, this);
 
-	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* window, int width, int height) {
+	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow *window, int width, int height)
+								   {
 		if (width <= 0 || height <= 0)
 			return;
 		Window* thiz = (Window*)glfwGetWindowUserPointer(window);
 		thiz->m_width = width;
-		thiz->m_height = height;
-		});
+		thiz->m_height = height; });
 
 	glfwSetDropCallback(m_window, drop_file_callback);
 }
@@ -65,11 +65,11 @@ bool Window::shouldClose() const
 
 void Window::swapBuffer() const
 {
-	glfwPollEvents();//¼ì²é´¥·¢ÊÂ¼ş£¨¼üÅÌÊäÈë¡¢Êó±êÒÆ¶¯µÈ£©
-	glfwSwapBuffers(m_window);//½»»»ÑÕÉ«»º³å£¨ËüÊÇÒ»¸ö´¢´æ×ÅGLFW´°¿ÚÃ¿Ò»¸öÏñËØÑÕÉ«µÄ´ó»º³å£©£¬Êä³öÔÚÆÁÄ»ÉÏ¡£
+	glfwPollEvents();		   // æ£€æŸ¥è§¦å‘äº‹ä»¶ï¼ˆé”®ç›˜è¾“å…¥ã€é¼ æ ‡ç§»åŠ¨ç­‰ï¼‰
+	glfwSwapBuffers(m_window); // äº¤æ¢é¢œè‰²ç¼“å†²ï¼ˆå®ƒæ˜¯ä¸€ä¸ªå‚¨å­˜ç€GLFWçª—å£æ¯ä¸€ä¸ªåƒç´ é¢œè‰²çš„å¤§ç¼“å†²ï¼‰ï¼Œè¾“å‡ºåœ¨å±å¹•ä¸Šã€‚
 }
 
-void* Window::getNativeWindowHandle() const
+void *Window::getNativeWindowHandle() const
 {
 	return m_window;
 }
@@ -89,9 +89,9 @@ float Window::getAspectRatio() const
 	return (float)m_width / (float)m_height;
 }
 
-FileDialog* Window::createFileDialog()
+FileDialog *Window::createFileDialog()
 {
-	WindowsFileDialog* file_dialog = new WindowsFileDialog(this);
+	WindowsFileDialog *file_dialog = new WindowsFileDialog(this);
 #ifdef __LINUX__
 	auto file_dialog;
 #endif

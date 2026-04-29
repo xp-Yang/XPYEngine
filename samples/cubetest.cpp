@@ -22,12 +22,12 @@ void Cubetest::init() {
 	world.addComponent<ecs::TransformComponent>(skybox_entity);
 	auto& skybox_com = world.addComponent<ecs::SkyboxComponent>(skybox_entity);
 	skybox_com.cube_texture = CubeTexture(
-		resource_dir + "/images/skybox/right.jpg",
-		resource_dir + "/images/skybox/left.jpg",
-		resource_dir + "/images/skybox/top.jpg",
-		resource_dir + "/images/skybox/bottom.jpg",
-		resource_dir + "/images/skybox/front.jpg",
-		resource_dir + "/images/skybox/back.jpg");
+		RESOURCE_DIRECTORY + "/images/skybox/right.jpg",
+		RESOURCE_DIRECTORY + "/images/skybox/left.jpg",
+		RESOURCE_DIRECTORY + "/images/skybox/top.jpg",
+		RESOURCE_DIRECTORY + "/images/skybox/bottom.jpg",
+		RESOURCE_DIRECTORY + "/images/skybox/front.jpg",
+		RESOURCE_DIRECTORY + "/images/skybox/back.jpg");
 	SubMesh sub_mesh;
 	sub_mesh.mesh_file_ref = { MeshFileType::CustomCube, "" };
 	skybox_com.mesh = sub_mesh;
@@ -137,83 +137,74 @@ void Cubetest::init() {
 	sub_mesh.material.ao = 0.01;
 	ground_renderable.sub_meshes.push_back(sub_mesh);
 
-	loadModel(resource_dir + "/model/nanosuit/nanosuit.obj");
+	loadModel(RESOURCE_DIRECTORY + "/model/nanosuit/nanosuit.obj");
 
-	GObject* bunny_obj = loadModel(resource_dir + "/model/bunny.obj");
+	GObject* bunny_obj = loadModel(RESOURCE_DIRECTORY + "/model/bunny.obj");
 	auto bunny_transform = world.getComponent<ecs::TransformComponent>(bunny_obj->entity());
 	bunny_transform->scale = Vec3(40.0f);
 	bunny_transform->translation = Vec3(-10.0f, 0.0f, 0.0f);
 
-	//loadModel(resource_dir + "/model/dragon.obj");
+	//loadModel(RESOURCE_DIRECTORY + "/model/dragon.obj");
 
 #endif // ENABLE_ECS
 
 	auto& engine = Engine::get();
 	auto scene = engine.Scene();
 
-	size_t cubes_count = 9;
-	size_t row_count = std::sqrt(cubes_count);
-	size_t col_count = cubes_count / row_count;
-	for (int i = 0; i < cubes_count; i++) {
-		GObject* cube_obj = GObject::create(nullptr, "Cube");
-		MeshComponent& mesh = cube_obj->addComponent<MeshComponent>();
-		std::shared_ptr<Mesh> cube_sub_mesh = Mesh::create_cube_mesh();
-		std::shared_ptr<Material> cube_material = Material::create_complete_default_material();
-		cube_material->albedo = Vec3(1.0f);
-		cube_material->metallic = 1.0;
-		cube_material->roughness = 0.5;
-		cube_material->ao = 0.01;
-		cube_sub_mesh->material = cube_material;
-		mesh.sub_meshes.push_back(cube_sub_mesh);
-		TransformComponent& transform = cube_obj->addComponent<TransformComponent>();
-		transform.translation = { 1.5f * (i % col_count), 0.5f + 1.5f * (i / row_count), -10.0f };
-		scene->addObject(std::shared_ptr<GObject>(cube_obj));
+	{
+		//GObject* plane_obj = GObject::create(nullptr, "Ground");
+		//MeshComponent& plane_mesh = plane_obj->addComponent<MeshComponent>();
+		//std::shared_ptr<Mesh> plane_sub_mesh = Mesh::create_complex_quad_mesh(Vec2(10.0f));
+		//std::shared_ptr<Material> plane_material = Material::create_complete_default_material();
+		//plane_sub_mesh->material = plane_material;
+		//plane_mesh.sub_meshes.push_back(plane_sub_mesh);
+		//TransformComponent& plane_transform = plane_obj->addComponent<TransformComponent>();
+		//plane_transform.scale = Vec3(50.0f, 1.f, 50.0f);
+		//scene->addObject(std::shared_ptr<GObject>(plane_obj));
+
+		GObject* ground_obj = scene->loadModel(RESOURCE_DIRECTORY + "/model/basic/cube.obj");
+        ground_obj->setName("Ground");
+		TransformComponent* transform = ground_obj->getComponent<TransformComponent>();
+		transform->scale = Vec3(30.0f, 0.001f, 30.0f);
+		std::shared_ptr<Material> ground_material = Material::create_complete_default_material();
+		ground_obj->getComponent<MeshComponent>()->sub_meshes[0]->material = ground_material;
 	}
 
-	size_t spheres_count = 4;
-	size_t s_row_count = std::sqrt(spheres_count);
-	size_t s_col_count = spheres_count / s_row_count;
-	for (int i = 0; i < spheres_count; i++) {
-		auto sphere_obj = GObject::create(nullptr, "Sphere");
-		MeshComponent& mesh = sphere_obj->addComponent<MeshComponent>();
-		std::shared_ptr<Mesh> sphere_sub_mesh = Mesh::create_icosphere_mesh(0.5f, 4);
-		std::shared_ptr<Material> sphere_material = Material::create_complete_default_material();
-		sphere_material->albedo = Vec3(1.0f);
-		sphere_material->metallic = 1.0;
-		sphere_material->roughness = 0.5;
-		sphere_material->ao = 0.01;
-		sphere_sub_mesh->material = sphere_material;
-		mesh.sub_meshes.push_back(sphere_sub_mesh);
-		TransformComponent& transform = sphere_obj->addComponent<TransformComponent>();
-		transform.translation = { 1.5f * (i % s_col_count), 0.5f + 1.5f * (i / s_row_count), -5.0f };
-		scene->addObject(std::shared_ptr<GObject>(sphere_obj));
-	}
+	//{
+	//	size_t cubes_count = 16;
+	//	size_t row_count = std::sqrt(cubes_count);
+	//	size_t col_count = cubes_count / row_count;
+	//	for (int i = 0; i < cubes_count; i++) {
+	//		GObject* cube_obj = scene->loadModel(RESOURCE_DIRECTORY + "/model/basic/cube.obj");
+	//		TransformComponent* transform = cube_obj->getComponent<TransformComponent>();
+	//		transform->translation = { 1.5f * (i % col_count), 0.5f + 1.5f * (i / row_count), 0.0f };
+	//		std::shared_ptr<Material> cube_material = Material::create_complete_default_material();
+	//		cube_obj->getComponent<MeshComponent>()->sub_meshes[0]->material = cube_material;
+	//	}
+	//}
+
+	//{
+	//	size_t spheres_count = 16;
+	//	size_t s_row_count = std::sqrt(spheres_count);
+	//	size_t s_col_count = spheres_count / s_row_count;
+	//	for (int i = 0; i < spheres_count; i++) {
+	//		GObject* sphere_obj = scene->loadModel(RESOURCE_DIRECTORY + "/model/basic/sphere.obj");
+	//		TransformComponent* transform = sphere_obj->getComponent<TransformComponent>();
+	//		transform->translation = { 1.5f * (i % s_col_count), 0.5f + 1.5f * (i / s_row_count), 0.0f };
+	//		std::shared_ptr<Material> sphere_material = Material::create_complete_default_material();
+	//		sphere_obj->getComponent<MeshComponent>()->sub_meshes[0]->material = sphere_material;
+	//	}
+	//}
 
 	{
-		GObject* plane_obj = GObject::create(nullptr, "Ground");
-		MeshComponent& plane_mesh = plane_obj->addComponent<MeshComponent>();
-		std::shared_ptr<Mesh> plane_sub_mesh = Mesh::create_complex_quad_mesh(Vec2(1.0f));
-		std::shared_ptr<Material> plane_material = Material::create_complete_default_material();
-		plane_material->albedo = Vec3(0.25f, 0.25f, 0.25f);
-		plane_material->metallic = 0.0f;
-		plane_material->roughness = 1.0f;
-		plane_material->ao = 0.01;
-		plane_sub_mesh->material = plane_material;
-		plane_mesh.sub_meshes.push_back(plane_sub_mesh);
-		TransformComponent& plane_transform = plane_obj->addComponent<TransformComponent>();
-		plane_transform.scale = Vec3(50.0f, 1.f, 50.0f);
-		scene->addObject(std::shared_ptr<GObject>(plane_obj));
-	}
-
-	{
-		//GObject* nano_suit = scene->loadModel(resource_dir + "/model/nanosuit/nanosuit.obj");
+		//GObject* nano_suit = scene->loadModel(RESOURCE_DIRECTORY + "/model/nanosuit/nanosuit.obj");
 		//nano_suit->getComponent<TransformComponent>()->scale = Vec3(0.3f);
 
-		//GObject* vampire = loadModel(resource_dir + "/model/vampire/dancing_vampire.dae");
+		//GObject* vampire = loadModel(RESOURCE_DIRECTORY + "/model/vampire/dancing_vampire.dae");
 		//vampire->getComponent<TransformComponent>()->scale = Vec3(0.02f);
 		//vampire->getComponent<TransformComponent>()->translation = Vec3(5.0f, 0.0f, 0.0f);
 
-		//GObject* bunny_obj = loadModel(resource_dir + "/model/bunny.obj");
+		//GObject* bunny_obj = loadModel(RESOURCE_DIRECTORY + "/model/bunny.obj");
 		//auto bunny_transform = bunny_obj->getComponent<TransformComponent>();
 		//bunny_transform->scale = Vec3(75.0f);
 	}

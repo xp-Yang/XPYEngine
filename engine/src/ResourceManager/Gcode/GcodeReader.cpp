@@ -9,13 +9,14 @@
 
 bool GCodeLine::has(char axis) const
 {
-    const char* c = m_raw.c_str();
+    const char *c = m_raw.c_str();
     // Skip the whitespaces.
     c = skip_whitespaces(c);
     // Skip the command.
     c = skip_word(c);
     // Up to the end of line or comment.
-    while (!is_end_of_gcode_line(*c)) {
+    while (!is_end_of_gcode_line(*c))
+    {
         // Skip whitespaces.
         c = skip_whitespaces(c);
         if (is_end_of_gcode_line(*c))
@@ -29,26 +30,29 @@ bool GCodeLine::has(char axis) const
     return false;
 }
 
-bool GCodeLine::has_value(char axis, float& value) const
+bool GCodeLine::has_value(char axis, float &value) const
 {
     assert(is_decimal_separator_point());
-    const char* c = m_raw.c_str();
+    const char *c = m_raw.c_str();
     // Skip the whitespaces.
     c = skip_whitespaces(c);
     // Skip the command.
     c = skip_word(c);
     // Up to the end of line or comment.
-    while (!is_end_of_gcode_line(*c)) {
+    while (!is_end_of_gcode_line(*c))
+    {
         // Skip whitespaces.
         c = skip_whitespaces(c);
         if (is_end_of_gcode_line(*c))
             break;
         // Check the name of the axis.
-        if (*c == axis) {
+        if (*c == axis)
+        {
             // Try to parse the numeric value.
-            char* pend = nullptr;
-            double  v = strtod(++c, &pend);
-            if (pend != nullptr && is_end_of_word(*pend)) {
+            char *pend = nullptr;
+            double v = strtod(++c, &pend);
+            if (pend != nullptr && is_end_of_word(*pend))
+            {
                 // The axis value has been parsed correctly.
                 value = float(v);
                 return true;
@@ -60,7 +64,7 @@ bool GCodeLine::has_value(char axis, float& value) const
     return false;
 }
 
-void GCodeLine::set(const GCodeReader& reader, const Axis axis, const float new_value, const int decimal_digits)
+void GCodeLine::set(const GCodeReader &reader, const Axis axis, const float new_value, const int decimal_digits)
 {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(decimal_digits) << new_value;
@@ -70,22 +74,25 @@ void GCodeLine::set(const GCodeReader& reader, const Axis axis, const float new_
         match[1] += int(axis);
     else if (axis == F)
         match[1] = 'F';
-    //BBS£º handle I and J axis
+    // BBSÂ£Âº handle I and J axis
     else if (axis == I)
         match[1] = 'I';
     else if (axis == J)
         match[1] = 'J';
-    else {
+    else
+    {
         assert(axis == E);
         match[1] = 'E';
     }
 
-    if (this->has(axis)) {
+    if (this->has(axis))
+    {
         size_t pos = m_raw.find(match) + 2;
         size_t end = m_raw.find(' ', pos + 1);
         m_raw = m_raw.replace(pos, end - pos, ss.str());
     }
-    else {
+    else
+    {
         size_t pos = m_raw.find(' ');
         if (pos == std::string::npos)
             m_raw += std::string(match) + ss.str();
@@ -96,46 +103,66 @@ void GCodeLine::set(const GCodeReader& reader, const Axis axis, const float new_
     m_mask |= 1 << int(axis);
 }
 
-const char* GCodeReader::parse_line_internal(const char* ptr, const char* end, GCodeLine& gline, std::pair<const char*, const char*>& command)
+const char *GCodeReader::parse_line_internal(const char *ptr, const char *end, GCodeLine &gline, std::pair<const char *, const char *> &command)
 {
     assert(is_decimal_separator_point());
 
     // command and args
-    const char* c = ptr;
+    const char *c = ptr;
     {
         // Skip the whitespaces.
         command.first = skip_whitespaces(c);
         // Skip the command.
         c = command.second = skip_word(command.first);
         // Up to the end of line or comment.
-        while (!is_end_of_gcode_line(*c)) {
+        while (!is_end_of_gcode_line(*c))
+        {
             // Skip whitespaces.
             c = skip_whitespaces(c);
             if (is_end_of_gcode_line(*c))
                 break;
             // Check the name of the axis.
             Axis axis = NUM_AXES_WITH_UNKNOWN;
-            switch (*c) {
-            case 'X': axis = X; break;
-            case 'Y': axis = Y; break;
-            case 'Z': axis = Z; break;
-            case 'F': axis = F; break;
-                //BBS: add I and J axis
-            case 'I': axis = I; break;
-            case 'J': axis = J; break;
-            case 'E': axis = E; break;
-            case 'P': axis = P; break;
+            switch (*c)
+            {
+            case 'X':
+                axis = X;
+                break;
+            case 'Y':
+                axis = Y;
+                break;
+            case 'Z':
+                axis = Z;
+                break;
+            case 'F':
+                axis = F;
+                break;
+                // BBS: add I and J axis
+            case 'I':
+                axis = I;
+                break;
+            case 'J':
+                axis = J;
+                break;
+            case 'E':
+                axis = E;
+                break;
+            case 'P':
+                axis = P;
+                break;
             default:
                 if (*c >= 'A' && *c <= 'Z')
                     // Unknown axis, but we still want to remember that such a axis was seen.
                     axis = UNKNOWN_AXIS;
                 break;
             }
-            if (axis != NUM_AXES_WITH_UNKNOWN) {
+            if (axis != NUM_AXES_WITH_UNKNOWN)
+            {
                 // Try to parse the numeric value.
                 double v;
                 auto [pend, ec] = fast_float::from_chars(++c, end, v);
-                if (pend != c && is_end_of_word(*pend)) {
+                if (pend != c && is_end_of_word(*pend))
+                {
                     // The axis value has been parsed correctly.
                     if (axis != UNKNOWN_AXIS)
                         gline.m_axis[int(axis)] = float(v);
@@ -156,10 +183,12 @@ const char* GCodeReader::parse_line_internal(const char* ptr, const char* end, G
         m_position[E] = 0;
 
     // Skip the rest of the line.
-    for (; !is_end_of_line(*c); ++c);
+    for (; !is_end_of_line(*c); ++c)
+        ;
 
     // Copy the raw string including the comment, without the trailing newlines.
-    if (c > ptr) {
+    if (c > ptr)
+    {
         gline.m_raw.assign(ptr, c);
     }
 
@@ -175,13 +204,15 @@ const char* GCodeReader::parse_line_internal(const char* ptr, const char* end, G
     return c;
 }
 
-void GCodeReader::update_coordinates(GCodeLine& gline, std::pair<const char*, const char*>& command)
+void GCodeReader::update_coordinates(GCodeLine &gline, std::pair<const char *, const char *> &command)
 {
-    if (*command.first == 'G') {
+    if (*command.first == 'G')
+    {
         int cmd_len = int(command.second - command.first);
-        //BBS: add support of G2 and G3
+        // BBS: add support of G2 and G3
         if ((cmd_len == 2 && (command.first[1] == '0' || command.first[1] == '1' || command.first[1] == '2' || command.first[1] == '3')) ||
-            (cmd_len == 3 && command.first[1] == '9' && command.first[2] == '2')) {
+            (cmd_len == 3 && command.first[1] == '9' && command.first[2] == '2'))
+        {
             for (size_t i = 0; i < NUM_AXES; ++i)
                 if (gline.has(Axis(i)))
                     m_position[i] = gline.value(Axis(i));
@@ -189,22 +220,25 @@ void GCodeReader::update_coordinates(GCodeLine& gline, std::pair<const char*, co
     }
 }
 
-template<typename ParseLineCallback, typename LineEndCallback>
-bool GCodeReader::parse_file_raw_internal(const std::string& filename, ParseLineCallback parse_line_callback, LineEndCallback line_end_callback)
+template <typename ParseLineCallback, typename LineEndCallback>
+bool GCodeReader::parse_file_raw_internal(const std::string &filename, ParseLineCallback parse_line_callback, LineEndCallback line_end_callback)
 {
-    struct FilePtr {
-        FilePtr(FILE* f) : f(f) {}
+    struct FilePtr
+    {
+        FilePtr(FILE *f) : f(f) {}
         ~FilePtr() { this->close(); }
-        void close() {
-            if (this->f) {
+        void close()
+        {
+            if (this->f)
+            {
                 ::fclose(this->f);
                 this->f = nullptr;
             }
         }
-        FILE* f = nullptr;
+        FILE *f = nullptr;
     };
 
-    FilePtr in{ /*boost::nowide::fopen*/std::fopen(filename.c_str(), "rb") };
+    FilePtr in{/*boost::nowide::fopen*/ std::fopen(filename.c_str(), "rb")};
 
     // Read the input stream 64kB at a time, extract lines and process them.
     std::vector<char> buffer(65536 * 10, 0);
@@ -212,14 +246,16 @@ bool GCodeReader::parse_file_raw_internal(const std::string& filename, ParseLine
     std::string gcode_line;
     size_t file_pos = 0;
     m_parsing = true;
-    for (;;) {
+    for (;;)
+    {
         size_t cnt_read = ::fread(buffer.data(), 1, buffer.size(), in.f);
         if (::ferror(in.f))
             return false;
         bool eof = cnt_read == 0;
         auto it = buffer.begin();
         auto it_bufend = buffer.begin() + cnt_read;
-        while (it != it_bufend || (eof && !gcode_line.empty())) {
+        while (it != it_bufend || (eof && !gcode_line.empty()))
+        {
             // Find end of line.
             bool eol = false;
             auto it_end = it;
@@ -228,10 +264,12 @@ bool GCodeReader::parse_file_raw_internal(const std::string& filename, ParseLine
                     line_end_callback(file_pos + (it_end - buffer.begin()) + 1);
             // End of line is indicated also if end of file was reached.
             eol |= eof && it_end == it_bufend;
-            if (eol) {
+            if (eol)
+            {
                 if (gcode_line.empty())
                     parse_line_callback(&(*it), &(*it_end));
-                else {
+                else
+                {
                     gcode_line.insert(gcode_line.end(), it, it_end);
                     parse_line_callback(gcode_line.c_str(), gcode_line.c_str() + gcode_line.size());
                     gcode_line.clear();
@@ -246,7 +284,8 @@ bool GCodeReader::parse_file_raw_internal(const std::string& filename, ParseLine
             it = it_end;
             if (it != it_bufend && *it == '\r')
                 ++it;
-            if (it != it_bufend && *it == '\n') {
+            if (it != it_bufend && *it == '\n')
+            {
                 line_end_callback(file_pos + (it - buffer.begin()) + 1);
                 ++it;
             }
@@ -258,12 +297,12 @@ bool GCodeReader::parse_file_raw_internal(const std::string& filename, ParseLine
     return true;
 }
 
-template<typename ParseLineCallback, typename LineEndCallback>
-bool GCodeReader::parse_file_internal(const std::string& filename, ParseLineCallback parse_line_callback, LineEndCallback line_end_callback)
+template <typename ParseLineCallback, typename LineEndCallback>
+bool GCodeReader::parse_file_internal(const std::string &filename, ParseLineCallback parse_line_callback, LineEndCallback line_end_callback)
 {
     GCodeLine gline;
-    return this->parse_file_raw_internal(filename,
-        [this, &gline, parse_line_callback](const char* begin, const char* end) {
+    return this->parse_file_raw_internal(filename, [this, &gline, parse_line_callback](const char *begin, const char *end)
+                                         {
             gline.reset();
 
             const char* begin_new = begin;
@@ -271,29 +310,27 @@ bool GCodeReader::parse_file_internal(const std::string& filename, ParseLineCall
             if (std::toupper(*begin_new) == 'N')
                 begin_new = skip_word(begin_new);
             begin_new = skip_whitespaces(begin_new);
-            this->parse_line(begin_new, end, gline, parse_line_callback);
-        },
-        line_end_callback);
+            this->parse_line(begin_new, end, gline, parse_line_callback); }, line_end_callback);
 }
 
-bool GCodeReader::parse_file(const std::string& file, callback_t callback)
+bool GCodeReader::parse_file(const std::string &file, callback_t callback)
 {
     auto ret = this->parse_file_internal(file, callback, [](size_t) {});
 
     return ret;
 }
 
-bool GCodeReader::parse_file(const std::string& file, callback_t callback, std::vector<size_t>& lines_ends)
+bool GCodeReader::parse_file(const std::string &file, callback_t callback, std::vector<size_t> &lines_ends)
 {
     lines_ends.clear();
-    auto ret = this->parse_file_internal(file, callback, [&lines_ends](size_t file_pos) { lines_ends.emplace_back(file_pos); });
+    auto ret = this->parse_file_internal(file, callback, [&lines_ends](size_t file_pos)
+                                         { lines_ends.emplace_back(file_pos); });
 
     return ret;
 }
 
-bool GCodeReader::parse_file_raw(const std::string& filename, raw_line_callback_t line_callback)
+bool GCodeReader::parse_file_raw(const std::string &filename, raw_line_callback_t line_callback)
 {
-    return this->parse_file_raw_internal(filename,
-        [this, line_callback](const char* begin, const char* end) { line_callback(*this, begin, end); },
-        [](size_t) {});
+    return this->parse_file_raw_internal(filename, [this, line_callback](const char *begin, const char *end)
+                                         { line_callback(*this, begin, end); }, [](size_t) {});
 }

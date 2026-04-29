@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(WaveEngine VERSION 0.9.0)
+project(XPYEngine VERSION 0.9.0)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
+#导致assimp 编译失败
+#set(CMAKE_CXX_STANDARD 17)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ---- Include guards ----
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)

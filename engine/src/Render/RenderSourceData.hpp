@@ -26,11 +26,11 @@ struct RenderMaterialData {
     GL_RESOURCE_HANLE metallic_map{ 0 };
     GL_RESOURCE_HANLE roughness_map{ 0 };
     GL_RESOURCE_HANLE ao_map{ 0 };
-    // temp
-    Vec3 albedo{ Vec3(1.0f) };
-    float metallic{ 1.0f };
-    float roughness{ 0.5f };
-    float ao{ 0.01f };
+    //// temp
+    //Vec3 albedo{ Vec3(1.0f) };
+    //float metallic{ 1.0f };
+    //float roughness{ 0.5f };
+    //float ao{ 0.01f };
 
     GL_RESOURCE_HANLE diffuse_map{ 0 };
     GL_RESOURCE_HANLE specular_map{ 0 };

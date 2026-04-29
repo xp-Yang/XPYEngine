@@ -20,6 +20,13 @@ void LightManager::addPointLight()
 	m_lights.push_back(point_light);
 }
 
+void LightManager::removeLastPointLight()
+{
+	if (!std::dynamic_pointer_cast<DirectionalLight>(m_lights[m_lights.size() - 1])) {
+		m_lights.pop_back();
+	}
+}
+
 void LightManager::addDirectionalLight()
 {
 	std::shared_ptr<DirectionalLight> dir_light = std::make_shared<DirectionalLight>();

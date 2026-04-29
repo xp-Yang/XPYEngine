@@ -39,14 +39,12 @@ void DeferredRenderPath::render()
 {
     const auto& render_params = ref_render_system->renderParams();
 
-    auto combine_pass = static_cast<CombinePass*>(m_render_passes[RenderPass::Type::Combined].get());
-
     //m_z_pre_pass->draw();
 
     m_render_passes[RenderPass::Type::Picking]->draw();
 
     std::vector<RenderPass*> combine_input_passes;
-    RenderPass* main_light_pass;
+    RenderPass* main_light_pass = nullptr;
 
     if (render_params.shadow_params.enable) {
         m_render_passes[RenderPass::Type::Shadow]->draw();
@@ -103,6 +101,7 @@ void DeferredRenderPath::render()
     m_render_passes[RenderPass::Type::Outline]->setInputPasses({ main_light_pass }); // draw above the main light pass framebuffer
     m_render_passes[RenderPass::Type::Outline]->draw();
 
+    auto combine_pass = static_cast<CombinePass*>(m_render_passes[RenderPass::Type::Combined].get());
     combine_pass->setInputPasses(combine_input_passes);
     combine_pass->enableFXAA(render_params.post_processing_params.fxaa);
     combine_pass->draw();

@@ -137,9 +137,7 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 
 	unsigned char data[4] = { 0,0,0,0 };
 	unsigned int frame_buffer_id = g_context.render_system->getPickingFBO();
-	glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer_id);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	RenderSourceData::rhi->readPixelRGBA(frame_buffer_id, x, y, data);
 	int picked_id = (int)data[0] + (((int)data[1]) << 8) + (((int)data[2]) << 16);
 	const auto& scene_objects = g_context.scene->getObjects();
 	auto it = std::find_if(scene_objects.begin(), scene_objects.end(), [picked_id](const std::shared_ptr<GObject>& obj) {

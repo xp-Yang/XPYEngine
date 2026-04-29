@@ -9,15 +9,10 @@ in VS_OUT {
     vec2 fragUV;
 } fs_in;
 
-// TODO should be map
-// struct Material {
-// };
-// uniform Material material;
-// material parameters
-uniform vec3 albedo;
-uniform float metallic;
-uniform float roughness;
-uniform float ao;
+uniform sampler2D albedo_map;
+uniform sampler2D metallic_map;
+uniform sampler2D roughness_map;
+uniform sampler2D ao_map;
 
 uniform vec3 cameraPos;
 
@@ -27,6 +22,11 @@ void main()
 {		
     vec3 N = normalize(fs_in.fragWorldNormal);
     vec3 V = normalize(cameraPos - fs_in.fragWorldPos);
+
+    vec3 albedo = texture(albedo_map, fs_in.fragUV).rgb;
+    float metallic = texture(metallic_map, fs_in.fragUV).r;
+    float roughness = texture(roughness_map, fs_in.fragUV).r;
+    float ao = texture(ao_map, fs_in.fragUV).r;
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    

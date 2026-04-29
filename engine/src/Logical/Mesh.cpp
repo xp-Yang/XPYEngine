@@ -2,16 +2,13 @@
 
 #include "Base/Logger/Logger.hpp"
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<int>& indices)
-    : vertices(vertices)
-    , indices(indices)
+Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<int> &indices)
+    : vertices(vertices), indices(indices)
 {
 }
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<int>& indices, std::shared_ptr<Material> material_)
-    : vertices(vertices)
-    , indices(indices)
-    , material(material_)
+Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<int> &indices, std::shared_ptr<Material> material_)
+    : vertices(vertices), indices(indices), material(material_)
 {
 }
 
@@ -26,39 +23,40 @@ void Mesh::reset()
     local_transform = Mat4(1.0f);
 }
 
-std::shared_ptr<Mesh> Mesh::create_cube_mesh() {
-    //float cubeVertices[] =
+std::shared_ptr<Mesh> Mesh::create_cube_mesh()
+{
+    // float cubeVertices[] =
     //{
-    //    // pos                  // normal              // uv           
-    //    -0.5f,  0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    0.0f, 1.0f,    // 0  Ç°Ãæ ×óÉÏ (´ÓÇ°Ãæ¿´)
-    //    -0.5f, -0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    0.0f, 0.0f,    // 1  Ç°Ãæ ×óÏÂ
-    //     0.5f, -0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    1.0f, 0.0f,    // 2  Ç°Ãæ ÓÒÏÂ
-    //     0.5f,  0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    1.0f, 1.0f,    // 3  Ç°Ãæ ÓÒÉÏ
+    //     // pos                  // normal              // uv
+    //     -0.5f,  0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    0.0f, 1.0f,    // 0  å‰é¢ å·¦ä¸Š (ä»å‰é¢çœ‹)
+    //     -0.5f, -0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    0.0f, 0.0f,    // 1  å‰é¢ å·¦ä¸‹
+    //      0.5f, -0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    1.0f, 0.0f,    // 2  å‰é¢ å³ä¸‹
+    //      0.5f,  0.5f,  0.5f,    0.0f,  0.0f,  1.0f,    1.0f, 1.0f,    // 3  å‰é¢ å³ä¸Š
 
-    //     0.5f,  0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    0.0f, 1.0f,    // 4  ºóÃæ ×óÉÏ (´ÓºóÃæ¿´)
-    //     0.5f, -0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    0.0f, 0.0f,    // 5  ºóÃæ ×óÏÂ
-    //    -0.5f, -0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    1.0f, 0.0f,    // 6  ºóÃæ ÓÒÏÂ
-    //    -0.5f,  0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    1.0f, 1.0f,    // 7  ºóÃæ ÓÒÉÏ
+    //     0.5f,  0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    0.0f, 1.0f,    // 4  åé¢ å·¦ä¸Š (ä»åé¢çœ‹)
+    //     0.5f, -0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    0.0f, 0.0f,    // 5  åé¢ å·¦ä¸‹
+    //    -0.5f, -0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    1.0f, 0.0f,    // 6  åé¢ å³ä¸‹
+    //    -0.5f,  0.5f, -0.5f,    0.0f,  0.0f, -1.0f,    1.0f, 1.0f,    // 7  åé¢ å³ä¸Š
 
-    //    -0.5f,  0.5f, -0.5f,   -1.0f,  0.0f,  0.0f,    0.0f, 1.0f,    // 8  ×óÃæ ×óÉÏ (´Ó×óÃæ¿´)
-    //    -0.5f, -0.5f, -0.5f,   -1.0f,  0.0f,  0.0f,    0.0f, 0.0f,    // 9  ×óÃæ ×óÏÂ
-    //    -0.5f, -0.5f,  0.5f,   -1.0f,  0.0f,  0.0f,    1.0f, 0.0f,    // 10 ×óÃæ ÓÒÏÂ
-    //    -0.5f,  0.5f,  0.5f,   -1.0f,  0.0f,  0.0f,    1.0f, 1.0f,    // 11 ×óÃæ ÓÒÉÏ
+    //    -0.5f,  0.5f, -0.5f,   -1.0f,  0.0f,  0.0f,    0.0f, 1.0f,    // 8  å·¦é¢ å·¦ä¸Š (ä»å·¦é¢çœ‹)
+    //    -0.5f, -0.5f, -0.5f,   -1.0f,  0.0f,  0.0f,    0.0f, 0.0f,    // 9  å·¦é¢ å·¦ä¸‹
+    //    -0.5f, -0.5f,  0.5f,   -1.0f,  0.0f,  0.0f,    1.0f, 0.0f,    // 10 å·¦é¢ å³ä¸‹
+    //    -0.5f,  0.5f,  0.5f,   -1.0f,  0.0f,  0.0f,    1.0f, 1.0f,    // 11 å·¦é¢ å³ä¸Š
 
-    //     0.5f,  0.5f,  0.5f,    1.0f,  0.0f,  0.0f,    0.0f, 1.0f,    // 12 ÓÒÃæ ×óÉÏ (´ÓÓÒÃæ¿´)
-    //     0.5f, -0.5f,  0.5f,    1.0f,  0.0f,  0.0f,    0.0f, 0.0f,    // 13 ÓÒÃæ ×óÏÂ
-    //     0.5f, -0.5f, -0.5f,    1.0f,  0.0f,  0.0f,    1.0f, 0.0f,    // 14 ÓÒÃæ ÓÒÏÂ
-    //     0.5f,  0.5f, -0.5f,    1.0f,  0.0f,  0.0f,    1.0f, 1.0f,    // 15 ÓÒÃæ ÓÒÉÏ
+    //     0.5f,  0.5f,  0.5f,    1.0f,  0.0f,  0.0f,    0.0f, 1.0f,    // 12 å³é¢ å·¦ä¸Š (ä»å³é¢çœ‹)
+    //     0.5f, -0.5f,  0.5f,    1.0f,  0.0f,  0.0f,    0.0f, 0.0f,    // 13 å³é¢ å·¦ä¸‹
+    //     0.5f, -0.5f, -0.5f,    1.0f,  0.0f,  0.0f,    1.0f, 0.0f,    // 14 å³é¢ å³ä¸‹
+    //     0.5f,  0.5f, -0.5f,    1.0f,  0.0f,  0.0f,    1.0f, 1.0f,    // 15 å³é¢ å³ä¸Š
 
-    //    -0.5f, -0.5f,  0.5f,    0.0f, -1.0f,  0.0f,    0.0f, 1.0f,    // 16 ÏÂÃæ ×óÉÏ (´ÓÏÂÃæ¿´)
-    //    -0.5f, -0.5f, -0.5f,    0.0f, -1.0f,  0.0f,    0.0f, 0.0f,    // 17 ÏÂÃæ ×óÏÂ
-    //     0.5f, -0.5f, -0.5f,    0.0f, -1.0f,  0.0f,    1.0f, 0.0f,    // 18 ÏÂÃæ ÓÒÏÂ
-    //     0.5f, -0.5f,  0.5f,    0.0f, -1.0f,  0.0f,    1.0f, 1.0f,    // 19 ÏÂÃæ ÓÒÉÏ
+    //    -0.5f, -0.5f,  0.5f,    0.0f, -1.0f,  0.0f,    0.0f, 1.0f,    // 16 ä¸‹é¢ å·¦ä¸Š (ä»ä¸‹é¢çœ‹)
+    //    -0.5f, -0.5f, -0.5f,    0.0f, -1.0f,  0.0f,    0.0f, 0.0f,    // 17 ä¸‹é¢ å·¦ä¸‹
+    //     0.5f, -0.5f, -0.5f,    0.0f, -1.0f,  0.0f,    1.0f, 0.0f,    // 18 ä¸‹é¢ å³ä¸‹
+    //     0.5f, -0.5f,  0.5f,    0.0f, -1.0f,  0.0f,    1.0f, 1.0f,    // 19 ä¸‹é¢ å³ä¸Š
 
-    //    -0.5f,  0.5f, -0.5f,    0.0f,  1.0f,  0.0f,    0.0f, 1.0f,    // 20 ÉÏÃæ ×óÉÏ (´ÓÉÏÃæ¿´)
-    //    -0.5f,  0.5f,  0.5f,    0.0f,  1.0f,  0.0f,    0.0f, 0.0f,    // 21 ÉÏÃæ ×óÏÂ
-    //     0.5f,  0.5f,  0.5f,    0.0f,  1.0f,  0.0f,    1.0f, 0.0f,    // 22 ÉÏÃæ ÓÒÏÂ
-    //     0.5f,  0.5f, -0.5f,    0.0f,  1.0f,  0.0f,    1.0f, 1.0f,    // 23 ÉÏÃæ ÓÒÉÏ
+    //    -0.5f,  0.5f, -0.5f,    0.0f,  1.0f,  0.0f,    0.0f, 1.0f,    // 20 ä¸Šé¢ å·¦ä¸Š (ä»ä¸Šé¢çœ‹)
+    //    -0.5f,  0.5f,  0.5f,    0.0f,  1.0f,  0.0f,    0.0f, 0.0f,    // 21 ä¸Šé¢ å·¦ä¸‹
+    //     0.5f,  0.5f,  0.5f,    0.0f,  1.0f,  0.0f,    1.0f, 0.0f,    // 22 ä¸Šé¢ å³ä¸‹
+    //     0.5f,  0.5f, -0.5f,    0.0f,  1.0f,  0.0f,    1.0f, 1.0f,    // 23 ä¸Šé¢ å³ä¸Š
     //};
 
     std::array<Vec3, 8> vertex_positions;
@@ -76,14 +74,32 @@ std::shared_ptr<Mesh> Mesh::create_cube_mesh() {
 std::shared_ptr<Mesh> Mesh::create_cuboid_mesh(const std::array<Vec3, 8> vertex_positions)
 {
     std::vector<Vertex> vertices(24);
-    
+
     std::array<int, 24> vertex_position_indices = {
-        0, 1, 2, 3,//Ç°Ãæ
-        4, 5, 6, 7,//ºóÃæ
-        7, 6, 1, 0,//×óÃæ
-        3, 2, 5, 4,//ÓÒÃæ
-        1, 6, 5, 2,//ÏÂÃæ
-        7, 0, 3, 4,//ÉÏÃæ
+        0,
+        1,
+        2,
+        3, // å‰é¢
+        4,
+        5,
+        6,
+        7, // åé¢
+        7,
+        6,
+        1,
+        0, // å·¦é¢
+        3,
+        2,
+        5,
+        4, // å³é¢
+        1,
+        6,
+        5,
+        2, // ä¸‹é¢
+        7,
+        0,
+        3,
+        4, // ä¸Šé¢
     };
 
     Vec3 front_normal = Math::Normalize(vertex_positions[0] - vertex_positions[7]);
@@ -101,27 +117,59 @@ std::shared_ptr<Mesh> Mesh::create_cuboid_mesh(const std::array<Vec3, 8> vertex_
         top_normal,
     };
 
-    for (int i = 0; i < vertices.size(); i += 4) {
-        vertices[i + 0] = { vertex_positions[vertex_position_indices[i + 0]], face_normals[i / 4], {0.0f, 1.0f} };
-        vertices[i + 1] = { vertex_positions[vertex_position_indices[i + 1]], face_normals[i / 4], {0.0f, 0.0f} };
-        vertices[i + 2] = { vertex_positions[vertex_position_indices[i + 2]], face_normals[i / 4], {1.0f, 0.0f} };
-        vertices[i + 3] = { vertex_positions[vertex_position_indices[i + 3]], face_normals[i / 4], {1.0f, 1.0f} };
+    for (int i = 0; i < vertices.size(); i += 4)
+    {
+        vertices[i + 0] = {vertex_positions[vertex_position_indices[i + 0]], face_normals[i / 4], {0.0f, 1.0f}};
+        vertices[i + 1] = {vertex_positions[vertex_position_indices[i + 1]], face_normals[i / 4], {0.0f, 0.0f}};
+        vertices[i + 2] = {vertex_positions[vertex_position_indices[i + 2]], face_normals[i / 4], {1.0f, 0.0f}};
+        vertices[i + 3] = {vertex_positions[vertex_position_indices[i + 3]], face_normals[i / 4], {1.0f, 1.0f}};
     }
 
     std::vector<int> indices =
-    {
-        0 , 1 , 2 , 0 , 2 , 3 , //Ç°
-        4 , 5 , 6 , 4 , 6 , 7 , //ºó
-        8 , 9 , 10, 8 , 10, 11, //×ó
-        12, 13, 14, 12, 14, 15, //ÓÒ
-        16, 17, 18, 16, 18, 19, //ÏÂ
-        20, 21, 22, 20, 22, 23, //ÉÏ
-    };
+        {
+            0,
+            1,
+            2,
+            0,
+            2,
+            3, // å‰
+            4,
+            5,
+            6,
+            4,
+            6,
+            7, // å
+            8,
+            9,
+            10,
+            8,
+            10,
+            11, // å·¦
+            12,
+            13,
+            14,
+            12,
+            14,
+            15, // å³
+            16,
+            17,
+            18,
+            16,
+            18,
+            19, // ä¸‹
+            20,
+            21,
+            22,
+            20,
+            22,
+            23, // ä¸Š
+        };
 
     return std::make_shared<Mesh>(vertices, indices);
 }
 
-static void create_tetrahedron(std::vector<Triangle>& triangles, Vec3& center) {
+static void create_tetrahedron(std::vector<Triangle> &triangles, Vec3 &center)
+{
     float side_length = 1.0f;
     Vec3 a = Vec3(0, 0, 0);
     Vec3 b = Vec3(side_length, 0, 0);
@@ -137,14 +185,15 @@ static void create_tetrahedron(std::vector<Triangle>& triangles, Vec3& center) {
     center -= center;
 
     triangles = {
-        Triangle(c,b,a),
-        Triangle(a,b,d),
-        Triangle(b,c,d),
-        Triangle(c,a,d),
+        Triangle(c, b, a),
+        Triangle(a, b, d),
+        Triangle(b, c, d),
+        Triangle(c, a, d),
     };
 }
 
-static std::vector<Triangle> subdivide(Triangle triangle) {
+static std::vector<Triangle> subdivide(Triangle triangle)
+{
     Vec3 new_vertex0 = (triangle.vertices[0].position + triangle.vertices[1].position) / 2.0f;
     Vec3 new_vertex1 = (triangle.vertices[1].position + triangle.vertices[2].position) / 2.0f;
     Vec3 new_vertex2 = (triangle.vertices[2].position + triangle.vertices[0].position) / 2.0f;
@@ -154,12 +203,14 @@ static std::vector<Triangle> subdivide(Triangle triangle) {
     Triangle new_triangle2 = Triangle(new_vertex0, new_vertex1, new_vertex2);
     Triangle new_triangle3 = Triangle(new_vertex2, new_vertex1, triangle.vertices[2].position);
 
-    return { new_triangle0, new_triangle1, new_triangle2, new_triangle3 };
+    return {new_triangle0, new_triangle1, new_triangle2, new_triangle3};
 }
 
-static std::vector<Triangle> recursive_subdivide(const Triangle& triangle, int recursive_depth) {
-    if (recursive_depth == 0) {
-        return { triangle };
+static std::vector<Triangle> recursive_subdivide(const Triangle &triangle, int recursive_depth)
+{
+    if (recursive_depth == 0)
+    {
+        return {triangle};
     }
 
     Vec3 new_vertex0 = (triangle.vertices[0].position + triangle.vertices[1].position) / 2.0f;
@@ -173,10 +224,10 @@ static std::vector<Triangle> recursive_subdivide(const Triangle& triangle, int r
 
     std::vector<Triangle> ret;
     recursive_depth--;
-    const std::vector<Triangle>& ret1 = recursive_subdivide(new_triangle0, recursive_depth);
-    const std::vector<Triangle>& ret2 = recursive_subdivide(new_triangle1, recursive_depth);
-    const std::vector<Triangle>& ret3 = recursive_subdivide(new_triangle2, recursive_depth);
-    const std::vector<Triangle>& ret4 = recursive_subdivide(new_triangle3, recursive_depth);
+    const std::vector<Triangle> &ret1 = recursive_subdivide(new_triangle0, recursive_depth);
+    const std::vector<Triangle> &ret2 = recursive_subdivide(new_triangle1, recursive_depth);
+    const std::vector<Triangle> &ret3 = recursive_subdivide(new_triangle2, recursive_depth);
+    const std::vector<Triangle> &ret4 = recursive_subdivide(new_triangle3, recursive_depth);
     ret.insert(ret.end(), ret1.begin(), ret1.end());
     ret.insert(ret.end(), ret2.begin(), ret2.end());
     ret.insert(ret.end(), ret3.begin(), ret3.end());
@@ -185,40 +236,46 @@ static std::vector<Triangle> recursive_subdivide(const Triangle& triangle, int r
     return ret;
 }
 
-std::shared_ptr<Mesh> Mesh::create_icosphere_mesh(float radius, int regression_depth) {
+std::shared_ptr<Mesh> Mesh::create_icosphere_mesh(float radius, int regression_depth)
+{
     std::vector<Triangle> m_triangles;
     Vec3 m_center;
 
-    // 0. ´´½¨ÕıËÄÃæÌå
+    // 0. åˆ›å»ºæ­£å››é¢ä½“
     create_tetrahedron(m_triangles, m_center);
 
-    // 1. ¶ÔÃ¿¸öÃæÏ¸·Ö
-    for (int i = 0; i < regression_depth; i++) {
+    // 1. å¯¹æ¯ä¸ªé¢ç»†åˆ†
+    for (int i = 0; i < regression_depth; i++)
+    {
         std::vector<Triangle> new_triangles;
-        for (int j = 0; j < m_triangles.size(); j++) {
+        for (int j = 0; j < m_triangles.size(); j++)
+        {
             auto divided_triangles = subdivide(m_triangles[j]);
             new_triangles.insert(new_triangles.end(), divided_triangles.begin(), divided_triangles.end());
         }
         m_triangles = new_triangles;
     }
 
-    //std::vector<Triangle> new_triangles;
-    //for (int i = 0; i < m_triangles.size(); i++) {
-    //    const auto& ret = recursive_subdivide(m_triangles[i], regression_depth);
-    //    new_triangles.insert(new_triangles.end(), ret.begin(), ret.end());
-    //}
-    //m_triangles = new_triangles;
+    // std::vector<Triangle> new_triangles;
+    // for (int i = 0; i < m_triangles.size(); i++) {
+    //     const auto& ret = recursive_subdivide(m_triangles[i], regression_depth);
+    //     new_triangles.insert(new_triangles.end(), ret.begin(), ret.end());
+    // }
+    // m_triangles = new_triangles;
 
-    // 2. ¶ÔËùÓĞÏ¸·Ö¶¥µãµ½ÖĞĞÄµÄ¾àÀë×ö¹éÒ»»¯
+    // 2. å¯¹æ‰€æœ‰ç»†åˆ†é¡¶ç‚¹åˆ°ä¸­å¿ƒçš„è·ç¦»åšå½’ä¸€åŒ–
     std::vector<Vertex> all_vertices;
-    for (auto& triangle : m_triangles) {
-        for (auto& vertex : triangle.vertices) {
+    for (auto &triangle : m_triangles)
+    {
+        for (auto &vertex : triangle.vertices)
+        {
             vertex.position = m_center + radius * Math::Normalize(vertex.position - m_center);
         }
-        for (auto& vertex : triangle.vertices) {
-            //Vec3 a = triangle.vertices[0] - triangle.vertices[1];
-            //Vec3 b = triangle.vertices[0] - triangle.vertices[2];
-            //Vec3 normal = Normalize(Cross(a, b));
+        for (auto &vertex : triangle.vertices)
+        {
+            // Vec3 a = triangle.vertices[0] - triangle.vertices[1];
+            // Vec3 b = triangle.vertices[0] - triangle.vertices[2];
+            // Vec3 normal = Normalize(Cross(a, b));
             Vec3 normal = Math::Normalize(vertex.position - m_center);
 
             Vertex v;
@@ -231,16 +288,17 @@ std::shared_ptr<Mesh> Mesh::create_icosphere_mesh(float radius, int regression_d
     // TODO optimize index method
     std::vector<int> indices;
     indices.reserve(all_vertices.size() + 1);
-    for (int i = 0; i < all_vertices.size(); i++) {
+    for (int i = 0; i < all_vertices.size(); i++)
+    {
         indices.push_back(i);
     }
 
-    //Logger::info("Mesh::create_icosphere_mesh({}), time:{}", regression_depth, time);
+    // Logger::info("Mesh::create_icosphere_mesh({}), time:{}", regression_depth, time);
 
     return std::make_shared<Mesh>(all_vertices, indices);
 }
 
-std::shared_ptr<Mesh> Mesh::create_quad_mesh(const Point3& origin, const Vec3& positive_dir_u, const Vec3& positive_dir_v)
+std::shared_ptr<Mesh> Mesh::create_quad_mesh(const Point3 &origin, const Vec3 &positive_dir_u, const Vec3 &positive_dir_v)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -250,33 +308,39 @@ std::shared_ptr<Mesh> Mesh::create_quad_mesh(const Point3& origin, const Vec3& p
     Point3 right_p = origin_p + positive_dir_u;
     Point3 upper_right_p = origin_p + positive_dir_u + positive_dir_v;
     Point3 upper_p = origin_p + positive_dir_v;
-    Point3 points[4] = { origin_p, right_p, upper_right_p, upper_p };
+    Point3 points[4] = {origin_p, right_p, upper_right_p, upper_p};
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         Vertex vertex;
 
         vertex.position = points[i];
         vertex.normal = normal;
         float u = (i == 0 || i == 3) ? 0.0f : 1.0f;
         float v = (i == 0 || i == 1) ? 0.0f : 1.0f;
-        vertex.texture_uv = { u, v };
+        vertex.texture_uv = {u, v};
 
         vertices.push_back(vertex);
     }
 
     int cubeIndices[] =
+        {
+            0,
+            1,
+            2,
+            0,
+            2,
+            3,
+        };
+    for (int i = 0; i < sizeof(cubeIndices) / sizeof(cubeIndices[0]); i++)
     {
-        0, 1, 2,
-        0, 2, 3,
-    };
-    for (int i = 0; i < sizeof(cubeIndices) / sizeof(cubeIndices[0]); i++) {
         indices.push_back(cubeIndices[i]);
     }
 
     return std::make_shared<Mesh>(vertices, indices);
 }
 
-std::shared_ptr<Mesh> Mesh::create_complex_quad_mesh(const Vec2& size)
+std::shared_ptr<Mesh> Mesh::create_complex_quad_mesh(const Vec2 &size)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -290,14 +354,16 @@ std::shared_ptr<Mesh> Mesh::create_complex_quad_mesh(const Vec2& size)
     size_t sub_quad_num_v = (size_t)(size.y);
     Vec3 sub_u = u / (float)sub_quad_num_u;
     Vec3 sub_v = v / (float)sub_quad_num_v;
-    for (int i = 0; i < sub_quad_num_v; i++) {
+    for (int i = 0; i < sub_quad_num_v; i++)
+    {
         for (int j = 0; j < sub_quad_num_u; j++)
         {
             Point3 sub_start_point = start_point + (float)j * sub_u + (float)i * sub_v;
             Point3 sub_end_point = sub_start_point + sub_u + sub_v;
             std::shared_ptr<Mesh> sub_mesh_data = create_quad_mesh(sub_start_point, sub_u, sub_v);
             vertices.insert(vertices.end(), sub_mesh_data->vertices.begin(), sub_mesh_data->vertices.end());
-            for (auto& index : sub_mesh_data->indices) {
+            for (auto &index : sub_mesh_data->indices)
+            {
                 index += 4 * (j + i * sub_quad_num_u);
             }
             indices.insert(indices.end(), sub_mesh_data->indices.begin(), sub_mesh_data->indices.end());

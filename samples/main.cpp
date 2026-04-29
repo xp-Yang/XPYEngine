@@ -5,8 +5,7 @@ int main()
 {
     auto& engine = Engine::get();
     engine.init();
-    Demo* cubetest = Demo::createDemo("cubetest");
-    cubetest->init();
+    Demo::createDemo("cubetest")->init();
     engine.run();
     engine.shutdown();
     return 0;

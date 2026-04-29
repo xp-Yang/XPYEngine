@@ -10,15 +10,16 @@
 #include <vector>
 
 class GObject;
-struct Component {
+struct Component
+{
     Component() = delete;
-    Component(GObject* parent) : parent_object(parent) {};
+    Component(GObject *parent) : parent_object(parent) {};
     virtual ~Component() {}
 
-    //virtual void tick(float delta_time) = 0;
+    // virtual void tick(float delta_time) = 0;
 
 public:
-    GObject* parent_object; // shared_ptr 导致循环引用
+    GObject *parent_object; // shared_ptr 瀵艰嚧寰幆寮曠敤
 };
 
 #endif // !Component_hpp

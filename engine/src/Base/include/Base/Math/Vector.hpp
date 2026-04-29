@@ -19,6 +19,14 @@ using Color4 = glm::vec4;
 
 namespace Math {
 
+namespace Constant {
+    inline constexpr double PI = 3.1415926535897932385;
+    inline constexpr double epsilon = 1e-6;
+}
+
+inline float rad2deg(float rad) { return rad * 180.0f / Constant::PI; }
+inline float deg2rad(float deg) { return deg * Constant::PI / 180.0f; }
+
 template<typename Vec>
 float Dot(const Vec& vec1, const Vec& vec2) {
     return glm::dot(vec1, vec2);

@@ -1,0 +1,66 @@
+{
+  "objects": [
+    {
+      "file_type": 1,
+      "filepath": "model/basic/cube.obj",
+      "materials": [
+        {
+          "alpha": 1,
+          "textures": {
+            "albedo": "images/pure_white_map.png",
+            "ao": "images/pure_white_map.png",
+            "diffuse": "images/pure_white_map.png",
+            "height": "images/pure_white_map.png",
+            "metallic": "images/pure_white_map.png",
+            "normal": "images/pure_white_map.png",
+            "roughness": "images/pure_white_map.png",
+            "specular": "images/pure_white_map.png"
+          }
+        }
+      ],
+      "name": "cube",
+      "sub_meshes": [
+        {
+          "index": 0,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": -0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      ],
+      "transform": {
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 30,
+          "y": 0.0010000000474974513,
+          "z": 30
+        },
+        "translation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "visible": true
+    }
+  ],
+  "project_name": "XPYProject",
+  "schema_version": 1
+}

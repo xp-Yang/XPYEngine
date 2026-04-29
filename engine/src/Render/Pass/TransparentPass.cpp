@@ -1,6 +1,4 @@
 #include "TransparentPass.hpp"
-// TODO remove
-#include <glad/glad.h>
 
 TransparentPass::TransparentPass()
 {
@@ -16,7 +14,7 @@ void TransparentPass::draw()
 {
     m_input_passes[0]->getFrameBuffer()->bind();
 
-    glDepthMask(GL_FALSE);
+    m_rhi->setDepthMask(false);
 
     static auto shader_ = Shader{ std::string(RESOURCE_DIR) + "/shader/mesh.vs", std::string(RESOURCE_DIR) + "/shader/transparent.fs"};
     static RenderShaderObject* shader = new RenderShaderObject(shader_);
@@ -53,5 +51,5 @@ void TransparentPass::draw()
     }
     shader->stop_using();
 
-    glDepthMask(GL_TRUE);
+    m_rhi->setDepthMask(true);
 }

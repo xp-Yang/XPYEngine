@@ -12,23 +12,60 @@ namespace Serialization {
 
 class Serializer {
 public:
-	template<class T>
-	static T& read(const Json& json, T* obj)
+	static void dump_pretty_json(std::ostream& os, const json11::Json& j, int indent = 0)
 	{
-		Instance refl_obj = obj;
-		read_internal(json, refl_obj);
-		return *static_cast<T*>(refl_obj.getInstance());
+		const std::string pad(indent, ' ');
+		if (j.is_object()) {
+			os << "{\n";
+			const auto& obj = j.object_items();
+			size_t i = 0;
+			for (const auto& kv : obj) {
+				os << std::string(indent + 2, ' ')
+					<< json11::Json(kv.first).dump()
+					<< ": ";
+				dump_pretty_json(os, kv.second, indent + 2);
+				if (++i < obj.size()) os << ",";
+				os << "\n";
+			}
+			os << pad << "}";
+			return;
+		}
+		if (j.is_array()) {
+			const auto& arr = j.array_items();
+			if (arr.empty()) {
+				os << "[]";
+				return;
+			}
+			os << "[\n";
+			for (size_t i = 0; i < arr.size(); i++) {
+				os << std::string(indent + 2, ' ');
+				dump_pretty_json(os, arr[i], indent + 2);
+				if (i + 1 < arr.size()) os << ",";
+				os << "\n";
+			}
+			os << pad << "]";
+			return;
+		}
+		os << j.dump();
 	}
 
 	template<class T>
-	static Json write(const T* obj) {
+	static T& read(const Json& json, T& obj)
+	{
+		Instance refl_obj = obj;
+		read_internal(json, refl_obj);
+		return refl_obj.getValue<T&>();
+	}
+
+	template<class T>
+	static Json write(const T& obj) {
 		Instance refl_obj = obj;
 		Json ret = write_internal(refl_obj);
 		return ret;
 	}
 
 	template<class T>
-	static void loadFromJsonFile(const std::string& filepath, T* obj) {
+	static void loadFromJsonFile(const std::string& filepath, T& obj) {
 		std::ifstream fin(filepath);
 		if (!fin) {
 			assert(false);
@@ -56,7 +93,8 @@ public:
 			return;
 		}
 		Json j = write(obj);
-		fout << j.dump();
+		dump_pretty_json(fout, json11::Json(j), 0);
+		fout << "\n";
 		fout.flush();
 	}
 
@@ -67,137 +105,100 @@ public:
 	//}
 
 protected:
-	static void read_internal(const Json& json, Instance& v) {
-		//MetaType meta_type = v.metaType();
-		//for (int i = 0; i < meta_type.propertyCount(); i++) {
-		//	auto& prop = meta_type.property(i);
-		//	std::string type_name = prop.type_name;
-		//	std::string name = prop.name;
-		//	void* filed_value_ptr = (v.getPropertyValue(i));
-		//	if (type_name == traits::typeName<char>()) {
-		//		assert(json.is_number());
-		//		*static_cast<char*>(filed_value_ptr) = json.number_value();
-		//	}
-		//	else if (type_name == traits::typeName<int>()) {
-		//		assert(json.is_number());
-		//		*static_cast<int*>(filed_value_ptr) = static_cast<int>(json.number_value());
-		//	}
-		//	else if (type_name == traits::typeName<unsigned int>()) {
-		//		assert(json.is_number());
-		//		*static_cast<unsigned int*>(filed_value_ptr) = static_cast<unsigned int>(json.number_value());
-		//	}
-		//	else if (type_name == traits::typeName<float>()) {
-		//		assert(json.is_number());
-		//		*static_cast<float*>(filed_value_ptr) = static_cast<float>(json.number_value());
-		//	}
-		//	else if (type_name == traits::typeName<double>()) {
-		//		assert(json.is_number());
-		//		*static_cast<double*>(filed_value_ptr) = static_cast<double>(json.number_value());
-		//	}
-		//	else if (type_name == traits::typeName<bool>()) {
-		//		assert(json.is_bool());
-		//		*static_cast<bool*>(filed_value_ptr) = json.bool_value();
-		//	}
-		//	else if (type_name == traits::typeName<std::string>()) {
-		//		assert(json.is_string());
-		//		*static_cast<std::string*>(filed_value_ptr) = json.string_value();
-		//	}
-		//	else {
-		//		Instance refl_obj = Instance(type_name, filed_value_ptr);
-		//		read_internal(json[name], refl_obj);
-		//	}
-		//}
+	static Json write_value_by_type(Instance inst) {
+		if (inst.isType<char>()) return Json(inst.getValue<char>());
+		if (inst.isType<int>()) return Json(inst.getValue<int>());
+		if (inst.isType<unsigned int>()) return Json((int)inst.getValue<unsigned int>());
+		if (inst.isType<float>()) return Json(inst.getValue<float>());
+		if (inst.isType<double>()) return Json(inst.getValue<double>());
+		if (inst.isType<bool>()) return Json(inst.getValue<bool>());
+		if (inst.isType<std::string>()) return Json(inst.getValue<std::string>());
+		return write_internal(inst);
 	}
 
-	static Json write_internal(const Instance& v) {
-		//Json::object json_obj;
-		//MetaType meta_type = v.metaType();
-		//for (int i = 0; i < meta_type.propertyCount(); i++) {
-		//	auto& prop = meta_type.property(i);
-		//	std::string type_name = prop.type_name;
-		//	std::string name = prop.name;
-		//	void* filed_value_ptr = (v.getPropertyValue(i));
-		//	if (type_name == traits::typeName<char>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<char*>(filed_value_ptr)));
-		//	}
-		//	else if (type_name == traits::typeName<int>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<int*>(filed_value_ptr)));
-		//	}
-		//	else if (type_name == traits::typeName<unsigned int>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<int*>(filed_value_ptr)));
-		//	}
-		//	else if (type_name == traits::typeName<float>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<float*>(filed_value_ptr)));
-		//	}
-		//	else if (type_name == traits::typeName<double>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<double*>(filed_value_ptr)));
-		//	}
-		//	else if (type_name == traits::typeName<bool>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<bool*>(filed_value_ptr)));
-		//	}
-		//	else if (type_name == traits::typeName<std::string>()) {
-		//		json_obj.insert_or_assign(name, Json(*static_cast<std::string*>(filed_value_ptr)));
-		//	}
-		//	else {
-		//		Instance refl_obj = Instance(type_name, filed_value_ptr);
-		//		json_obj.insert_or_assign(name, write_internal(refl_obj));
-		//	}
-		//}
-		//return Json(json_obj);
+	static void read_value_by_type(const Json& json, Instance inst) {
+		if (inst.isType<char>()) {
+			if (json.is_number()) inst.setValue((char)json.number_value());
+			return;
+		}
+		if (inst.isType<int>()) {
+			if (json.is_number()) inst.setValue((int)json.number_value());
+			return;
+		}
+		if (inst.isType<unsigned int>()) {
+			if (json.is_number()) inst.setValue((unsigned int)json.number_value());
+			return;
+		}
+		if (inst.isType<float>()) {
+			if (json.is_number()) inst.setValue((float)json.number_value());
+			return;
+		}
+		if (inst.isType<double>()) {
+			if (json.is_number()) inst.setValue((double)json.number_value());
+			return;
+		}
+		if (inst.isType<bool>()) {
+			if (json.is_bool()) inst.setValue(json.bool_value());
+			return;
+		}
+		if (inst.isType<std::string>()) {
+			if (json.is_string()) inst.setValue(json.string_value());
+			return;
+		}
+		read_internal(json, inst);
+	}
+
+	static void read_internal(const Json& json, Instance& inst) {
+		MetaType meta_type = inst.metaType();
+		for (int i = 0; i < meta_type.propertyCount(); i++) {
+			auto& prop = meta_type.property(i);
+			std::string type_name = prop.type_name;
+			std::string name = prop.name;
+			Instance prop_value = prop.getValue(inst);
+			const Json& field_json = json[name];
+			if ((prop.type & Property::Type::SequenceContainer) == Property::Type::SequenceContainer &&
+				prop.sequence_resize && prop.sequence_element_ptr && !prop.value_type_name.empty()) {
+				if (!field_json.is_array()) continue;
+				const auto& arr = field_json.array_items();
+				prop.sequence_resize(prop_value, arr.size());
+				for (size_t idx = 0; idx < arr.size(); idx++) {
+					Instance elem_value = prop.sequence_element_ptr(prop_value, idx);
+					read_value_by_type(arr[idx], elem_value);
+				}
+				continue;
+			}
+			read_value_by_type(field_json, prop_value);
+		}
+	}
+
+	static Json write_internal(const Instance& inst) {
+		Json::object json_obj;
+		MetaType meta_type = inst.metaType();
+		for (int i = 0; i < meta_type.propertyCount(); i++) {
+			auto& prop = meta_type.property(i);
+			std::string type_name = prop.type_name;
+			std::string name = prop.name;
+			Instance prop_value = prop.getValue(inst);
+			if ((prop.type & Property::Type::SequenceContainer) == Property::Type::SequenceContainer &&
+				prop.sequence_size && prop.sequence_element_ptr && !prop.value_type_name.empty()) {
+				Json::array arr;
+				size_t n = prop.sequence_size(prop_value);
+				arr.reserve(n);
+				for (size_t idx = 0; idx < n; idx++) {
+					Instance elem_value = prop.sequence_element_ptr(prop_value, idx);
+					arr.push_back(write_value_by_type(elem_value));
+				}
+				json_obj.insert_or_assign(name, Json(arr));
+				continue;
+			}
+			json_obj.insert_or_assign(name, write_value_by_type(prop_value));
+		}
+		return Json(json_obj);
 	}
 
 private:
 	Serializer() = default;
 };
-
-//template<class T>
-//inline void test_output(ReflectionInstance<T>& refl_obj)
-//{
-//	static std::string tab_str = "    ";
-//	static std::string crlf_str = "\n";
-//	static std::string open_brace_str = "{\n";
-//	static std::string close_brace_str = "},\n";
-//	static std::string colon = " : ";
-//
-//	std::cout << "\n====================================================================\n";
-//	std::cout << open_brace_str;
-//
-//		std::cout << tab_str << "\"className\"" << colon << "\"" << refl_obj.className() << "\"" << "," << crlf_str;
-//
-//		std::cout << tab_str << "\"fields\"" << colon << open_brace_str;
-//			for (int i = 0; i < refl_obj.fieldCount(); i++) {
-//				auto& field = refl_obj.field(i);
-//				std::string_view type_name = field.type_name;
-//				std::string_view name = field.name;
-//				std::cout << tab_str << tab_str << "\"" << "<" << type_name << ">" << " " << name << "\"" << colon << " ";
-//				if (refl_obj.getFieldValue<Vec3>(i)) {
-//					Vec3 value_vec3 = *refl_obj.getFieldValue<Vec3>(i);
-//					std::cout << "\"" << value_vec3.x << " " << value_vec3.y << " " << value_vec3.z << "\"";
-//				}
-//				if (refl_obj.getFieldValue<std::string>(i)) {
-//					std::string value_str = *refl_obj.getFieldValue<std::string>(i);
-//					std::cout << "\"" << value_str << "\"";
-//				}
-//				std::cout << "," << crlf_str;
-//			}
-//		std::cout << tab_str << close_brace_str;
-//
-//		std::cout << tab_str << "\"methods\"" << colon << open_brace_str;
-//			for (int i = 0; i < refl_obj.methodCount(); i++) {
-//				auto& method = refl_obj.method(i);
-//				std::cout << tab_str << tab_str << "\"" << method.signature << "\"" << "," << crlf_str;
-//			}
-//		std::cout << tab_str << close_brace_str;
-//
-//		if (refl_obj.method("transform").signature != "") {
-//			std::cout << tab_str << "\"invokeMethods\"" << colon << refl_obj.method("transform").signature << " = ";
-//			Mat4 transform_mat = refl_obj.invokeMethod<Mat4>("transform");
-//			std::cout << crlf_str << Utils::mat4ToStr(transform_mat, 2);
-//		}
-//
-//	std::cout << close_brace_str;
-//	std::cout << "====================================================================\n\n";
-//}
 
 }}
 

@@ -43,8 +43,8 @@ namespace traits {
 //    return name;
 //}
 
-// typeidÄÜÕıÈ·ÍÆµ¼¶àÌ¬µÄÀàĞÍ£¨ÒªÓĞĞéº¯Êı£©£¬ºÍ¸÷ÖÖÒıÓÃÀàĞÍ
-// typeid(T).name()µÄ½á¹û£º
+// typeidèƒ½æ­£ç¡®æ¨å¯¼å¤šæ€çš„ç±»å‹ï¼ˆè¦æœ‰è™šå‡½æ•°ï¼‰ï¼Œå’Œå„ç§å¼•ç”¨ç±»å‹
+// typeid(T).name()çš„ç»“æœï¼š
 // T -> T
 // const T& -> T
 // T& -> T
@@ -70,21 +70,21 @@ inline std::string getArgTypeName() {
 }
 
 
-// »ù´¡ÈİÆ÷ÌØÕ÷¼ì²é
+// åŸºç¡€å®¹å™¨ç‰¹å¾æ£€æŸ¥
 template <typename T, typename = void>
 struct is_container : std::false_type {};
 
 template <typename T>
 struct is_container<T, std::void_t<
-    typename T::value_type,        // ±ØĞëÓĞ value_type
-    typename T::iterator,          // ±ØĞëÓĞµü´úÆ÷ÀàĞÍ
-    typename T::const_iterator,    // ±ØĞëÓĞ³£Á¿µü´úÆ÷ÀàĞÍ
-    decltype(std::declval<T>().begin()),  // ±ØĞëÓĞ begin() ·½·¨
-    decltype(std::declval<T>().end()),    // ±ØĞëÓĞ end() ·½·¨
-    decltype(std::declval<T>().size())    // Ó¦¸ÃÓĞ size() ·½·¨
+    typename T::value_type,        // å¿…é¡»æœ‰ value_type
+    typename T::iterator,          // å¿…é¡»æœ‰è¿­ä»£å™¨ç±»å‹
+    typename T::const_iterator,    // å¿…é¡»æœ‰å¸¸é‡è¿­ä»£å™¨ç±»å‹
+    decltype(std::declval<T>().begin()),  // å¿…é¡»æœ‰ begin() æ–¹æ³•
+    decltype(std::declval<T>().end()),    // å¿…é¡»æœ‰ end() æ–¹æ³•
+    decltype(std::declval<T>().size())    // åº”è¯¥æœ‰ size() æ–¹æ³•
     >> : std::true_type{};
 
-// ¼ì²éÊÇ·ñÊÇ¹ØÁªÈİÆ÷
+// æ£€æŸ¥æ˜¯å¦æ˜¯å…³è”å®¹å™¨
 template <typename T, typename = void>
 struct is_associative_container : std::false_type {};
 
@@ -95,7 +95,7 @@ struct is_associative_container<T, std::void_t<
     decltype(std::declval<T>().find(std::declval<typename T::key_type>()))
     >> : std::true_type {};
 
-// ¼ì²éÊÇ·ñÊÇĞòÁĞÈİÆ÷
+// æ£€æŸ¥æ˜¯å¦æ˜¯åºåˆ—å®¹å™¨
 template <typename T>
 struct is_sequence_container : std::conjunction<
     is_container<T>,
@@ -112,6 +112,12 @@ template <typename T>
 constexpr bool is_associative_container_v = is_associative_container<T>::value;
 template <typename T>
 constexpr bool is_sequence_container_v = is_sequence_container<T>::value;
+template <typename T>
+struct is_std_vector : std::false_type {};
+template <typename T, typename Alloc>
+struct is_std_vector<std::vector<T, Alloc>> : std::true_type {};
+template <typename T>
+constexpr bool is_std_vector_v = is_std_vector<T>::value;
 template <typename T>
 constexpr bool is_fundamental_v =
     std::is_fundamental_v<T> ||
