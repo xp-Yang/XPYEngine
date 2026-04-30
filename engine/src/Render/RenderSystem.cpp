@@ -5,7 +5,9 @@
 #include "Path/RayTracingRenderPath.hpp"
 
 #include <Logical/Framework/World/Scene.hpp>
+#include <Logical/Animation/AnimationSystem.hpp>
 #include <unordered_set>
+#include "GlobalContext.hpp"
 
 RenderSystem::RenderSystem()
 {
@@ -148,6 +150,8 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         alive_object_ids.insert(object->ID().id);
         auto &sub_meshes = object->getComponent<MeshComponent>()->sub_meshes;
         auto &model_matrix = object->getComponent<TransformComponent>()->transform();
+        const bool use_skinning = g_context.animation_system && g_context.animation_system->HasAnimation(object->ID().id);
+        const std::vector<Mat4> *bone_matrices = use_skinning ? &g_context.animation_system->GetFinalBoneMatrices(object->ID().id) : nullptr;
         bool visible = object->visible();
         for (const auto &sub_mesh : sub_meshes)
         {
@@ -164,11 +168,16 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
                 {
                     m_render_source_data->render_mesh_nodes[render_mesh_data_id]->model_matrix = (model_matrix * sub_mesh->local_transform);
                     m_render_source_data->render_mesh_nodes[render_mesh_data_id]->updateRenderMaterialData(sub_mesh->material);
+                    m_render_source_data->render_mesh_nodes[render_mesh_data_id]->use_skinning = use_skinning;
+                    m_render_source_data->render_mesh_nodes[render_mesh_data_id]->bone_matrices = bone_matrices ? *bone_matrices : std::vector<Mat4>();
                 }
                 else
                 {
+                    auto render_node = std::make_shared<RenderMeshNode>(render_mesh_data_id, RenderMeshData(sub_mesh), RenderMaterialData(sub_mesh->material), model_matrix * sub_mesh->local_transform);
+                    render_node->use_skinning = use_skinning;
+                    render_node->bone_matrices = bone_matrices ? *bone_matrices : std::vector<Mat4>();
                     m_render_source_data->render_mesh_nodes.insert_or_assign(render_mesh_data_id,
-                                                                             std::make_shared<RenderMeshNode>(render_mesh_data_id, RenderMeshData(sub_mesh), RenderMaterialData(sub_mesh->material), model_matrix));
+                                                                             render_node);
                 }
             }
         }

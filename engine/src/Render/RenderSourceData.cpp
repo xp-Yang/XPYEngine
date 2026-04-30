@@ -69,9 +69,11 @@ RenderMeshData::RenderMeshData(std::shared_ptr<Mesh> mesh_data)
 
     m_vertex_layout = rhi->newVertexLayout(vbuf, ibuf);
     m_vertex_layout->setAttributes({
-        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                            // position
-        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},     // normal
-        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)}, // uv
+        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                                  // position
+        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},           // normal
+        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},       // uv
+        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},          // bone ids
+        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)},     // bone weights
     });
     m_vertex_layout->create();
     // glGenVertexArrays(1, &m_VAO);

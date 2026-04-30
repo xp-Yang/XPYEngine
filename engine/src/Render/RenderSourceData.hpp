@@ -107,6 +107,8 @@ struct RenderMeshNode {
     RenderMeshData mesh;
     RenderMaterialData material;
     Mat4 model_matrix;
+    bool use_skinning{ false };
+    std::vector<Mat4> bone_matrices;
 
     void updateRenderMaterialData(std::shared_ptr<Material> material_);
 };

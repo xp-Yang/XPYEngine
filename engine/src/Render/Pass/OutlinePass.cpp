@@ -57,6 +57,15 @@ void OutlinePass::draw()
         );
         if (it != m_render_source_data->render_mesh_nodes.end()) {
             const auto& render_node = it->second;
+            one_color_shader->setBool("useSkinning", render_node->use_skinning);
+            if (render_node->use_skinning && !render_node->bone_matrices.empty()) {
+                int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
+                one_color_shader->setInt("bone_count", bone_count);
+                one_color_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+            }
+            else {
+                one_color_shader->setInt("bone_count", 0);
+            }
             one_color_shader->setMatrix("model", 1, render_node->model_matrix);
             int id = picked_id;
             int r = (id & 0x000000FF) >> 0;

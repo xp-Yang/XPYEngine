@@ -3,72 +3,118 @@
 
 #include "Base/Math/Math.hpp"
 #include "Animation.hpp"
+#include "Logical/Framework/World/Scene.hpp"
+#include <unordered_map>
+#include <unordered_set>
 
 class AnimationSystem
 {
 public:
     AnimationSystem() = default;
-    AnimationSystem::AnimationSystem(Animation* Animation)
-        : m_CurrentAnimation(Animation)
-    {
-        m_CurrentTime = 0.0;
-        m_FinalBoneMatrices.assign(100, Mat4(1.0f));
-    }
 
-    void AnimationSystem::onUpdate(float delta_time = 1.0f/60.0f)
+    void onUpdate(std::shared_ptr<Scene> scene, float delta_time = 1.0f / 60.0f)
     {
-        m_DeltaTime = delta_time;
-        if (m_CurrentAnimation)
+        if (!scene)
+            return;
+
+        std::unordered_set<int> alive_object_ids;
+        for (const auto &object : scene->getObjects())
         {
-            m_CurrentTime += m_CurrentAnimation->GetTicksPerSecond() * delta_time;
-            m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
-            CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), Mat4(1.0f));
+            auto *animation_component = object->getComponent<AnimationComponent>();
+            if (!animation_component || !animation_component->clip)
+                continue;
+
+            const int object_id = object->ID().id;
+            alive_object_ids.insert(object_id);
+
+            auto &state = m_object_states[object_id];
+            if (!state.clip || state.clip.get() != animation_component->clip.get())
+            {
+                state.clip = animation_component->clip;
+                state.current_time = 0.0f;
+                state.final_bone_matrices.assign(MAX_BONE_PALETTE_SIZE, Mat4(1.0f));
+            }
+            state.playing = animation_component->playing;
+            state.loop = animation_component->loop;
+            state.speed = animation_component->speed;
+
+            if (!state.playing || !state.clip || state.clip->GetDuration() <= 0.0f)
+                continue;
+
+            state.current_time += state.clip->GetTicksPerSecond() * delta_time * state.speed;
+            if (state.loop)
+                state.current_time = fmod(state.current_time, state.clip->GetDuration());
+            else if (state.current_time > state.clip->GetDuration())
+                state.current_time = state.clip->GetDuration();
+            CalculateBoneTransform(state, &state.clip->GetRootNode(), Mat4(1.0f));
+        }
+
+        for (auto it = m_object_states.begin(); it != m_object_states.end();)
+        {
+            if (alive_object_ids.find(it->first) == alive_object_ids.end())
+                it = m_object_states.erase(it);
+            else
+                ++it;
         }
     }
 
-    void AnimationSystem::PlayAnimation(Animation* pAnimation)
+    const std::vector<Mat4> &GetFinalBoneMatrices(int object_id) const
     {
-        m_CurrentAnimation = pAnimation;
-        m_CurrentTime = 0.0f;
+        auto it = m_object_states.find(object_id);
+        if (it == m_object_states.end())
+            return m_empty_bone_matrices;
+        return it->second.final_bone_matrices;
     }
 
-    void AnimationSystem::CalculateBoneTransform(const AssimpNodeData* node, Mat4 parentTransform)
+    bool HasAnimation(int object_id) const
+    {
+        auto it = m_object_states.find(object_id);
+        return it != m_object_states.end() && it->second.clip != nullptr;
+    }
+
+private:
+    struct ObjectAnimationState
+    {
+        std::shared_ptr<Animation> clip{ nullptr };
+        std::vector<Mat4> final_bone_matrices = std::vector<Mat4>(MAX_BONE_PALETTE_SIZE, Mat4(1.0f));
+        float current_time{ 0.0f };
+        float speed{ 1.0f };
+        bool loop{ true };
+        bool playing{ true };
+    };
+
+    void CalculateBoneTransform(ObjectAnimationState &state, const AssimpNodeData *node, Mat4 parentTransform)
     {
         std::string nodeName = node->name;
         Mat4 nodeTransform = node->transformation;
 
-        Bone* Bone = m_CurrentAnimation->FindBone(nodeName);
+        Bone *bone = state.clip->FindBone(nodeName);
 
-        if (Bone)
+        if (bone)
         {
-            Bone->onUpdate(m_CurrentTime);
-            nodeTransform = Bone->GetLocalTransform();
+            bone->onUpdate(state.current_time);
+            nodeTransform = bone->GetLocalTransform();
         }
 
         Mat4 globalTransformation = parentTransform * nodeTransform;
 
-        auto boneInfoMap = m_CurrentAnimation->GetBoneIDMap();
+        const auto &boneInfoMap = state.clip->GetBoneIDMap();
         if (boneInfoMap.find(nodeName) != boneInfoMap.end())
         {
-            int index = boneInfoMap[nodeName].id;
-            Mat4 offset = boneInfoMap[nodeName].offset;
-            m_FinalBoneMatrices[index] = globalTransformation * offset;
+            int index = boneInfoMap.at(nodeName).id;
+            if (index >= 0 && index < MAX_BONE_PALETTE_SIZE)
+            {
+                Mat4 offset = boneInfoMap.at(nodeName).offset;
+                state.final_bone_matrices[index] = globalTransformation * offset;
+            }
         }
 
         for (int i = 0; i < node->childrenCount; i++)
-            CalculateBoneTransform(&node->children[i], globalTransformation);
+            CalculateBoneTransform(state, &node->children[i], globalTransformation);
     }
 
-    const std::vector<Mat4>& GetFinalBoneMatrices()
-    {
-        return m_FinalBoneMatrices;
-    }
-
-private:
-    std::vector<Mat4> m_FinalBoneMatrices;
-    Animation* m_CurrentAnimation;
-    float m_CurrentTime;
-    float m_DeltaTime;
+    std::unordered_map<int, ObjectAnimationState> m_object_states;
+    std::vector<Mat4> m_empty_bone_matrices = std::vector<Mat4>(MAX_BONE_PALETTE_SIZE, Mat4(1.0f));
 };
 
 #endif // !AnimationSystem_hpp

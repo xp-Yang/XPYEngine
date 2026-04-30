@@ -19,6 +19,7 @@ bool OpenGLVertexLayout::create()
         int offset = m_attributes[i].offset;
         int size = 1;
         GLenum type = GL_FLOAT;
+        bool integer_attrib = false;
         switch (m_attributes[i].format) {
         case RhiVertexAttribute::Float4:
             type = GL_FLOAT;
@@ -39,40 +40,51 @@ bool OpenGLVertexLayout::create()
         case RhiVertexAttribute::UInt4:
             type = GL_UNSIGNED_INT;
             size = 4;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::UInt3:
             type = GL_UNSIGNED_INT;
             size = 3;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::UInt2:
             type = GL_UNSIGNED_INT;
             size = 2;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::UInt:
             type = GL_UNSIGNED_INT;
             size = 1;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt4:
             type = GL_INT;
             size = 4;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt3:
             type = GL_INT;
             size = 3;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt2:
             type = GL_INT;
             size = 2;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt:
             type = GL_INT;
             size = 1;
+            integer_attrib = true;
             break;
         default:
             break;
         }
         glEnableVertexAttribArray(location);
-        glVertexAttribPointer(location, size, type, false, stride, (GLvoid*)(offset));
+        if (integer_attrib)
+            glVertexAttribIPointer(location, size, type, stride, (GLvoid *)(offset));
+        else
+            glVertexAttribPointer(location, size, type, false, stride, (GLvoid *)(offset));
     }
     return true;
 }
@@ -89,6 +101,7 @@ bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, int instancin_
         int offset = m_attributes[i].offset;
         int size = 1;
         GLenum type = GL_FLOAT;
+        bool integer_attrib = false;
         switch (m_attributes[i].format) {
         case RhiVertexAttribute::Float4:
             type = GL_FLOAT;
@@ -109,40 +122,51 @@ bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, int instancin_
         case RhiVertexAttribute::UInt4:
             type = GL_UNSIGNED_INT;
             size = 4;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::UInt3:
             type = GL_UNSIGNED_INT;
             size = 3;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::UInt2:
             type = GL_UNSIGNED_INT;
             size = 2;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::UInt:
             type = GL_UNSIGNED_INT;
             size = 1;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt4:
             type = GL_INT;
             size = 4;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt3:
             type = GL_INT;
             size = 3;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt2:
             type = GL_INT;
             size = 2;
+            integer_attrib = true;
             break;
         case RhiVertexAttribute::SInt:
             type = GL_INT;
             size = 1;
+            integer_attrib = true;
             break;
         default:
             break;
         }
         glEnableVertexAttribArray(location);
-        glVertexAttribPointer(location, size, type, false, stride, (GLvoid*)(offset));
+        if (integer_attrib)
+            glVertexAttribIPointer(location, size, type, stride, (GLvoid *)(offset));
+        else
+            glVertexAttribPointer(location, size, type, false, stride, (GLvoid *)(offset));
         glVertexAttribDivisor(location, 1);
     }
     return true;

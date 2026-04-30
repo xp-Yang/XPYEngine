@@ -35,6 +35,15 @@ void PickingPass::draw()
     // TODO Unpickable
     for (const auto& pair : m_render_source_data->render_mesh_nodes) {
         const auto& render_node = pair.second;
+        picking_shader->setBool("useSkinning", render_node->use_skinning);
+        if (render_node->use_skinning && !render_node->bone_matrices.empty()) {
+            int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
+            picking_shader->setInt("bone_count", bone_count);
+            picking_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+        }
+        else {
+            picking_shader->setInt("bone_count", 0);
+        }
         picking_shader->setMatrix("model", 1, render_node->model_matrix);
         int id = render_node->node_id.object_id;
         int r = (id & 0x000000FF) >> 0;

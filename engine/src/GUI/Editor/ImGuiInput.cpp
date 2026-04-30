@@ -145,6 +145,8 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 		});
 	if (it != scene_objects.end())
 		emit pickedChanged({ (*it)->ID() }, retain_old ? std::vector<GObjectID>() : g_context.scene->getPickedObjectIDs());
+	else if (!retain_old)
+		emit pickedChanged({}, g_context.scene->getPickedObjectIDs());
 
 	Logger::debug("PickSolver::onPicking(), picking({}, {}), mouse({}, {}), picked_id:{}", x, y, mouse_x, mouse_y, picked_id);
 }

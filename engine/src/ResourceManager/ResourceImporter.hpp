@@ -4,6 +4,7 @@
 // import files in formats other than XPYEngin Asset file
 
 #include "Base/Common.hpp"
+#include "Logical/Mesh.hpp"
 
 struct aiNode;
 struct aiScene;
@@ -32,6 +33,7 @@ public:
 	std::shared_ptr<Mesh> meshOfNode(int ai_mesh_idx);
 	std::shared_ptr<Material> materialOfNode(int ai_mesh_idx);
 	std::vector<int> getSubMeshesIds() const;
+	bool hasAnimation() const;
 	const std::map<std::string, BoneInfo>& getBoneInfoMap() const { return m_BoneInfoMap; }
 	int getBoneCount() const { return m_BoneCounter; }
 
@@ -39,7 +41,8 @@ protected:
 	std::vector<aiMesh*> collect_ai_meshes();
 	std::shared_ptr<Mesh> load_sub_mesh_data(aiMesh* mesh);
 	std::shared_ptr<Material> load_material(aiMaterial* material);
-	//void extractBoneWeightForVertices(std::vector<Vertex>& vertices, aiMesh* mesh);
+	void extractBoneWeightForVertices(std::vector<Vertex>& vertices, aiMesh* mesh);
+	void setVertexBoneData(Vertex& vertex, int bone_id, float weight) const;
 
 private:
 	static std::unordered_map<std::string, Assimp::Importer*> m_importers;

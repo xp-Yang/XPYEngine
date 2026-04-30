@@ -4,6 +4,8 @@
 #include "Logical/Framework/Object/GObject.hpp"
 #include "Logical/Mesh.hpp"
 #include "Logical/Material.hpp"
+#include "Logical/Framework/Component/AnimationComponent.hpp"
+#include "Base/Logger/Logger.hpp"
 
 void Cubetest::init() {
 #if ENABLE_ECS
@@ -200,9 +202,23 @@ void Cubetest::init() {
 		//GObject* nano_suit = scene->loadModel(RESOURCE_DIRECTORY + "/model/nanosuit/nanosuit.obj");
 		//nano_suit->getComponent<TransformComponent>()->scale = Vec3(0.3f);
 
-		//GObject* vampire = loadModel(RESOURCE_DIRECTORY + "/model/vampire/dancing_vampire.dae");
-		//vampire->getComponent<TransformComponent>()->scale = Vec3(0.02f);
-		//vampire->getComponent<TransformComponent>()->translation = Vec3(5.0f, 0.0f, 0.0f);
+		// 骨骼动画冒烟测试：如果资源存在，会自动播放模型内的第一个动画 clip。
+		GObject* vampire = scene->loadModel(RESOURCE_DIRECTORY + "/model/vampire/dancing_vampire.dae");
+		if (vampire) {
+			vampire->setName("AnimatedVampire");
+			if (auto* transform = vampire->getComponent<TransformComponent>()) {
+				transform->scale = Vec3(0.02f);
+				transform->translation = Vec3(5.0f, 0.0f, 0.0f);
+			}
+			if (auto* animation = vampire->getComponent<AnimationComponent>()) {
+				animation->speed = 1.0f;
+				animation->loop = true;
+				animation->playing = true;
+			}
+		}
+		else {
+			Logger::warn("Animated sample not loaded: {}", RESOURCE_DIRECTORY + std::string("/model/vampire/dancing_vampire.dae"));
+		}
 
 		//GObject* bunny_obj = loadModel(RESOURCE_DIRECTORY + "/model/bunny.obj");
 		//auto bunny_transform = bunny_obj->getComponent<TransformComponent>();

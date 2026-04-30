@@ -3,6 +3,8 @@
 #include "Logical/Framework/Component/CameraComponent.hpp"
 #include "Logical/Framework/Component/MeshComponent.hpp"
 #include "Logical/Framework/Component/TransformComponent.hpp"
+#include "Logical/Framework/Component/AnimationComponent.hpp"
+#include "Logical/Animation/Animation.hpp"
 #include "Logical/Gcode/GcodeViewer.hpp"
 
 #include "ResourceManager/DTO.hpp"
@@ -29,7 +31,8 @@ Scene::Scene()
 GObject* Scene::loadModel(const std::string& filepath)
 {
 	ResourceImporter model_importer;
-	model_importer.load(filepath);
+	if (!model_importer.load(filepath))
+		return nullptr;
 	std::vector<int> obj_sub_meshes_idx = model_importer.getSubMeshesIds();
 	if (obj_sub_meshes_idx.empty()) {
 		//Logger::error("Model datas is empty. File loading fails. Please check if the filepath is all English.");
@@ -57,6 +60,11 @@ GObject* Scene::loadModel(const std::string& filepath)
 		std::shared_ptr<Mesh> sub_mesh = model_importer.meshOfNode(idx);
 		sub_mesh->sub_mesh_idx = idx;
 		mesh.sub_meshes.push_back(sub_mesh);
+	}
+	if (model_importer.hasAnimation()) {
+		AnimationComponent& animation = res->addComponent<AnimationComponent>();
+		animation.clip_path = filepath;
+		animation.clip = std::make_shared<Animation>(filepath, &model_importer);
 	}
 	m_objects.push_back(std::shared_ptr<GObject>(res));
 #endif

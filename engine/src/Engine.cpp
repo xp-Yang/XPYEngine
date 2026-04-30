@@ -28,7 +28,7 @@ void Engine::run() {
 			{
 				// logical
 				g_context.gui_input->onUpdate();
-				g_context.animation_system->onUpdate();
+				g_context.animation_system->onUpdate(g_context.scene);
 				// render
 				g_context.render_system->onUpdate(g_context.scene);
 				// gui

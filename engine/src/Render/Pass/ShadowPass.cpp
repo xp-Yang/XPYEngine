@@ -60,6 +60,17 @@ void ShadowPass::drawDirectionalLightShadowMap()
     for (const auto &pair : m_render_source_data->render_mesh_nodes)
     {
         const auto &render_node = pair.second;
+        depth_shader->setBool("useSkinning", render_node->use_skinning);
+        if (render_node->use_skinning && !render_node->bone_matrices.empty())
+        {
+            int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
+            depth_shader->setInt("bone_count", bone_count);
+            depth_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+        }
+        else
+        {
+            depth_shader->setInt("bone_count", 0);
+        }
         depth_shader->setMatrix("model", 1, render_node->model_matrix);
         depth_shader->setMatrix("view", 1, light_view);
         depth_shader->setMatrix("projection", 1, light_proj);
@@ -104,6 +115,17 @@ void ShadowPass::drawPointLightShadowMap()
             for (const auto &pair : m_render_source_data->render_mesh_nodes)
             {
                 const auto &render_node = pair.second;
+                depth_shader->setBool("useSkinning", render_node->use_skinning);
+                if (render_node->use_skinning && !render_node->bone_matrices.empty())
+                {
+                    int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
+                    depth_shader->setInt("bone_count", bone_count);
+                    depth_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+                }
+                else
+                {
+                    depth_shader->setInt("bone_count", 0);
+                }
                 depth_shader->setMatrix("model", 1, render_node->model_matrix);
                 depth_shader->setMatrix("view", 1, light_view[cube_map_id][i]);
                 depth_shader->setMatrix("projection", 1, light_proj[cube_map_id]);

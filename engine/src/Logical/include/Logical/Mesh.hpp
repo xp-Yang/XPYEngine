@@ -4,14 +4,14 @@
 #include <Base/Common.hpp>
 #include "Material.hpp"
 
-#define MAX_BONE_INFLUENCE 100
+#define MAX_BONE_INFLUENCE 4
+#define MAX_BONE_PALETTE_SIZE 100
 struct Vertex {
 	Vec3 position;
 	Vec3 normal;
 	Vec2 texture_uv;
-
-	//std::vector<int> m_BoneIDs = std::vector<int>(MAX_BONE_INFLUENCE, -1);
-	//std::vector<float> m_Weights = std::vector<float>(MAX_BONE_INFLUENCE, 0.0f);
+	std::array<int, MAX_BONE_INFLUENCE> bone_ids{ -1, -1, -1, -1 };
+	std::array<float, MAX_BONE_INFLUENCE> bone_weights{ 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 struct Triangle {

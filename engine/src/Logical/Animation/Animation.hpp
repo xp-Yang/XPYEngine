@@ -22,10 +22,10 @@ public:
     {
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(animationPath, aiProcess_Triangulate);
-        assert(scene && scene->mRootNode);
+        assert(scene && scene->mRootNode && scene->mNumAnimations > 0);
         auto animation = scene->mAnimations[0];
         m_Duration = animation->mDuration;
-        m_TicksPerSecond = animation->mTicksPerSecond;
+        m_TicksPerSecond = animation->mTicksPerSecond == 0 ? 25.0f : animation->mTicksPerSecond;
         ReadHeirarchyData(m_RootNode, scene->mRootNode);
         ReadMissingBones(animation, *model);
     }
@@ -63,23 +63,26 @@ private:
     {
         int size = animation->mNumChannels;
 
-        auto& boneInfoMap = model.getBoneInfoMap();//getting m_BoneInfoMap from Model class
+        auto boneInfoMap = model.getBoneInfoMap();//getting m_BoneInfoMap from Model class
         int boneCount = model.getBoneCount(); //getting the m_BoneCounter from Model class
 
         //reading channels(bones engaged in an animation and their keyframes)
-        //for (int i = 0; i < size; i++)
-        //{
-        //    auto channel = animation->mChannels[i];
-        //    std::string boneName = channel->mNodeName.data;
+        for (int i = 0; i < size; i++)
+        {
+            auto channel = animation->mChannels[i];
+            std::string boneName = channel->mNodeName.data;
 
-        //    if (boneInfoMap.find(boneName) == boneInfoMap.end())
-        //    {
-        //        boneInfoMap[boneName].id = boneCount;
-        //        boneCount++;
-        //    }
-        //    m_Bones.push_back(Bone(channel->mNodeName.data,
-        //        boneInfoMap[channel->mNodeName.data].id, channel));
-        //}
+            if (boneInfoMap.find(boneName) == boneInfoMap.end())
+            {
+                BoneInfo bone_info;
+                bone_info.id = boneCount;
+                bone_info.offset = Mat4(1.0f);
+                boneInfoMap[boneName] = bone_info;
+                boneCount++;
+            }
+            m_Bones.push_back(Bone(channel->mNodeName.data,
+                boneInfoMap[channel->mNodeName.data].id, channel));
+        }
 
         m_BoneInfoMap = boneInfoMap;
     }
@@ -116,7 +119,7 @@ private:
     }
 
     float m_Duration;
-    int m_TicksPerSecond;
+    float m_TicksPerSecond;
     std::vector<Bone> m_Bones;
     AssimpNodeData m_RootNode;
     std::map < std::string, BoneInfo > m_BoneInfoMap;
