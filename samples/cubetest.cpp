@@ -206,10 +206,6 @@ void Cubetest::init() {
 		GObject* vampire = scene->loadModel(RESOURCE_DIRECTORY + "/model/vampire/dancing_vampire.dae");
 		if (vampire) {
 			vampire->setName("AnimatedVampire");
-			if (auto* transform = vampire->getComponent<TransformComponent>()) {
-				transform->scale = Vec3(0.02f);
-				transform->translation = Vec3(5.0f, 0.0f, 0.0f);
-			}
 			if (auto* animation = vampire->getComponent<AnimationComponent>()) {
 				animation->speed = 1.0f;
 				animation->loop = true;

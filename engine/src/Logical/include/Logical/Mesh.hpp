@@ -42,7 +42,9 @@ struct Mesh {
 	std::vector<Vertex> vertices;
 	std::vector<int> indices;
 	std::shared_ptr<Material> material;
-	Mat4 local_transform = Mat4(1.0f);
+	Vec3 translation{ 0.0f, 0.0f, 0.0f };
+	Vec3 rotation{ 0.0f, 0.0f, 0.0f };
+	Vec3 scale{ 1.0f, 1.0f, 1.0f };
 };
 
 #endif

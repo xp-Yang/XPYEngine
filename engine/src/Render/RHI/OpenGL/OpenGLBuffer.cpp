@@ -20,6 +20,14 @@ bool OpenGLBuffer::create()
 
     glGenBuffers(1, &m_id);
     glBindBuffer(m_target_enum, m_id);
-    glBufferData(m_target_enum, m_size, m_data, /*m_type == Dynamic ? GL_DYNAMIC_DRAW : */GL_STATIC_DRAW);
+    glBufferData(m_target_enum, m_size, m_data, m_type == Dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     return true;
+}
+
+void OpenGLBuffer::update(void* data, int size, int offset)
+{
+    if (size <= 0)
+        return;
+    glBindBuffer(m_target_enum, m_id);
+    glBufferSubData(m_target_enum, offset, size, data);
 }

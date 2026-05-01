@@ -11,16 +11,6 @@
 #include "ResourceManager/ResourceImporter.hpp"
 #include "ResourceManager/Gcode/GcodeImporter.hpp"
 
-#include "Base/Logger/Logger.hpp"
-#include "Base/Utils/PathService.hpp"
-
-static std::string dir_of(const std::string& filepath)
-{
-	std::string p = PathService::normalize(filepath);
-	const size_t pos = p.find_last_of('/');
-	return (pos == std::string::npos) ? std::string() : p.substr(0, pos);
-}
-
 Scene::Scene()
 {
 	m_light_manager = std::make_shared<LightManager>();
@@ -38,7 +28,7 @@ GObject* Scene::loadModel(const std::string& filepath)
 		//Logger::error("Model datas is empty. File loading fails. Please check if the filepath is all English.");
 		return nullptr;
 	}
-	std::string name = filepath.substr(filepath.find_last_of("/\\") + 1, filepath.find_last_of('.') - filepath.find_last_of("/\\") - 1);
+	std::string name = PathService::getFileName(filepath);
 
 #if ENABLE_ECS
 	auto& world = ecs::World::get();
@@ -85,8 +75,8 @@ ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& proje
 {
 	ProjectDTO dto;
 	dto.schema_version = 1;
-	dto.project_name = "XPYProject";
-	const std::string project_dir = dir_of(project_filepath);
+    dto.project_name = PathService::getFileName(project_filepath);
+	const std::string project_dir = PathService::getDirectory(project_filepath);
 
 	for (const auto& obj_sp : scene.getObjects()) {
 		if (!obj_sp) continue;
@@ -109,13 +99,9 @@ ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& proje
 
 			SubMeshDTO sm;
 			sm.sub_mesh_index = sub->sub_mesh_idx;
-			Mat4 translation; Mat4 rotation; Mat4 scale;
-			float angle_x; float angle_y; float angle_z;
-			Math::DecomposeMatrix(sub->local_transform, translation, rotation, scale);
-			Math::rotationMatrixToEulerAngle(rotation, angle_x, angle_y, angle_z);
-			sm.local_transform.translation = Vec3(translation[3][0], translation[3][1], translation[3][2]);
-			sm.local_transform.rotation = Vec3(angle_x, angle_y, angle_z);
-			sm.local_transform.scale = Vec3(scale[0][0], scale[1][1], scale[2][2]);
+			sm.local_transform.translation = sub->translation;
+			sm.local_transform.rotation = sub->rotation;
+			sm.local_transform.scale = sub->scale;
 			obj_dto.sub_meshes.push_back(std::move(sm));
 
 			MaterialDTO mat_dto;
@@ -141,11 +127,14 @@ ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& proje
 }
 
 // DTO -> Scene
-void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene)
+void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old)
 {
-	scene.m_objects.clear();
-	scene.m_picked_objects.clear();
-	const std::string project_dir = dir_of(scene.m_current_project_filepath);
+    if (clear_old) {
+        scene.m_objects.clear();
+        scene.m_picked_objects.clear();
+    }
+
+	const std::string project_dir = PathService::getDirectory(scene.m_current_project_filepath);
 
 	for (const auto& obj_dto : dto.objects) {
 		if (obj_dto.filepath.empty()) continue;
@@ -181,7 +170,9 @@ void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene)
 				auto& sub = mc->sub_meshes[i];
 				if (!sub) continue;
 				const TransformDTO& lt = obj_dto.sub_meshes[i].local_transform;
-				sub->local_transform = Math::composeMatrix(lt.scale, lt.rotation, lt.translation);
+				sub->translation = lt.translation;
+				sub->rotation = lt.rotation;
+				sub->scale = lt.scale;
 
 				if (!sub->material) sub->material = std::make_shared<Material>();
 				const auto& md = obj_dto.materials[i];
@@ -202,12 +193,12 @@ void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene)
 	}
 }
 
-bool Scene::loadProject(const std::string& project_filepath)
+bool Scene::loadProject(const std::string& project_filepath, bool clear_old)
 {
 	m_current_project_filepath = project_filepath;
 	ProjectDTO dto;
 	Meta::Serialization::Serializer::loadFromJsonFile(project_filepath, dto);
-	applyProjectDTOToScene(dto, *this);
+	applyProjectDTOToScene(dto, *this, clear_old);
 	return true;
 }
 

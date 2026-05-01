@@ -6,7 +6,6 @@
 #include "GUI/Editor/ImGuiInput.hpp"
 #include "Logical/Animation/AnimationSystem.hpp"
 #include "AllMetaRegister.hpp"
-#include "Project/ProjectManager.hpp"
 
 GlobalContext g_context;
 
@@ -20,7 +19,6 @@ GlobalContext::GlobalContext()
 	gui_editor = std::make_shared<ImGuiEditor>();
 	gui_input = std::make_shared<GUIInput>(gui_editor);
 	animation_system = std::make_shared<AnimationSystem>();
-	project_manager = std::make_shared<ProjectManager>();
 }
 
 GlobalContext::~GlobalContext()

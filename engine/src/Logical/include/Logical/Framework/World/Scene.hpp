@@ -14,7 +14,7 @@ public:
 
 	GObject* loadModel(const std::string& filepath);
 	GCodeProcessorResult loadGcodeFile(const std::string& filepath);
-	bool loadProject(const std::string& project_filepath);
+	bool loadProject(const std::string& project_filepath, bool clear_old = true);
 	bool saveProject(const std::string& project_filepath);
 	const std::string& currentProjectFilepath() const { return m_current_project_filepath; }
 	const std::vector<std::shared_ptr<GObject>>& getPickedObjects() const { return m_picked_objects; }
@@ -32,7 +32,7 @@ public slots:
 
 protected:
 	friend ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& project_filepath);
-	friend void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene);
+	friend void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old = true);
 
 private:
 	std::vector<std::shared_ptr<GObject>> m_objects;

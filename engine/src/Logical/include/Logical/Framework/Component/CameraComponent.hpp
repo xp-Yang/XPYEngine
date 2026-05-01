@@ -49,13 +49,14 @@ struct CameraComponent : public Component
 	float fov = originFov;
 	float nearPlane = 0.1f;
 	float farPlane = 1000.0f;
-	Vec3 direction = Math::Normalize(Vec3(0.0f, -0.6f, -0.8f));
+	Vec3 direction = Math::Normalize(Vec3(0.0f, -1.f, -1.f));
 	Vec3 upDirection = Math::Normalize(global_up - Math::Dot(global_up, direction) * direction); // camera 的 y 轴
 	Vec3 getRightDirection() const
 	{ // camera 的 x 轴
 		return Math::Cross(direction, upDirection);
+
 	}
-	Vec3 pos = Vec3(0.0f) - 115.0f * direction;
+	Vec3 pos = Vec3(0.0f) - 30.0f * direction;
 	Mat4 view = Math::LookAt(pos, pos + direction, global_up);
 	float aspectRatio{16.0f / 9.0f}; // response on window size change, by sync_camera_projection_to_content()
 	Mat4 projection = projection_mode == Projection::Perspective ? Math::Perspective(fov, aspectRatio, nearPlane, farPlane) : Math::Ortho(-15.0f * aspectRatio, 15.0f * aspectRatio, -15.0f, 15.0f, nearPlane, farPlane);

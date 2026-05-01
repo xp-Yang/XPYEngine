@@ -32,6 +32,18 @@ void TransparentPass::draw()
         if (render_node->material.alpha == 1.0f)
             continue;
 
+        shader->setBool("useSkinning", render_node->use_skinning);
+        if (render_node->use_skinning && !render_node->bone_matrices.empty())
+        {
+            int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
+            shader->setInt("bone_count", bone_count);
+            shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+        }
+        else
+        {
+            shader->setInt("bone_count", 0);
+        }
+
         shader->setMatrix("model", 1, render_node->model_matrix);
 
         auto& material = render_node->material;

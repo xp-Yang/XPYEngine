@@ -31,19 +31,26 @@ void DeferredLightingPass::draw()
 	static RenderShaderObject* lighting_phong_shader = RenderShaderObject::getShaderObject(ShaderType::DeferredLightingPhongShader);
 	RenderShaderObject* lighting_shader = m_pbr ? lighting_pbr_shader : lighting_phong_shader;
 	RhiFrameBuffer* gbuffer_framebuffer = m_input_passes[0]->getFrameBuffer();
-	unsigned int g_position_map = gbuffer_framebuffer->colorAttachmentAt(0)->texture()->id();
 	lighting_shader->start_using();
+	unsigned int g_position_map = gbuffer_framebuffer->colorAttachmentAt(0)->texture()->id();
+	unsigned int g_normal_map = gbuffer_framebuffer->colorAttachmentAt(1)->texture()->id();
 	lighting_shader->setTexture("gPosition", 0, g_position_map);
-	lighting_shader->setTexture("gNormal", 1, g_position_map + 1);
+	lighting_shader->setTexture("gNormal", 1, g_normal_map);
 	if (m_pbr) {
-		lighting_shader->setTexture("gAlbedo", 2, g_position_map + 2);
-		lighting_shader->setTexture("gMetallic", 3, g_position_map + 3);
-		lighting_shader->setTexture("gRoughness", 4, g_position_map + 4);
-		lighting_shader->setTexture("gAo", 5, g_position_map + 5);
+		unsigned int g_albedo_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
+		unsigned int g_metallic_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
+		unsigned int g_roughness_map = gbuffer_framebuffer->colorAttachmentAt(4)->texture()->id();
+		unsigned int g_ao_map = gbuffer_framebuffer->colorAttachmentAt(5)->texture()->id();
+		lighting_shader->setTexture("gAlbedo", 2, g_albedo_map);
+		lighting_shader->setTexture("gMetallic", 3, g_metallic_map);
+		lighting_shader->setTexture("gRoughness", 4, g_roughness_map);
+		lighting_shader->setTexture("gAo", 5, g_ao_map);
 	}
 	else {
-		lighting_shader->setTexture("gDiffuse", 2, g_position_map + 2);
-		lighting_shader->setTexture("gSpecular", 3, g_position_map + 3);
+		unsigned int g_diffuse_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
+		unsigned int g_specular_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
+		lighting_shader->setTexture("gDiffuse", 2, g_diffuse_map);
+		lighting_shader->setTexture("gSpecular", 3, g_specular_map);
 	}
 
 	RhiFrameBuffer* shadow_framebuffer = m_input_passes[1]->getFrameBuffer();
@@ -88,15 +95,20 @@ void DeferredLightingPass::draw()
 	//	m_rhi->drawIndexed(render_point_light_sub_mesh_data->getVAO(), render_point_light_sub_mesh_data->indicesCount());
 	//	point_light_shader->stop_using();
 	//}
+
 	// instancing lights
-	//static RenderShaderObject* point_light_instancing_shader = RenderShaderObject::getShaderObject(ShaderType::InstancingShader);
-	//m_render_source_data->render_point_light_inst_mesh;
-	//point_light_instancing_shader->start_using();
-	//point_light_instancing_shader->setFloat4("color", Color4(0.5, 0.843, 0.12, 1.0));
-	//point_light_instancing_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-	//point_light_instancing_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
-	//m_rhi->drawIndexed(m_render_source_data->render_point_light_inst_mesh->getVAO(), m_render_source_data->render_point_light_inst_mesh->indicesCount(), m_render_source_data->point_light_inst_amount);
-	//point_light_instancing_shader->stop_using();
+    if (m_render_source_data->render_point_light_inst_mesh && m_render_source_data->point_light_inst_amount > 0)
+    {
+        static RenderShaderObject* point_light_instancing_shader = RenderShaderObject::getShaderObject(ShaderType::InstancingShader);
+        point_light_instancing_shader->start_using();
+        point_light_instancing_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
+        point_light_instancing_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
+        m_rhi->drawIndexed(
+            m_render_source_data->render_point_light_inst_mesh->getVAO(),
+            m_render_source_data->render_point_light_inst_mesh->indicesCount(),
+            m_render_source_data->point_light_inst_amount);
+        point_light_instancing_shader->stop_using();
+    }
 
 	m_framebuffer->unBind();
 }

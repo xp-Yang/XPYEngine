@@ -8,8 +8,6 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Project/ProjectManager.hpp"
-
 #include "GUI/Editor/ImGuiCanvas.hpp"
 #include "GUI/Editor/ImGuiContextMenu.hpp"
 #include "GUI/Editor/ImGuiSceneHierarchy.hpp"
@@ -124,12 +122,8 @@ void ImGuiEditor::renderMenuBar()
                 FileDialog* file_dlg = g_context.window->createFileDialog();
                 auto project_path = file_dlg->OpenFile(XPY_PROJECT_FILE_FILTER);
                 if (!project_path.empty()) {
-                    if (!g_context.project_manager->openProject(project_path)) {
-                        Logger::error("Open Project failed: {}", project_path);
-                    } else {
-                        if (!g_context.scene->loadProject(project_path)) {
-                            Logger::warn("Open Project: failed to load scene payload from: {}", project_path);
-                        }
+                    if (!g_context.scene->loadProject(project_path)) {
+                        Logger::warn("Open Project: failed to load scene payload from: {}", project_path);
                     }
                 }
             }
@@ -137,21 +131,28 @@ void ImGuiEditor::renderMenuBar()
             if (ImGui::MenuItem("Open", "Ctrl+O")) {
                 FileDialog* file_dlg = g_context.window->createFileDialog();
                 auto filepath = file_dlg->OpenFile("");
-                if (filepath.find(".gcode") != std::string::npos) {
-                    const GCodeProcessorResult& result = g_context.scene->loadGcodeFile(filepath);
-                    if (!result.moves.empty()) {
-                        g_context.scene->gcodeViewer()->load(result);
-                        static_cast<PreviewCanvas*>(m_preview_canvas.get())->horizontal_slider()->initValueSpan(g_context.scene->gcodeViewer()->get_move_range());
-                        static_cast<PreviewCanvas*>(m_preview_canvas.get())->vertical_slider()->initValueSpan(g_context.scene->gcodeViewer()->get_layer_range());
+                if (!filepath.empty()) {
+                    if (PathService::getFileSuffix(filepath) == "gcode") {
+                        const GCodeProcessorResult& result = g_context.scene->loadGcodeFile(filepath);
+                        if (!result.moves.empty()) {
+                            g_context.scene->gcodeViewer()->load(result);
+                            static_cast<PreviewCanvas*>(m_preview_canvas.get())->horizontal_slider()->initValueSpan(g_context.scene->gcodeViewer()->get_move_range());
+                            static_cast<PreviewCanvas*>(m_preview_canvas.get())->vertical_slider()->initValueSpan(g_context.scene->gcodeViewer()->get_layer_range());
 
-                        //g_context.scene->gcodeViewerInstancing()->load(result);
-                        //static_cast<PreviewCanvas*>(m_preview_canvas.get())->horizontal_slider()->initValueSpan(g_context.scene->gcodeViewerInstancing()->get_move_range());
-                        //static_cast<PreviewCanvas*>(m_preview_canvas.get())->vertical_slider()->initValueSpan(g_context.scene->gcodeViewerInstancing()->get_layer_range());
+                            //g_context.scene->gcodeViewerInstancing()->load(result);
+                            //static_cast<PreviewCanvas*>(m_preview_canvas.get())->horizontal_slider()->initValueSpan(g_context.scene->gcodeViewerInstancing()->get_move_range());
+                            //static_cast<PreviewCanvas*>(m_preview_canvas.get())->vertical_slider()->initValueSpan(g_context.scene->gcodeViewerInstancing()->get_layer_range());
+                        }
+
                     }
-                    
-                }
-                else if (!filepath.empty()) {
-                    g_context.scene->loadModel(filepath);
+                    else if (PathService::getFileSuffix(filepath) == "proj") {
+                        if (!g_context.scene->loadProject(filepath, false)) {
+                            Logger::warn("Open Project: failed to load scene payload from: {}", filepath);
+                        }
+                    }
+                    else {
+                        g_context.scene->loadModel(filepath);
+                    }
                 }
             }
             if (ImGui::MenuItem("Save Project", "Ctrl+S")) {
@@ -168,7 +169,6 @@ void ImGuiEditor::renderMenuBar()
                 FileDialog* file_dlg = g_context.window->createFileDialog();
                 auto project_path = file_dlg->SaveFile(XPY_PROJECT_FILE_FILTER);
                 if (!project_path.empty()) {
-                    g_context.project_manager->setProjectFilepath(project_path);
                     if (!g_context.scene->saveProject(project_path)) {
                         Logger::error("Save Project As failed: {}", project_path);
                     } else {
@@ -259,7 +259,7 @@ void ImGuiEditor::configUIStyle()
     /// 1 = MORE "3D" LOOK
     int is3D = 0;
 
-    colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_Text] = ImVec4(0.83f, 0.83f, 0.83f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
     colors[ImGuiCol_ChildBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
     colors[ImGuiCol_WindowBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);

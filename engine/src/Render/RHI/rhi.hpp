@@ -62,6 +62,7 @@ public:
     unsigned int id() const { return m_id; }
 
     virtual bool create() = 0;
+    virtual void update(void* data, int size, int offset = 0) = 0;
 
 protected:
     RhiBuffer(Type type_, UsageFlag usage_, void *data, int size_);
@@ -329,23 +330,15 @@ class RhiVertexLayout
 public:
     void setAttributes(std::initializer_list<RhiVertexAttribute> list)
     {
-        std::array<RhiVertexAttribute, 8> attributes;
-        int i = 0;
-        for (auto it = list.begin(); it != list.end(); ++it)
-        {
-            if (i < attributes.size())
-                attributes[i++] = *it;
-        }
-        m_attributes.swap(attributes);
+        m_attributes.assign(list.begin(), list.end());
     }
     template <typename InputIterator>
     void setAttributes(InputIterator first, InputIterator last)
     {
-        m_attributes.clear();
-        std::copy(first, last, std::back_inserter(m_attributes));
+        m_attributes.assign(first, last);
     }
-    const RhiVertexAttribute *cbeginAttributes() const { return &m_attributes.front(); }
-    const RhiVertexAttribute *cendAttributes() const { return &m_attributes.back(); }
+    const RhiVertexAttribute *cbeginAttributes() const { return m_attributes.empty() ? nullptr : m_attributes.data(); }
+    const RhiVertexAttribute *cendAttributes() const { return m_attributes.empty() ? nullptr : m_attributes.data() + m_attributes.size(); }
 
     unsigned int id() const { return m_id; }
 
@@ -356,7 +349,7 @@ public:
 protected:
     RhiVertexLayout() = default;
     RhiVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer);
-    std::array<RhiVertexAttribute, 8> m_attributes;
+    std::vector<RhiVertexAttribute> m_attributes;
     RhiBuffer *m_vbuffer;
     RhiBuffer *m_ibuffer;
     unsigned int m_id;

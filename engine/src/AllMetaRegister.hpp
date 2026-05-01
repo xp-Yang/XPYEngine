@@ -49,7 +49,9 @@ inline void allMetaRegister()
 		registerProperty(&Mesh::vertices, "vertices").
 		registerProperty(&Mesh::indices, "indices").
 		registerProperty(&Mesh::material, "material").
-		registerProperty(&Mesh::local_transform, "local_transform");
+		registerProperty(&Mesh::translation, "translation").
+		registerProperty(&Mesh::rotation, "rotation").
+		registerProperty(&Mesh::scale, "scale");
 	registerClass<Texture>("Texture").
 		registerProperty(&Texture::texture_type, "texture_type").
 		registerProperty(&Texture::texture_filepath, "texture_filepath").
@@ -145,6 +147,7 @@ inline void allMetaRegister()
 		registerProperty(&::GObject::m_components, "m_components");
 
 	registerClass<::MeshComponent>("MeshComponent").
+		registerProperty(&::MeshComponent::source_filepath, "source_filepath").
 		registerProperty(&::MeshComponent::sub_meshes, "sub_meshes");
 
 	registerClass<::TransformComponent>("TransformComponent").
@@ -166,16 +169,22 @@ inline void allMetaRegister()
 		registerProperty(&::CameraComponent::view, "view").
 		registerProperty(&::CameraComponent::projection, "projection");
 
-	registerClass<::AnimationComponent>("AnimationComponent");
+	registerClass<::AnimationComponent>("AnimationComponent")
+		.registerProperty(&::AnimationComponent::clip_path, "clip_path")
+		.registerProperty(&::AnimationComponent::speed, "speed")
+		.registerProperty(&::AnimationComponent::loop, "loop")
+		.registerProperty(&::AnimationComponent::playing, "playing");
 	registerClass<::RigidComponent>("RigidComponent");
 
 	registerClass<::DirectionalLight>("DirectionalLight")
 		.registerProperty(&::DirectionalLight::direction, "direction")
 		.registerProperty(&::DirectionalLight::aspectRatio, "aspectRatio")
 		.registerProperty(&::DirectionalLight::luminousColor, "luminousColor");
+
 	registerClass<::PointLight>("PointLight")
 		.registerProperty(&::PointLight::radius, "radius")
-		.registerProperty(&::PointLight::position, "position");
+		.registerProperty(&::PointLight::position, "position")
+		.registerProperty(&::PointLight::luminousColor, "luminousColor");
 #endif
 
 }

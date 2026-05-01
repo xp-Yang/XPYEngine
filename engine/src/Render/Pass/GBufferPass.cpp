@@ -48,6 +48,18 @@ void GBufferPass::draw()
         if (render_node->material.alpha != 1.0f)
             continue;
 
+        g_shader->setBool("useSkinning", render_node->use_skinning);
+        if (render_node->use_skinning && !render_node->bone_matrices.empty())
+        {
+            int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
+            g_shader->setInt("bone_count", bone_count);
+            g_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+        }
+        else
+        {
+            g_shader->setInt("bone_count", 0);
+        }
+
         g_shader->setMatrix("model", 1, render_node->model_matrix);
         auto& material = render_node->material;
         if (m_pbr) {

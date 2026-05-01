@@ -8,204 +8,270 @@
 #include "Render/RenderSourceData.hpp"
 #include "GlobalContext.hpp"
 
-ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor *parent)
+ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     : m_parent(parent)
 {
-    m_widget_creator[Meta::MetaTypeOf<GObject>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
+    float columnWidth = 100.0f;
+
+    auto TreeNodeExWithTitleFont = [this](const char* label, ImGuiTreeNodeFlags flags) -> bool
     {
-        auto &object = inst.getValue<GObject &>();
-        GObjectID id = object.ID();
-        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
-
-        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-        const auto &original_picked_ids = g_context.scene->getPickedObjectIDs();
-        if (std::find(original_picked_ids.begin(), original_picked_ids.end(), id) != original_picked_ids.end())
-            node_flags |= ImGuiTreeNodeFlags_Selected;
-        else
-            node_flags &= ~ImGuiTreeNodeFlags_Selected;
-
-        bool node_open = ImGui::TreeNodeEx(display_text.c_str(), node_flags);
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-        {
-            g_context.scene->onPickedChanged({id}, original_picked_ids);
-        }
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-        {
-            g_context.scene->onPickedChanged({id}, original_picked_ids);
-            m_parent->popUpMenu();
-        }
-        if (node_open)
-        {
-            if (object.isLeaf())
-            {
-                for (auto &com : object.getComponents())
-                {
-                    Meta::Instance inst{*com};
-                    if (m_widget_creator.find(inst.typeName()) != m_widget_creator.end())
-                        m_widget_creator[inst.typeName()](inst.typeName(), inst);
-                }
-            }
-            else
-            {
-                for (auto &child : object.children())
-                {
-                    Meta::Instance inst{*child};
-                    m_widget_creator[Meta::MetaTypeOf<GObject>().typeName()](inst.typeName(), inst);
-                }
-            }
-            ImGui::TreePop();
-        }
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+        const float old_scale = ImGui::GetCurrentWindow()->FontWindowScale;
+        ImGui::SetWindowFontScale(1.2f);
+        bool node_open = ImGui::TreeNodeEx(label, flags);
+        ImGui::SetWindowFontScale(old_scale);
+        ImGui::PopStyleColor();
+        return node_open;
     };
-    m_widget_creator[Meta::MetaTypeOf<DirectionalLight>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
-    {
-        auto &light = inst.getValue<DirectionalLight &>();
-        LightID id = light.ID();
-        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
 
-        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-        bool node_open = ImGui::TreeNodeEx(display_text.c_str(), node_flags);
-        if (node_open)
-        {
-            for (auto &prop : inst.metaType().properties())
-            {
-                auto &inst_ = prop.getValue(inst);
-                if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
-                    m_widget_creator[inst_.typeName()](prop.name, inst_);
-            }
-            ImGui::TreePop();
-        }
+    auto DrawIntControl = [columnWidth](const std::string& label, int& value, float speed = 1.0f, int min = 0.0f, int max = 0.0f) {
+        ImGui::PushID(label.c_str());
+
+        ImGui::Columns(2, nullptr, false);
+        ImGui::SetColumnWidth(0, columnWidth);
+
+        ImGui::Text("%s", label.c_str());
+        ImGui::NextColumn();
+        ImGui::DragInt(("##" + label).c_str(), &value, speed, min, max);
+
+        ImGui::Columns(1);
+        ImGui::PopID();
     };
-    m_widget_creator[Meta::MetaTypeOf<PointLight>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
-    {
-        auto &light = inst.getValue<PointLight &>();
-        LightID id = light.ID();
-        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
 
-        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-        bool node_open = ImGui::TreeNodeEx(display_text.c_str(), node_flags);
-        if (node_open)
-        {
-            for (auto &prop : inst.metaType().properties())
-            {
-                auto &inst_ = prop.getValue(inst);
-                if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
-                    m_widget_creator[inst_.typeName()](prop.name, inst_);
-            }
-            ImGui::TreePop();
-        }
+    auto DrawFloatControl = [columnWidth](const std::string& label, float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f) {
+        ImGui::PushID(label.c_str());
+
+        ImGui::Columns(2, nullptr, false);
+        ImGui::SetColumnWidth(0, columnWidth);
+
+        ImGui::Text("%s", label.c_str());
+        ImGui::NextColumn();
+        ImGui::DragFloat(("##" + label).c_str(), &value, speed, min, max);
+
+        ImGui::Columns(1);
+        ImGui::PopID();
     };
-    m_widget_creator[Meta::MetaTypeOf<TransformComponent>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
+
+    auto DrawVec3Control = [columnWidth](const std::string& label, Vec3& values, float resetValue = 0.0f)
     {
-        auto DrawVecControl = [](const std::string &label, Vec3 &values, float resetValue = 0.0f, float columnWidth = 100.0f)
-        {
-            ImGui::PushID(label.c_str());
+        ImGui::PushID(label.c_str());
 
-            ImGui::Columns(2);
-            ImGui::SetColumnWidth(0, columnWidth);
-            ImGui::Text("%s", label.c_str());
-            ImGui::NextColumn();
+        ImGui::Columns(2, nullptr, false);
+        ImGui::SetColumnWidth(0, columnWidth);
+        ImGui::Text("%s", label.c_str());
+        ImGui::NextColumn();
 
-            ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{0, 0});
+        ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, ImGui::GetStyle().ItemSpacing.y });
 
-            float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
-            ImVec2 buttonSize = {lineHeight + 3.0f, lineHeight};
+        float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
+        ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
 
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.8f, 0.1f, 0.15f, 1.0f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.9f, 0.2f, 0.2f, 1.0f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{0.8f, 0.1f, 0.15f, 1.0f});
-            if (ImGui::Button("X", buttonSize))
-                values.x = resetValue;
-            ImGui::PopStyleColor(3);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+        if (ImGui::Button("X", buttonSize))
+            values.x = resetValue;
+        ImGui::PopStyleColor(3);
 
-            ImGui::SameLine();
-            ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
-            ImGui::PopItemWidth();
-            ImGui::SameLine();
+        ImGui::SameLine();
+        ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
 
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.2f, 0.45f, 0.2f, 1.0f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.3f, 0.55f, 0.3f, 1.0f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{0.2f, 0.45f, 0.2f, 1.0f});
-            if (ImGui::Button("Y", buttonSize))
-                values.y = resetValue;
-            ImGui::PopStyleColor(3);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.3f, 0.55f, 0.3f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
+        if (ImGui::Button("Y", buttonSize))
+            values.y = resetValue;
+        ImGui::PopStyleColor(3);
 
-            ImGui::SameLine();
-            ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
-            ImGui::PopItemWidth();
-            ImGui::SameLine();
+        ImGui::SameLine();
+        ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
 
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.1f, 0.25f, 0.8f, 1.0f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.2f, 0.35f, 0.9f, 1.0f});
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{0.1f, 0.25f, 0.8f, 1.0f});
-            if (ImGui::Button("Z", buttonSize))
-                values.z = resetValue;
-            ImGui::PopStyleColor(3);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+        if (ImGui::Button("Z", buttonSize))
+            values.z = resetValue;
+        ImGui::PopStyleColor(3);
 
-            ImGui::SameLine();
-            ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
-            ImGui::PopItemWidth();
+        ImGui::SameLine();
+        ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
+        ImGui::PopItemWidth();
 
-            ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
 
+        ImGui::Columns(1);
+        ImGui::PopID();
+    };
+
+    auto DrawVec4Control = [columnWidth](const std::string& label, Vec4& values, float resetValue = 1.0f) {
+        ImGui::PushID(label.c_str());
+
+        ImGui::Columns(2, nullptr, false);
+        ImGui::SetColumnWidth(0, columnWidth);
+        ImGui::Text("%s", label.c_str());
+        ImGui::NextColumn();
+
+        ImGui::PushMultiItemsWidths(4, ImGui::CalcItemWidth());
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, ImGui::GetStyle().ItemSpacing.y });
+
+        float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
+        ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+        if (ImGui::Button("R", buttonSize))
+            values.x = resetValue;
+        ImGui::PopStyleColor(3);
+
+        ImGui::SameLine();
+        ImGui::DragFloat("##R", &values.x, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.3f, 0.55f, 0.3f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
+        if (ImGui::Button("G", buttonSize))
+            values.y = resetValue;
+        ImGui::PopStyleColor(3);
+
+        ImGui::SameLine();
+        ImGui::DragFloat("##G", &values.y, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+        if (ImGui::Button("B", buttonSize))
+            values.z = resetValue;
+        ImGui::PopStyleColor(3);
+
+        ImGui::SameLine();
+        ImGui::DragFloat("##B", &values.z, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+        ImGui::SameLine();
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.45f, 0.45f, 0.45f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.55f, 0.55f, 0.55f, 1.0f });
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.45f, 0.45f, 0.45f, 1.0f });
+        if (ImGui::Button("W", buttonSize))
+            values.w = resetValue;
+        ImGui::PopStyleColor(3);
+
+        ImGui::SameLine();
+        ImGui::DragFloat("##W", &values.w, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::PopItemWidth();
+
+        ImGui::PopStyleVar();
+
+        ImGui::Columns(1);
+        ImGui::PopID();
+    };
+
+    auto DrawTexturePreview = [columnWidth](const std::string& label, const std::shared_ptr<Texture>& tex)
+    {
+        const float preview_size = 64.f;
+        ImGui::Columns(2, nullptr, false);
+        ImGui::SetColumnWidth(0, columnWidth);
+        ImGui::Text("%s", label.c_str());
+        ImGui::NextColumn();
+        if (!tex) {
+            ImGui::TextUnformatted("<none>");
             ImGui::Columns(1);
-            ImGui::PopID();
-        };
+            return;
+        }
 
-        static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings;
+        static std::unordered_map<const Texture*, unsigned int> texture_preview_cache;
+        auto it = texture_preview_cache.find(tex.get());
+        if (it == texture_preview_cache.end()) {
+            const unsigned int preview_id = RenderTextureData(tex).id;
+            it = texture_preview_cache.insert({ tex.get(), preview_id }).first;
+        }
+
+        ImTextureID preview_tex = (ImTextureID)(intptr_t)it->second;
+        ImGui::Image(preview_tex, ImVec2(preview_size, preview_size), ImVec2(0, 1), ImVec2(1, 0));
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            if (!tex->texture_filepath.empty())
+                ImGui::TextUnformatted(tex->texture_filepath.c_str());
+            else
+                ImGui::TextUnformatted("<no filepath>");
+            ImGui::EndTooltip();
+        }
+        ImGui::Columns(1);
+    };
+
+    m_widget_creator[Meta::MetaTypeOf<Vec4>().typeName()] = [this, DrawVec4Control](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        DrawVec4Control(name, inst.getValue<Vec4&>());
+    };
+    m_widget_creator[Meta::MetaTypeOf<Vec3>().typeName()] = [this, DrawVec3Control](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        DrawVec3Control(name, inst.getValue<Vec3&>());
+    };
+    m_widget_creator[Meta::MetaTypeOf<bool>().typeName()] = [this](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        ImGui::Checkbox(name.c_str(), &inst.getValue<bool&>());
+    };
+    m_widget_creator[Meta::MetaTypeOf<int>().typeName()] = [this, DrawIntControl](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        DrawIntControl(name, inst.getValue<int&>());
+    };
+    m_widget_creator[Meta::MetaTypeOf<float>().typeName()] = [this, DrawFloatControl](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        DrawFloatControl(name, inst.getValue<float&>());
+    };
+    m_widget_creator[Meta::MetaTypeOf<std::string>().typeName()] = [this, columnWidth](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        ImGui::PushID(name.c_str());
+
+        ImGui::Columns(2, nullptr, false);
+        ImGui::SetColumnWidth(0, columnWidth);
+
+        ImGui::Text(name.c_str());
+        ImGui::NextColumn();
+        std::string& val = inst.getValue<std::string&>();
+        if (val.empty())
+            ImGui::Text("<none>");
+        else
+            ImGui::Text(val.c_str());
+
+        ImGui::Columns(1);
+        ImGui::PopID();
+    };
+    m_widget_creator[Meta::MetaTypeOf<TransformComponent>().typeName()] = [this, DrawVec3Control, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
+    {
         bool node_open = false;
-        node_open = ImGui::TreeNodeEx(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+        node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
             Meta::MetaType meta = inst.metaType();
-            for (auto &prop : meta.properties())
+            for (auto& prop : meta.properties())
             {
-                if (prop.isType<Vec3>())
-                    DrawVecControl(prop.name, prop.getValue<Vec3 &>(inst));
+                if (prop.isType<Vec3>()) {
+                    if (prop.name == "scale")
+                        DrawVec3Control(prop.name, prop.getValue<Vec3&>(inst), 1.0f);
+                    else
+                        DrawVec3Control(prop.name, prop.getValue<Vec3&>(inst));
+                }
             }
             ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<MeshComponent>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<MeshComponent>().typeName()] = [this, DrawVec3Control, DrawTexturePreview, columnWidth, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        auto DrawTexturePreview = [](const char *label, const std::shared_ptr<Texture> &tex)
-        {
-            const float preview_size = 48.0f;
-            ImGui::Text("%s:", label);
-            ImGui::SameLine();
-            const float start_x = ImGui::GetCursorPosX();
-            const float right_x = ImGui::CalcItemWidth();
-            if (right_x > start_x)
-                ImGui::SetCursorPosX(right_x);
-            if (!tex) {
-                ImGui::TextUnformatted("<none>");
-                return;
-            }
-
-            static std::unordered_map<const Texture *, unsigned int> texture_preview_cache;
-            auto it = texture_preview_cache.find(tex.get());
-            if (it == texture_preview_cache.end()) {
-                const unsigned int preview_id = RenderTextureData(tex).id;
-                it = texture_preview_cache.insert({tex.get(), preview_id}).first;
-            }
-
-            ImTextureID preview_tex = (ImTextureID)(intptr_t)it->second;
-            ImGui::Image(preview_tex, ImVec2(preview_size, preview_size), ImVec2(0, 1), ImVec2(1, 0));
-            if (ImGui::IsItemHovered()) {
-                ImGui::BeginTooltip();
-                if (!tex->texture_filepath.empty())
-                    ImGui::TextUnformatted(tex->texture_filepath.c_str());
-                else
-                    ImGui::TextUnformatted("<no filepath>");
-                ImGui::EndTooltip();
-            }
-        };
-
-        auto DrawSubMeshControl = [&DrawTexturePreview](const std::string &label, Mesh &sub_mesh, float columnWidth = 100.0f)
+        auto DrawSubMeshControl = [DrawTexturePreview, DrawVec3Control, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh)
         {
             ImGui::PushID(label.c_str());
-            if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) {
-                ImGui::Columns(2);
+            if (TreeNodeExWithTitleFont(label.c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) {
+                ImGui::Columns(2, nullptr, false);
                 ImGui::SetColumnWidth(0, columnWidth);
                 ImGui::Text("vertices");
                 ImGui::NextColumn();
@@ -216,42 +282,38 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor *parent)
                 ImGui::Text("%d", (int)sub_mesh.indices.size());
                 ImGui::Columns(1);
 
-                ImGui::Separator();
-                ImGui::Text("Local Transform");
-                for (int row = 0; row < 4; ++row) {
-                    float row_values[4] = {
-                        sub_mesh.local_transform[0][row],
-                        sub_mesh.local_transform[1][row],
-                        sub_mesh.local_transform[2][row],
-                        sub_mesh.local_transform[3][row]
-                    };
-                    const std::string row_label = std::string("row") + std::to_string(row);
-                    if (ImGui::DragFloat4(("##" + row_label).c_str(), row_values, 0.01f)) {
-                        sub_mesh.local_transform[0][row] = row_values[0];
-                        sub_mesh.local_transform[1][row] = row_values[1];
-                        sub_mesh.local_transform[2][row] = row_values[2];
-                        sub_mesh.local_transform[3][row] = row_values[3];
-                    }
+                if (TreeNodeExWithTitleFont(("Local Transform##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
+                {
+                    DrawVec3Control("translation", sub_mesh.translation);
+                    DrawVec3Control("rotation", sub_mesh.rotation);
+                    DrawVec3Control("scale", sub_mesh.scale, 1.0f);
+                    ImGui::TreePop();
                 }
 
                 if (sub_mesh.material) {
-                    ImGui::Separator();
-                    ImGui::Text("Material");
-                    ImGui::Text("alpha:");
-                    ImGui::SliderFloat("##alpha", &sub_mesh.material->alpha, 0.0f, 1.0f);
+                    if (TreeNodeExWithTitleFont(("Material##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
+                    {
+                        ImGui::Columns(2, nullptr, false);
+                        ImGui::SetColumnWidth(0, columnWidth);
+                        ImGui::Text("alpha");
+                        ImGui::NextColumn();
+                        ImGui::DragFloat("##alpha", &sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f);
+                        ImGui::Columns(1);
 
-                    DrawTexturePreview("albedo", sub_mesh.material->albedo_texture);
-                    DrawTexturePreview("metallic", sub_mesh.material->metallic_texture);
-                    DrawTexturePreview("roughness", sub_mesh.material->roughness_texture);
-                    DrawTexturePreview("ao", sub_mesh.material->ao_texture);
+                        DrawTexturePreview("albedo", sub_mesh.material->albedo_texture);
+                        DrawTexturePreview("metallic", sub_mesh.material->metallic_texture);
+                        DrawTexturePreview("roughness", sub_mesh.material->roughness_texture);
+                        DrawTexturePreview("ao", sub_mesh.material->ao_texture);
 
-                    DrawTexturePreview("diffuse", sub_mesh.material->diffuse_texture);
-                    DrawTexturePreview("specular", sub_mesh.material->specular_texture);
-                    DrawTexturePreview("normal", sub_mesh.material->normal_texture);
-                    DrawTexturePreview("height", sub_mesh.material->height_texture);
+                        DrawTexturePreview("diffuse", sub_mesh.material->diffuse_texture);
+                        DrawTexturePreview("specular", sub_mesh.material->specular_texture);
+                        DrawTexturePreview("normal", sub_mesh.material->normal_texture);
+                        DrawTexturePreview("height", sub_mesh.material->height_texture);
+
+                        ImGui::TreePop();
+                    }
                 }
                 else {
-                    ImGui::Separator();
                     ImGui::TextUnformatted("Material: <none>");
                 }
 
@@ -262,73 +324,123 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor *parent)
 
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings;
         bool node_open = false;
-        node_open = ImGui::TreeNodeEx(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+        node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
-            MeshComponent &mesh_ptr = inst.getValue<MeshComponent &>();
-            ImGui::Text("source_filepath:");
-            if (mesh_ptr.source_filepath.empty())
-                ImGui::TextUnformatted("<none>");
-            else
-                ImGui::TextUnformatted(mesh_ptr.source_filepath.c_str());
-            ImGui::Separator();
-            for (auto &sub_mesh : mesh_ptr.sub_meshes)
+            for (auto& prop : inst.metaType().properties())
             {
-                DrawSubMeshControl(std::string("SubMesh id ") + std::to_string(sub_mesh->sub_mesh_idx), *sub_mesh);
+                if (prop.name == "sub_meshes") {
+                    MeshComponent& mc = inst.getValue<MeshComponent&>();
+                    for (auto& sub_mesh : mc.sub_meshes)
+                    {
+                        DrawSubMeshControl(std::string("SubMesh id ") + std::to_string(sub_mesh->sub_mesh_idx), *sub_mesh);
+                    }
+                }
+                else if (m_widget_creator.find(prop.type_name) != m_widget_creator.end())
+                    m_widget_creator[prop.type_name](prop.name, prop.getValue(inst));
             }
 
             ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<Vec4>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<AnimationComponent>().typeName()] = [this, DrawFloatControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        Vec4 &vec = inst.getValue<Vec4 &>();
-        float val[4] = {vec.x, vec.y, vec.z, vec.w};
+        bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+        if (node_open)
         {
-            std::string full_label = "##" + name;
-            ImGui::Text("%s", (name + ":").c_str());
-            ImGui::DragFloat4(full_label.c_str(), val, 0.01f, 0.0f, 1.0f);
-        }
-        vec.x = val[0];
-        vec.y = val[1];
-        vec.z = val[2];
-        vec.w = val[3];
-    };
-    m_widget_creator[Meta::MetaTypeOf<Vec3>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
-    {
-        Vec3 &vec = inst.getValue<Vec3 &>();
-        float val[3] = {vec.x, vec.y, vec.z};
-        {
-            std::string full_label = "##" + name;
-            ImGui::Text("%s", (name + ":").c_str());
-            ImGui::DragFloat3(full_label.c_str(), val);
-        }
-        vec.x = val[0];
-        vec.y = val[1];
-        vec.z = val[2];
-    };
-    m_widget_creator[Meta::MetaTypeOf<bool>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
-    {
-        {
-            std::string full_label = "##" + name;
-            ImGui::Text("%s", name.c_str());
-            ImGui::Checkbox(full_label.c_str(), &inst.getValue<bool &>());
+            for (auto& prop : inst.metaType().properties())
+            {
+                if (prop.name == "speed") {
+                    DrawFloatControl(prop.name, prop.getValue(inst).getValue<float&>(), 0.01f, 0.0f, 2.0f);
+                }
+                else if (m_widget_creator.find(prop.type_name) != m_widget_creator.end())
+                    m_widget_creator[prop.type_name](prop.name, prop.getValue(inst));
+            }
+
+            ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<int>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<DirectionalLight>().typeName()] = [this, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
+        auto& light = inst.getValue<DirectionalLight&>();
+        LightID id = light.ID();
+        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
+
+        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+        bool node_open = TreeNodeExWithTitleFont(display_text.c_str(), node_flags);
+        if (node_open)
         {
-            std::string full_label = "##" + name;
-            ImGui::Text("%s", (name + ":").c_str());
-            ImGui::InputInt(full_label.c_str(), &inst.getValue<int &>());
+            for (auto& prop : inst.metaType().properties())
+            {
+                auto& inst_ = prop.getValue(inst);
+                if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
+                    m_widget_creator[inst_.typeName()](prop.name, inst_);
+            }
+            ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<float>().typeName()] = [this](const std::string &name, const Meta::Instance &inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<PointLight>().typeName()] = [this, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
+        auto& light = inst.getValue<PointLight&>();
+        LightID id = light.ID();
+        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
+
+        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+        bool node_open = TreeNodeExWithTitleFont(display_text.c_str(), node_flags);
+        if (node_open)
         {
-            std::string full_label = "##" + name;
-            ImGui::Text("%s", (name + ":").c_str());
-            ImGui::InputFloat(full_label.c_str(), &inst.getValue<float &>());
+            for (auto& prop : inst.metaType().properties())
+            {
+                auto& inst_ = prop.getValue(inst);
+                if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
+                    m_widget_creator[inst_.typeName()](prop.name, inst_);
+            }
+            ImGui::TreePop();
+        }
+    };
+    m_widget_creator[Meta::MetaTypeOf<GObject>().typeName()] = [this, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        auto& object = inst.getValue<GObject&>();
+        GObjectID id = object.ID();
+        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
+
+        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+        const auto& original_picked_ids = g_context.scene->getPickedObjectIDs();
+        if (std::find(original_picked_ids.begin(), original_picked_ids.end(), id) != original_picked_ids.end())
+            node_flags |= ImGuiTreeNodeFlags_Selected;
+        else
+            node_flags &= ~ImGuiTreeNodeFlags_Selected;
+
+        bool node_open = TreeNodeExWithTitleFont(display_text.c_str(), node_flags);
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+        {
+            g_context.scene->onPickedChanged({ id }, original_picked_ids);
+        }
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            g_context.scene->onPickedChanged({ id }, original_picked_ids);
+            m_parent->popUpMenu();
+        }
+        if (node_open)
+        {
+            if (object.isLeaf())
+            {
+                for (auto& com : object.getComponents())
+                {
+                    Meta::Instance inst{ *com };
+                    if (m_widget_creator.find(inst.typeName()) != m_widget_creator.end())
+                        m_widget_creator[inst.typeName()](inst.typeName(), inst);
+                }
+            }
+            else
+            {
+                for (auto& child : object.children())
+                {
+                    Meta::Instance inst{ *child };
+                    m_widget_creator[Meta::MetaTypeOf<GObject>().typeName()](inst.typeName(), inst);
+                }
+            }
+            ImGui::TreePop();
         }
     };
 }

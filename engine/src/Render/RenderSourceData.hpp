@@ -49,12 +49,17 @@ public:
     GL_RESOURCE_HANLE getVAO() const { return m_vertex_layout->id(); }
     size_t verticesCount() const { return m_vertices_count; }
     size_t indicesCount() const { return m_indices_count; }
-    void create_instancing(void* instancing_data, int instancing_data_size);
+    void create_instancing(void* instancing_data, int instancing_data_size, int buffer_capacity_size = -1);
+    void update_instancing(void* instancing_data, int instancing_data_size);
+    int instancingCapacityBytes() const { return m_instancing_capacity_bytes; }
 
 private:
-    RhiVertexLayout* m_vertex_layout;
+    RhiVertexLayout* m_vertex_layout{ nullptr };
     size_t m_vertices_count;
     size_t m_indices_count;
+
+    RhiBuffer* m_instancing_buffer{ nullptr };
+    int m_instancing_capacity_bytes{ 0 };
 };
 
 class RenderMeshInstanceData {
@@ -136,8 +141,8 @@ struct RenderSourceData {
     std::unordered_map<RenderMeshNodeID, std::shared_ptr<RenderMeshNode>, RenderMeshNodeIDHasher> render_mesh_nodes;
     std::vector<RenderDirectionalLightData> render_directional_light_data_list;
     std::vector<RenderPointLightData> render_point_light_data_list;
-    //std::shared_ptr<RenderMeshData> render_point_light_inst_mesh;
-    int point_light_inst_amount;
+    std::shared_ptr<RenderMeshData> render_point_light_inst_mesh;
+    int point_light_inst_amount{ 0 };
     RenderSkyboxNode render_skybox_node;
     std::shared_ptr<RenderMeshData> screen_quad;
 

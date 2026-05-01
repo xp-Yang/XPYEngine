@@ -16,7 +16,7 @@ void LightManager::addPointLight()
 	double r3 = Math::random(-15.0f, 15.0f);
 	point_light->position = { r1, r2, r3 };
 	point_light->radius = 30.f;// random(0.1f, 0.3f) * 100.0f;
-	point_light->luminousColor = Color4(3.0f, 3.0f, 3.0f, 1.0f);//Color4{ randomUnit(), randomUnit(), randomUnit(), 1.0f };
+	point_light->luminousColor = Color4{ Math::randomUnit(), Math::randomUnit(), Math::randomUnit(), 1.0f };
 	m_lights.push_back(point_light);
 }
 

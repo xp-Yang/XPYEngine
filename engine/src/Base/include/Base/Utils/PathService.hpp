@@ -71,6 +71,21 @@ namespace PathService {
 		}
 		return p;
 	}
+
+    static std::string getDirectory(const std::string& filepath)
+    {
+        std::string path = normalize(filepath);
+        const size_t pos = path.find_last_of('/');
+        return (pos == std::string::npos) ? std::string() : path.substr(0, pos);
+    }
+
+    static inline std::string getFileName(const std::string& filepath) {
+        return filepath.substr(filepath.find_last_of("/\\") + 1, filepath.find_last_of('.') - filepath.find_last_of("/\\") - 1);
+    }
+
+    static inline std::string getFileSuffix(const std::string& filepath) {
+        return filepath.substr(filepath.find_last_of(".") + 1);
+    }
 }
 
 #endif // !PathService_hpp

@@ -20,7 +20,9 @@ void Mesh::reset()
     vertices.shrink_to_fit();
     indices.shrink_to_fit();
     material.reset();
-    local_transform = Mat4(1.0f);
+    translation = Vec3(0.0f);
+    rotation = Vec3(0.0f);
+    scale = Vec3(1.0f);
 }
 
 std::shared_ptr<Mesh> Mesh::create_cube_mesh()

@@ -37,7 +37,7 @@ struct EffectParams {
 };
 
 struct RenderParams {
-    RenderPathType render_path_type = RenderPathType::Forward;
+    RenderPathType render_path_type = RenderPathType::Deferred;
     MaterialModel material_model = MaterialModel::BlinnPhong;
     MSAAParams msaa_params;
     ShadowParams shadow_params;

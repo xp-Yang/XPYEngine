@@ -93,24 +93,49 @@ void RenderMeshData::reset()
     // if (m_VAO) glDeleteVertexArrays(1, &m_VAO);
 }
 
-void RenderMeshData::create_instancing(void *instancing_data, int instancing_data_size)
+void RenderMeshData::create_instancing(void *instancing_data, int instancing_data_size, int buffer_capacity_size)
 {
+    if (instancing_data_size <= 0)
+        return;
+
     const auto &rhi = RenderSourceData::rhi;
 
-    RhiBuffer *inst_buf = rhi->newBuffer(RhiBuffer::Immutable, RhiBuffer::VertexBuffer, instancing_data, instancing_data_size);
-    inst_buf->create();
+    m_instancing_capacity_bytes = buffer_capacity_size > 0 ? buffer_capacity_size : instancing_data_size;
+    m_instancing_buffer = rhi->newBuffer(RhiBuffer::Dynamic, RhiBuffer::VertexBuffer, nullptr, m_instancing_capacity_bytes);
+    m_instancing_buffer->create();
+    m_instancing_buffer->update(instancing_data, instancing_data_size);
 
     m_vertex_layout->setAttributes({
-        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                            // position
-        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},     // normal
-        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)}, // uv
-        {3, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 0},
-        {4, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), sizeof(Vec4)},
-        {5, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 2 * sizeof(Vec4)},
-        {6, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 3 * sizeof(Vec4)},
-        {7, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 4 * sizeof(Vec4)},
+        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                                  // position
+        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},           // normal
+        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},       // uv
+        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},          // bone ids
+        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)},     // bone weights
+        {5, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 0},                                // 矩阵
+        {6, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), sizeof(Vec4)},                     
+        {7, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 2 * sizeof(Vec4)},
+        {8, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 3 * sizeof(Vec4)},
+        {9, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 4 * sizeof(Vec4)},                 // color
     });
-    m_vertex_layout->createInstancing(inst_buf, 3);
+    m_vertex_layout->createInstancing(m_instancing_buffer, 5);
+}
+
+void RenderMeshData::update_instancing(void* instancing_data, int instancing_data_size)
+{
+    if (instancing_data_size <= 0 || instancing_data == nullptr)
+        return;
+    if (!m_instancing_buffer)
+    {
+        create_instancing(instancing_data, instancing_data_size);
+        return;
+    }
+    if (instancing_data_size > m_instancing_capacity_bytes)
+    {
+        // TODO 旧的buffer需要释放
+        int new_capacity = std::max(instancing_data_size, m_instancing_capacity_bytes * 2);
+        create_instancing(instancing_data, instancing_data_size, new_capacity);
+    }
+    m_instancing_buffer->update(instancing_data, instancing_data_size);
 }
 
 RenderMaterialData::RenderMaterialData(std::shared_ptr<Material> material_)

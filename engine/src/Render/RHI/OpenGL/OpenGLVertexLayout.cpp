@@ -11,7 +11,7 @@ bool OpenGLVertexLayout::create()
     glBindVertexArray(m_id);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffer->id());
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibuffer->id());
-    for (int i = 0; i < m_attributes.size(); ++i) {
+    for (size_t i = 0; i < m_attributes.size(); ++i) {
         int location = m_attributes[i].location;
         if (location == -1)
             continue;
@@ -89,11 +89,11 @@ bool OpenGLVertexLayout::create()
     return true;
 }
 
-bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, int instancin_location)
+bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, int instancing_location)
 {
     glBindVertexArray(m_id);
     glBindBuffer(GL_ARRAY_BUFFER, inst_buffer->id());
-    for (int i = instancin_location; i < m_attributes.size(); ++i) {
+    for (size_t i = static_cast<size_t>(instancing_location); i < m_attributes.size(); ++i) {
         int location = m_attributes[i].location;
         if (location == -1)
             continue;

@@ -18,14 +18,14 @@
           }
         }
       ],
-      "name": "cube",
+      "name": "Ground",
       "sub_meshes": [
         {
           "index": 0,
           "local_transform": {
             "rotation": {
               "x": 0,
-              "y": -0,
+              "y": 0,
               "z": 0
             },
             "scale": {
@@ -61,6 +61,6 @@
       "visible": true
     }
   ],
-  "project_name": "XPYProject",
+  "project_name": "ground",
   "schema_version": 1
 }

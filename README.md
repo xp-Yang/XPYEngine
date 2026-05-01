@@ -1,6 +1,46 @@
-# XPYEngine 使用手册
+# 依赖与构建流程
+
+### 1. 主要依赖
+
+依赖定义见 `engine/thirdparty/CMakeLists.txt` 与 `engine/src/CMakeLists.txt`。
+
+核心依赖包括：
+
+- 渲染与窗口：`glad`, `glfw`
+- GUI：`imgui`
+- 资源加载：`stb`, `assimp`
+- 数学与工具：`glm`, `spdlog`, `json11`
+- 反射/序列化：`TinyReflection`
+
+### 2. 构建目标
+
+- `EngineRuntime`（库，位于 `engine/src/CMakeLists.txt`）
+- `SAMPLES`（可执行程序，位于 `samples/CMakeLists.txt`，链接 `EngineRuntime`）
+
+### 3. 构建步骤（推荐 out-of-source）
+
+在项目根目录执行：
+
+```bash
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+如果使用单配置生成器（如 Ninja），可用：
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+### 4. 运行样例
+
+- 入口在 `samples/main.cpp`
+- 默认创建 `cubetest` demo 并进入 `engine.run()`
 
 ---
+
+# 项目说明
 
 ## 1. 分层设计总览：Base / ResourceManager / Logical / Render / GUI
 
@@ -176,45 +216,7 @@ Deferred 路径典型顺序：
 
 ---
 
-## 6. 依赖与构建流程
-
-### 6.1 主要依赖
-依赖定义见 `engine/thirdparty/CMakeLists.txt` 与 `engine/src/CMakeLists.txt`。
-
-核心依赖包括：
-- 渲染与窗口：`glad`, `glfw`
-- GUI：`imgui`
-- 资源加载：`stb`, `assimp`
-- 数学与工具：`glm`, `spdlog`, `json11`
-- 反射/序列化：`TinyReflection`
-
-### 6.2 构建目标
-- `EngineRuntime`（库，位于 `engine/src/CMakeLists.txt`）
-- `SAMPLES`（可执行程序，位于 `samples/CMakeLists.txt`，链接 `EngineRuntime`）
-
-### 6.3 构建步骤（推荐 out-of-source）
-
-在项目根目录执行：
-
-```bash
-cmake -S . -B build
-cmake --build build --config Release
-```
-
-如果使用单配置生成器（如 Ninja），可用：
-
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-```
-
-### 6.4 运行样例
-- 入口在 `samples/main.cpp`
-- 默认创建 `cubetest` demo 并进入 `engine.run()`
-
----
-
-## 快速导航（常看文件）
+# 快速导航（常看文件）
 - 引擎循环：`engine/src/Engine.cpp`
 - 全局上下文：`engine/src/GlobalContext.hpp`
 - 场景与项目序列化：`engine/src/Logical/Framework/World/Scene.cpp`
