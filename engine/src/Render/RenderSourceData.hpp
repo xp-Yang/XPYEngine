@@ -101,17 +101,27 @@ struct RenderMeshNodeIDHasher {
 };
 
 struct RenderMeshNode {
-    RenderMeshNode(const RenderMeshNodeID& id, const RenderMeshData& mesh_data, const RenderMaterialData& material_data, Mat4 matrix)
+    RenderMeshNode(
+        const RenderMeshNodeID& id,
+        const RenderMeshData& mesh_data,
+        const RenderMaterialData& material_data,
+        Mat4 matrix,
+        int source_index_offset_,
+        int source_index_count_)
         : node_id(id)
         , mesh(mesh_data)
         , material(material_data)
         , model_matrix(matrix)
+        , source_index_offset(source_index_offset_)
+        , source_index_count(source_index_count_)
     {}
 
     RenderMeshNodeID node_id;
     RenderMeshData mesh;
     RenderMaterialData material;
     Mat4 model_matrix;
+    int source_index_offset{ 0 };
+    int source_index_count{ 0 };
     bool use_skinning{ false };
     std::vector<Mat4> bone_matrices;
 

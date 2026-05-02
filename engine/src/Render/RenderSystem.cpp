@@ -167,54 +167,74 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         const int object_id = object->ID().id;
         alive_object_ids.insert(object_id);
 
-        auto *mesh_component = object->getComponent<MeshComponent>();
-        auto *transform_component = object->getComponent<TransformComponent>();
-        if (!mesh_component || !transform_component)
-            continue;
-
-        const auto &sub_meshes = mesh_component->sub_meshes;
-        const Mat4 obj_transform = transform_component->transform();
-        const bool use_skinning = animation_system && animation_system->HasAnimation(object_id);
-        const std::vector<Mat4> *bone_matrices = use_skinning ? &animation_system->GetFinalBoneMatrices(object_id) : nullptr;
         const bool visible = object->visible();
+        if (!visible)
+        {
+            for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
+            {
+                if (it->first.object_id.id == object_id)
+                    it = render_mesh_nodes.erase(it);
+                else
+                    ++it;
+            }
+            continue;
+        }
+
+
+        const auto& sub_meshes = object->getComponent<MeshComponent>()->sub_meshes;
+        const Mat4 obj_transform = object->getComponent<TransformComponent>()->transform();
+        const bool use_skinning = animation_system && animation_system->HasAnimation(object_id);
+        const std::vector<Mat4>* bone_matrices = use_skinning ? &animation_system->GetFinalBoneMatrices(object_id) : nullptr;
+
+        std::unordered_set<int> alive_sub_mesh_ids;
+        alive_sub_mesh_ids.reserve(sub_meshes.size());
         for (const auto &sub_mesh : sub_meshes)
         {
+            alive_sub_mesh_ids.insert(sub_mesh->sub_mesh_idx);
             Mat4 sub_mesh_transform = Math::composeMatrix(sub_mesh->scale, sub_mesh->rotation, sub_mesh->translation);
             auto render_mesh_mode_id = RenderMeshNodeID(object->ID(), sub_mesh->sub_mesh_idx);
             auto it = render_mesh_nodes.find(render_mesh_mode_id);
-            if (!visible)
+            if (it != render_mesh_nodes.end())
             {
-                if (it != render_mesh_nodes.end())
-                    render_mesh_nodes.erase(it);
+                auto &render_node = *(it->second);
+                render_node.model_matrix = (obj_transform * sub_mesh_transform);
+                render_node.source_index_offset = sub_mesh->index_offset;
+                render_node.source_index_count = sub_mesh->index_count;
+                render_node.updateRenderMaterialData(sub_mesh->material);
+                render_node.use_skinning = use_skinning;
+                if (bone_matrices)
+                    render_node.bone_matrices = *bone_matrices;
+                else
+                    render_node.bone_matrices.clear();
             }
             else
             {
-                if (it != render_mesh_nodes.end())
-                {
-                    auto &render_node = *(it->second);
-                    render_node.model_matrix = (obj_transform * sub_mesh_transform);
-                    render_node.updateRenderMaterialData(sub_mesh->material);
-                    render_node.use_skinning = use_skinning;
-                    if (bone_matrices)
-                        render_node.bone_matrices = *bone_matrices;
-                    else
-                        render_node.bone_matrices.clear();
-                }
-                else
-                {
-                    auto render_node = std::make_shared<RenderMeshNode>(
-                        render_mesh_mode_id,
-                        RenderMeshData(sub_mesh),
-                        RenderMaterialData(sub_mesh->material),
-                        obj_transform * sub_mesh_transform);
-                    render_node->use_skinning = use_skinning;
-                    if (bone_matrices)
-                        render_node->bone_matrices = *bone_matrices;
-                    render_mesh_nodes.emplace(render_mesh_mode_id, render_node);
-                }
+                auto render_node = std::make_shared<RenderMeshNode>(
+                    render_mesh_mode_id,
+                    RenderMeshData(sub_mesh),
+                    RenderMaterialData(sub_mesh->material),
+                    obj_transform * sub_mesh_transform,
+                    sub_mesh->index_offset,
+                    sub_mesh->index_count);
+                render_node->use_skinning = use_skinning;
+                if (bone_matrices)
+                    render_node->bone_matrices = *bone_matrices;
+                render_mesh_nodes.emplace(render_mesh_mode_id, render_node);
             }
         }
+        // Remove not alive sub_mesh
+        for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
+        {
+            if (it->first.object_id.id == object_id &&
+                alive_sub_mesh_ids.find(it->first.sub_mesh_idx) == alive_sub_mesh_ids.end())
+            {
+                it = render_mesh_nodes.erase(it);
+            }
+            else
+                ++it;
+        }
     }
+    // Remove not alive object
     for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
     {
         if (alive_object_ids.find(it->first.object_id.id) == alive_object_ids.end())

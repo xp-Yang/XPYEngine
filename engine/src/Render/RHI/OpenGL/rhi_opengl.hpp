@@ -14,7 +14,7 @@ public:
     ~RhiOpenGL() override {};
 
     // render相关
-    void drawIndexed(unsigned int vao_id, size_t indices_count, int inst_amount = -1) override;
+    void drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1) override;
     void drawTriangles(unsigned int vao_id, size_t array_count) override;
     // context 全局状态
     void setViewport(int x, int y, int width, int height) override;

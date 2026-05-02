@@ -2,6 +2,7 @@
 #include "GUI/Editor/ImGuiCanvas.hpp"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include "Logical/Framework/World/Scene.hpp"
 #include "Render/RenderSystem.hpp"

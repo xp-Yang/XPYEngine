@@ -1,7 +1,7 @@
-#ifndef GcodeViewerInstancingInstancing_hpp
-#define GcodeViewerInstancingInstancing_hpp
+#ifndef GcodeTraceInstancingInstancing_hpp
+#define GcodeTraceInstancingInstancing_hpp
 
-#include "ResourceManager/Gcode/GcodeResultData.hpp"
+#include "GcodeImporter/GcodeResultData.hpp"
 
 namespace Instance {
 enum LineType : unsigned int {
@@ -118,13 +118,13 @@ struct LinesBatch {
 	int calculate_index_offset_of(int move_id, bool begin) const;
 };
 
-class GcodeViewerInstancing {
+class GcodeTraceInstancing {
 public:
-	GcodeViewerInstancing();
-	GcodeViewerInstancing(const GcodeViewerInstancing&) = delete;
-	GcodeViewerInstancing(GcodeViewerInstancing&&) = delete;
-	GcodeViewerInstancing& operator=(const GcodeViewerInstancing&) = delete;
-	GcodeViewerInstancing& operator=(GcodeViewerInstancing&&) = delete;
+	GcodeTraceInstancing();
+	GcodeTraceInstancing(const GcodeTraceInstancing&) = delete;
+	GcodeTraceInstancing(GcodeTraceInstancing&&) = delete;
+	GcodeTraceInstancing& operator=(const GcodeTraceInstancing&) = delete;
+	GcodeTraceInstancing& operator=(GcodeTraceInstancing&&) = delete;
 
 	void load(const GCodeProcessorResult& result);
 
@@ -173,4 +173,4 @@ private:
 	bool m_valid = false;
 };
 }
-#endif // !GcodeViewerInstancingInstancing_hpp
+#endif // !GcodeTraceInstancingInstancing_hpp

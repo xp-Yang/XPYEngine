@@ -112,7 +112,7 @@ void MeshForwardLightingPass::draw()
                 shader->setCubeTexture(cube_map_id, 6 + i, m_cube_maps[i]);
             }
         }
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
     }
     shader->stop_using();
 }

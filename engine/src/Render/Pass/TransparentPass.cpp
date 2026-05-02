@@ -59,7 +59,7 @@ void TransparentPass::draw()
 
         shader->setFloat("alpha", material.alpha);
 
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
     }
     shader->stop_using();
 

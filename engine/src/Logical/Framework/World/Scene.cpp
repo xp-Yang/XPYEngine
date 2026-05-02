@@ -5,17 +5,14 @@
 #include "Logical/Framework/Component/TransformComponent.hpp"
 #include "Logical/Framework/Component/AnimationComponent.hpp"
 #include "Logical/Animation/Animation.hpp"
-#include "Logical/Gcode/GcodeViewer.hpp"
 
 #include "ResourceManager/DTO.hpp"
 #include "ResourceManager/ResourceImporter.hpp"
-#include "ResourceManager/Gcode/GcodeImporter.hpp"
 
 Scene::Scene()
 {
 	m_light_manager = std::make_shared<LightManager>();
 	m_camera = std::make_shared<CameraComponent>(nullptr);
-	m_gcode_viewer = std::make_shared<GcodeViewer>();
 }
 
 GObject* Scene::loadModel(const std::string& filepath)
@@ -60,14 +57,6 @@ GObject* Scene::loadModel(const std::string& filepath)
 #endif
 
 	return res;
-}
-
-GCodeProcessorResult Scene::loadGcodeFile(const std::string& filepath)
-{
-	GCodeProcessor gcode_importer;
-	gcode_importer.process_file(filepath);
-	GCodeProcessorResult&& result = std::move(gcode_importer.extract_result());
-	return result;
 }
 
 // Scene -> DTO
@@ -222,11 +211,6 @@ std::vector<GObjectID> Scene::getPickedObjectIDs() const
 void Scene::addObject(std::shared_ptr<GObject> obj)
 {
 	m_objects.push_back(std::shared_ptr<GObject>(obj));
-}
-
-std::shared_ptr<GcodeViewer> Scene::gcodeViewer() const
-{
-	return m_gcode_viewer;
 }
 
 void Scene::onPickedChanged(std::vector<GObjectID> added, std::vector<GObjectID> removed)

@@ -5,7 +5,9 @@ file(GLOB_RECURSE SRC_FILES "*.cpp" "*.c")
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SRC_FILES} ${HEAD_FILES})
 #增加HEAD_FILES以便ide可以显示这些头文件
-add_executable(${SAMPLES_EXEC_NAME} ${HEAD_FILES} ${SRC_FILES})
+add_executable(${SAMPLES_EXEC_NAME}
+    ${HEAD_FILES}
+    ${SRC_FILES})
 
 #设为vs默认启动项目
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${SAMPLES_EXEC_NAME})
@@ -15,6 +17,6 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT $
 #    MACOSX_BUNDLE ON
 #)
 
-target_link_libraries(${SAMPLES_EXEC_NAME} EngineRuntime)
+target_link_libraries(${SAMPLES_EXEC_NAME} PUBLIC EngineRuntime)
 
 target_compile_features(${SAMPLES_EXEC_NAME} PRIVATE cxx_std_17)

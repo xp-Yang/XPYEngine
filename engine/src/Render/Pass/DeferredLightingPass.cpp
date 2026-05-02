@@ -106,6 +106,7 @@ void DeferredLightingPass::draw()
         m_rhi->drawIndexed(
             m_render_source_data->render_point_light_inst_mesh->getVAO(),
             m_render_source_data->render_point_light_inst_mesh->indicesCount(),
+            0,
             m_render_source_data->point_light_inst_amount);
         point_light_instancing_shader->stop_using();
     }

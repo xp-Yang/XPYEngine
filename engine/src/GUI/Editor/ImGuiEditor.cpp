@@ -5,6 +5,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
+#include <utility>
 
 #include <GLFW/glfw3.h>
 
@@ -18,7 +19,6 @@
 #include "GUI/Window.hpp"
 #include "Render/RenderSystem.hpp"
 #include "Logical/FrameWork/World/Scene.hpp"
-#include "Logical/Gcode/GcodeViewer.hpp"
 #include "Base/Logger/Logger.hpp"
 #include "GlobalContext.hpp"
 
@@ -112,6 +112,11 @@ bool ImGuiEditor::isInMainCanvas() const
     return !m_main_canvas->getImGuiWindow()->SkipItems;
 }
 
+void ImGuiEditor::setExternalOpenFileHandler(ExternalOpenFileHandler handler)
+{
+    m_external_open_file_handler = std::move(handler);
+}
+
 void ImGuiEditor::renderMenuBar()
 {
     if (ImGui::BeginMenuBar())
@@ -132,26 +137,21 @@ void ImGuiEditor::renderMenuBar()
                 FileDialog* file_dlg = g_context.window->createFileDialog();
                 auto filepath = file_dlg->OpenFile("");
                 if (!filepath.empty()) {
-                    if (PathService::getFileSuffix(filepath) == "gcode") {
-                        const GCodeProcessorResult& result = g_context.scene->loadGcodeFile(filepath);
-                        if (!result.moves.empty()) {
-                            g_context.scene->gcodeViewer()->load(result);
-                            static_cast<PreviewCanvas*>(m_preview_canvas.get())->horizontal_slider()->initValueSpan(g_context.scene->gcodeViewer()->get_move_range());
-                            static_cast<PreviewCanvas*>(m_preview_canvas.get())->vertical_slider()->initValueSpan(g_context.scene->gcodeViewer()->get_layer_range());
-
-                            //g_context.scene->gcodeViewerInstancing()->load(result);
-                            //static_cast<PreviewCanvas*>(m_preview_canvas.get())->horizontal_slider()->initValueSpan(g_context.scene->gcodeViewerInstancing()->get_move_range());
-                            //static_cast<PreviewCanvas*>(m_preview_canvas.get())->vertical_slider()->initValueSpan(g_context.scene->gcodeViewerInstancing()->get_layer_range());
-                        }
-
-                    }
-                    else if (PathService::getFileSuffix(filepath) == "proj") {
+                    if (PathService::getFileSuffix(filepath) == "proj") {
                         if (!g_context.scene->loadProject(filepath, false)) {
                             Logger::warn("Open Project: failed to load scene payload from: {}", filepath);
                         }
                     }
                     else {
-                        g_context.scene->loadModel(filepath);
+                        if (!g_context.scene->loadModel(filepath)) {
+                            bool handled_by_external = false;
+                            if (m_external_open_file_handler) {
+                                handled_by_external = m_external_open_file_handler(filepath);
+                            }
+                            if (!handled_by_external) {
+                                Logger::warn("Open: unsupported or failed file type: {}", filepath);
+                            }
+                        }
                     }
                 }
             }

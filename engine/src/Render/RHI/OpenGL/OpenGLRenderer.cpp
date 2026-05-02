@@ -1,12 +1,13 @@
 #include "OpenGLRenderer.hpp"
 
-void OpenGLRenderer::drawIndexed(unsigned int vao_id, size_t indices_count, int inst_amount)
+void OpenGLRenderer::drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset, int inst_amount)
 {
     glBindVertexArray(vao_id);
+    void* index_buffer_offset = reinterpret_cast<void*>(index_offset * sizeof(unsigned int));
     if (inst_amount == -1)
-        glDrawElements(GL_TRIANGLES, (int)indices_count, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, (int)indices_count, GL_UNSIGNED_INT, index_buffer_offset);
     else
-        glDrawElementsInstanced(GL_TRIANGLES, (int)indices_count, GL_UNSIGNED_INT, 0, inst_amount);
+        glDrawElementsInstanced(GL_TRIANGLES, (int)indices_count, GL_UNSIGNED_INT, index_buffer_offset, inst_amount);
     glBindVertexArray(0);
 }
 

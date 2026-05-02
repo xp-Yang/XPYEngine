@@ -29,8 +29,8 @@ target_include_directories(${LIB_NAME}
 
 target_link_libraries(${LIB_NAME} 
 	PRIVATE glad
-	PRIVATE imgui
 	PRIVATE stb
+	PUBLIC imgui
 	PUBLIC spdlog
 	PUBLIC json11
 	PUBLIC glm

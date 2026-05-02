@@ -39,6 +39,8 @@ struct Mesh {
 	void reset();
 
 	int sub_mesh_idx{ 0 };
+	int index_offset{ 0 };
+	int index_count{ 0 };
 	std::vector<Vertex> vertices;
 	std::vector<int> indices;
 	std::shared_ptr<Material> material;

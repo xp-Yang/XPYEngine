@@ -33,6 +33,6 @@ void NormalPass::draw()
             normal_shader->setInt("bone_count", 0);
         }
         normal_shader->setMatrix("model", 1, render_node->model_matrix);
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
     }
 }

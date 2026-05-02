@@ -23,9 +23,9 @@ RhiOpenGL::RhiOpenGL()
 	glFrontFace(GL_CCW);
 }
 
-void RhiOpenGL::drawIndexed(unsigned int vao_id, size_t indices_count, int inst_amount)
+void RhiOpenGL::drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset, int inst_amount)
 {
-	OpenGLRenderer::drawIndexed(vao_id, indices_count, inst_amount);
+	OpenGLRenderer::drawIndexed(vao_id, indices_count, index_offset, inst_amount);
 }
 
 void RhiOpenGL::drawTriangles(unsigned int vao_id, size_t array_count)

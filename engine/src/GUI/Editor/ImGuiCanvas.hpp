@@ -4,12 +4,11 @@
 #include "Base/Common.hpp"
 #include "GUI/Viewport.hpp"
 
-#include "Gcode/ImGuiSlider.hpp"
-#include "Gcode/ImGuiGcodeLegend.hpp"
+struct ImGuiWindow;
 
 enum CanvasType : unsigned int {
     Main,
-    GcodePreview,
+    Preview,
     Pick,
     Shadow,
     GBuffer,
@@ -47,20 +46,10 @@ protected:
     ImGuiToolbar* m_toolbar{ nullptr };
 };
 
-class ImGuiSlider;
-class GcodeLegend;
-class Mesh;
 class PreviewCanvas : public ImGuiCanvas {
 public:
     PreviewCanvas(ImGuiEditor* parent);
     void render() override;
-    ImGuiSlider* horizontal_slider() const { return m_horizontal_slider.get(); }
-    ImGuiSlider* vertical_slider() const { return m_vertical_slider.get(); }
-
-protected:
-    std::unique_ptr<ImGuiSlider> m_horizontal_slider;
-    std::unique_ptr<ImGuiSlider> m_vertical_slider;
-    std::unique_ptr<GcodeLegend> m_legend;
 };
 
 class PickingCanvas : public ImGuiCanvas {

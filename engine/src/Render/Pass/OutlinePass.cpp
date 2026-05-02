@@ -73,7 +73,7 @@ void OutlinePass::draw()
             int b = (id & 0x00FF0000) >> 16;
             Color4 color(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
             one_color_shader->setFloat4("color", color);
-            m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+            m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
         }
     }
     auto source_map = m_source_framebuffer->colorAttachmentAt(0)->texture()->id();

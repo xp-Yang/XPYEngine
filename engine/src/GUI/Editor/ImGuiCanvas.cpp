@@ -61,11 +61,7 @@ void MainCanvas::render()
 PreviewCanvas::PreviewCanvas(ImGuiEditor* parent)
     : ImGuiCanvas(parent)
 {
-    m_type = CanvasType::GcodePreview;
-
-    m_horizontal_slider = std::make_unique<ImGuiSlider>(this, Orientation::Horizontal);
-    m_vertical_slider = std::make_unique<ImGuiSlider>(this, Orientation::Vertical);
-    m_legend = std::make_unique<GcodeLegend>(this);
+    m_type = CanvasType::Preview;
 }
 
 void PreviewCanvas::render()
@@ -92,9 +88,6 @@ void PreviewCanvas::render()
         ImGui::Text("FPS %.1f", io.Framerate);
         setViewPort({ (int)content_pos.x, (int)content_pos.y, (int)content_size.x, (int)content_size.y });
 
-        m_horizontal_slider->render();
-        m_vertical_slider->render();
-        m_legend->render();
     }
     ImGui::End();
 }

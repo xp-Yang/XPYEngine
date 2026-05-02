@@ -1,7 +1,7 @@
-#ifndef GcodeViewer_hpp
-#define GcodeViewer_hpp
+#ifndef GcodeTrace_hpp
+#define GcodeTrace_hpp
 
-#include "ResourceManager/Gcode/GcodeResultData.hpp"
+#include "GcodeImporter/GcodeResultData.hpp"
 #include "SimpleMesh.hpp"
 
 enum LineType : unsigned int {
@@ -32,6 +32,28 @@ enum LineType : unsigned int {
 	WIPE						= 1 << 19,
 	SEAM						= 1 << 20,
 	COUNT						= 1 << 21,
+};
+
+inline const std::array<std::string, ExtrusionRole::erCount> role_labels = {
+    ("Undefined"),
+    ("Inner wall"),
+    ("Outer wall"),
+    ("Overhang wall"),
+    ("Sparse infill"),
+    ("Internal solid infill"),
+    ("Top surface"),
+    ("Bottom surface"),
+    ("Ironing"),
+    ("Bridge"),
+    ("Gap infill"),
+    ("Skirt"),
+    ("Brim"),
+    ("Support"),
+    ("Support interface"),
+    ("Support transition"),
+    ("Prime tower"),
+    ("Custom"),
+    ("Multiple"),
 };
 
 inline const std::vector<Color4> Extrusion_Role_Colors{
@@ -86,17 +108,19 @@ struct Segment {
 	// begin_move_id == end_move_id - 1
 	//int begin_move_id;
 	int end_move_id;
-	std::shared_ptr<SimpleMesh> mesh;
 	// persist index_offset because the mesh will be released after send its data to gpu.
 	int index_offset = 0;
+
+	std::shared_ptr<SimpleMesh> mesh;
 };
 
 // Polyline is a set of continuous Segment
 struct Polyline {
 	int begin_move_id = INT_MAX;
 	int end_move_id = -INT_MAX;
-	std::vector<Segment> segments;
 	int index_offset = 0;
+
+	std::vector<Segment> segments;
 
 	void append_segment(const Segment& segment);
 };
@@ -104,22 +128,23 @@ struct Polyline {
 // LinesBatch is a set of Polyline that can be rendered in one batch, i.e. a set of Polyline with the same color.
 struct LinesBatch {
 	std::vector<Polyline> polylines;
-	std::shared_ptr<SimpleMesh> merged_mesh;
 	std::pair<int, int> colorless_indices_interval;
 	std::pair<int, int> colored_indices_interval;
+
+	std::shared_ptr<SimpleMesh> merged_mesh;
 
 	bool empty() const { return polylines.empty(); }
 	void append_polyline(const Polyline& polyline);
 	int calculate_index_offset_of(int move_id, bool begin) const;
 };
 
-class GcodeViewer {
+class GcodeTrace {
 public:
-	GcodeViewer();
-	//GcodeViewer(const GcodeViewer&) = delete;
-	//GcodeViewer(GcodeViewer&&) = delete;
-	//GcodeViewer& operator=(const GcodeViewer&) = delete;
-	//GcodeViewer& operator=(GcodeViewer&&) = delete;
+	GcodeTrace();
+	//GcodeTrace(const GcodeTrace&) = delete;
+	//GcodeTrace(GcodeTrace&&) = delete;
+	//GcodeTrace& operator=(const GcodeTrace&) = delete;
+	//GcodeTrace& operator=(GcodeTrace&&) = delete;
 
 	void load(const GCodeProcessorResult& result);
 
@@ -131,7 +156,9 @@ public:
 	void set_move_scope(std::array<int, 2> move_scope);
 
 	const std::array<int, 2>& get_layer_range() const { return m_layer_range; }
+	const std::array<int, 2>& get_layer_scope() const { return m_layer_scope; }
 	const std::array<int, 2>& get_move_range() const { return m_move_range; }
+	const std::array<int, 2>& get_move_scope() const { return m_move_scope; }
 
 	const std::vector<Layer>& get_layers() const { return m_layers; }
 
@@ -172,4 +199,4 @@ private:
 	bool m_valid = false;
 };
 
-#endif // !#define GcodeViewer_hpp
+#endif // !#define GcodeTrace_hpp

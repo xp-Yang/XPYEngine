@@ -75,7 +75,7 @@ void ShadowPass::drawDirectionalLightShadowMap()
         depth_shader->setMatrix("view", 1, light_view);
         depth_shader->setMatrix("projection", 1, light_proj);
         depth_shader->setFloat4("color", Color4(1.0));
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
     }
 }
 
@@ -131,7 +131,7 @@ void ShadowPass::drawPointLightShadowMap()
                 depth_shader->setMatrix("projection", 1, light_proj[cube_map_id]);
                 depth_shader->setFloat3("lightPos", light_pos[cube_map_id]);
                 depth_shader->setFloat("far_plane", light_radius[cube_map_id]);
-                m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+                m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
             }
         }
     }

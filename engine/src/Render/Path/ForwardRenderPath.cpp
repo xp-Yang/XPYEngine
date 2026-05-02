@@ -3,8 +3,6 @@
 #include "../Pass/ShadowPass.hpp"
 #include "../Pass/MeshForwardLightingPass.hpp"
 #include "../Pass/PickingPass.hpp"
-#include "../Gcode/GcodeViewerPass.hpp"
-#include "../Gcode/GcodeViewerInstancingPass.hpp"
 #include "../Pass/SkyBoxPass.hpp"
 #include "../Pass/OutlinePass.hpp"
 #include "../Pass/CombinePass.hpp"
@@ -17,7 +15,6 @@ ForwardRenderPath::ForwardRenderPath(RenderSystem *render_system)
     m_render_passes[RenderPass::Type::SkyBox] = std::make_unique<SkyBoxPass>();
     m_render_passes[RenderPass::Type::Shadow] = std::make_unique<ShadowPass>();
     m_render_passes[RenderPass::Type::Forward] = std::make_unique<MeshForwardLightingPass>();
-    // m_gcode_instancing_pass = std::make_unique<Instance::GcodeViewerInstancingPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
     m_render_passes[RenderPass::Type::Combined] = std::make_unique<CombinePass>();
 

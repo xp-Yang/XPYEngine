@@ -1,11 +1,9 @@
 #ifndef Cubetest_hpp
 #define Cubetest_hpp
 
-#include "demo.hpp"
-
-class Cubetest : public Demo {
+class Cubetest {
 public:
-	void init() override;
+	void init();
 };
 
 #endif // !Cubetest_hpp

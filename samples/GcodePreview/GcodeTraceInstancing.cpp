@@ -1,4 +1,4 @@
-#include "GcodeViewerInstancing.hpp"
+#include "GcodeTraceInstancing.hpp"
 
 namespace Instance {
 void Polyline::append_segment(const Segment& segment)
@@ -49,12 +49,12 @@ int LinesBatch::calculate_index_offset_of(int move_id, bool begin) const
 	return index_offset;
 }
 
-GcodeViewerInstancing::GcodeViewerInstancing()
+GcodeTraceInstancing::GcodeTraceInstancing()
 {
 	reset();
 }
 
-void GcodeViewerInstancing::reset()
+void GcodeTraceInstancing::reset()
 {
 	m_move_type_visible.fill(false);
 	m_role_visible.fill(false);
@@ -76,7 +76,7 @@ void GcodeViewerInstancing::reset()
 	m_valid = false;
 }
 
-void GcodeViewerInstancing::load(const GCodeProcessorResult& result)
+void GcodeTraceInstancing::load(const GCodeProcessorResult& result)
 {
 	reset();
 	parse_moves(result.moves);
@@ -91,7 +91,7 @@ void GcodeViewerInstancing::load(const GCodeProcessorResult& result)
 	}
 }
 
-void GcodeViewerInstancing::set_layer_scope(std::array<int, 2> layer_scope)
+void GcodeTraceInstancing::set_layer_scope(std::array<int, 2> layer_scope)
 {
 	assert(layer_scope[1] >= layer_scope[0]);
 	m_layer_scope = layer_scope;
@@ -103,7 +103,7 @@ void GcodeViewerInstancing::set_layer_scope(std::array<int, 2> layer_scope)
 	refresh();
 }
 
-void GcodeViewerInstancing::set_move_scope(std::array<int, 2> move_scope)
+void GcodeTraceInstancing::set_move_scope(std::array<int, 2> move_scope)
 {
 	assert(move_scope[1] >= move_scope[0]);
 	m_move_scope[0] = std::max(move_scope[0], m_move_range[0]);
@@ -112,7 +112,7 @@ void GcodeViewerInstancing::set_move_scope(std::array<int, 2> move_scope)
 	refresh();
 }
 
-void GcodeViewerInstancing::set_visible(ExtrusionRole role_type, bool visible)
+void GcodeTraceInstancing::set_visible(ExtrusionRole role_type, bool visible)
 {
 	m_role_visible[role_type] = visible;
 	if (!visible) {
@@ -126,7 +126,7 @@ void GcodeViewerInstancing::set_visible(ExtrusionRole role_type, bool visible)
 	//update the horizontal slider
 }
 
-void GcodeViewerInstancing::parse_moves(std::vector<MoveVertex> moves)
+void GcodeTraceInstancing::parse_moves(std::vector<MoveVertex> moves)
 {
 	ExtrusionRole prev_role = ExtrusionRole::erNone;
 	for (size_t move_id = 1; move_id < moves.size(); move_id++) {
@@ -207,7 +207,7 @@ void GcodeViewerInstancing::parse_moves(std::vector<MoveVertex> moves)
 	refresh();
 }
 
-void GcodeViewerInstancing::refresh()
+void GcodeTraceInstancing::refresh()
 {
 	int begin_move_id = m_layers[m_layer_scope[0]].begin_move_id;
 	int end_move_id = m_move_scope[1];

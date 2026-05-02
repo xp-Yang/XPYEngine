@@ -1,4 +1,4 @@
-#include "GcodeViewer.hpp"
+#include "GcodeTrace.hpp"
 
 void Polyline::append_segment(const Segment& segment)
 {
@@ -62,12 +62,12 @@ int LinesBatch::calculate_index_offset_of(int move_id, bool begin) const
 	return index_offset;
 }
 
-GcodeViewer::GcodeViewer()
+GcodeTrace::GcodeTrace()
 {
 	reset();
 }
 
-void GcodeViewer::reset()
+void GcodeTrace::reset()
 {
 	m_move_type_visible.fill(false);
 	m_role_visible.fill(false);
@@ -85,7 +85,7 @@ void GcodeViewer::reset()
 	m_valid = false;
 }
 
-void GcodeViewer::load(const GCodeProcessorResult& result)
+void GcodeTrace::load(const GCodeProcessorResult& result)
 {
 	reset();
 	parse_moves(result.moves);
@@ -99,7 +99,7 @@ void GcodeViewer::load(const GCodeProcessorResult& result)
 	}
 }
 
-void GcodeViewer::set_layer_scope(std::array<int, 2> layer_scope)
+void GcodeTrace::set_layer_scope(std::array<int, 2> layer_scope)
 {
 	assert(layer_scope[1] >= layer_scope[0]);
 	m_layer_scope = layer_scope;
@@ -111,7 +111,7 @@ void GcodeViewer::set_layer_scope(std::array<int, 2> layer_scope)
 	refresh();
 }
 
-void GcodeViewer::set_move_scope(std::array<int, 2> move_scope)
+void GcodeTrace::set_move_scope(std::array<int, 2> move_scope)
 {
 	assert(move_scope[1] >= move_scope[0]);
 	m_move_scope[0] = std::max(move_scope[0], m_move_range[0]);
@@ -120,7 +120,7 @@ void GcodeViewer::set_move_scope(std::array<int, 2> move_scope)
 	refresh();
 }
 
-void GcodeViewer::set_visible(ExtrusionRole role_type, bool visible)
+void GcodeTrace::set_visible(ExtrusionRole role_type, bool visible)
 {
 	m_role_visible[role_type] = visible;
 	if (!visible) {
@@ -134,7 +134,7 @@ void GcodeViewer::set_visible(ExtrusionRole role_type, bool visible)
 	//update the horizontal slider
 }
 
-std::shared_ptr<SimpleMesh> GcodeViewer::generate_cuboid_from_move(const MoveVertex& prev, const MoveVertex& curr)
+std::shared_ptr<SimpleMesh> GcodeTrace::generate_cuboid_from_move(const MoveVertex& prev, const MoveVertex& curr)
 {
 	Vec3 up_dir = Vec3(0, 0, 1);
 	Vec3 to_curr_dir = Math::Normalize(curr.position - prev.position);
@@ -153,7 +153,7 @@ std::shared_ptr<SimpleMesh> GcodeViewer::generate_cuboid_from_move(const MoveVer
 	return SimpleMesh::create_vertex_normal_cuboid_mesh(face_center_pos, face_left_vec, face_up_vec);
 }
 
-std::shared_ptr<SimpleMesh> GcodeViewer::generate_arc_from_move(const MoveVertex& prev, const MoveVertex& curr)
+std::shared_ptr<SimpleMesh> GcodeTrace::generate_arc_from_move(const MoveVertex& prev, const MoveVertex& curr)
 {
 	size_t loop_num = curr.is_arc_move_with_interpolation_points() ? curr.interpolation_points.size() : 0;
 	assert(loop_num > 0);
@@ -195,7 +195,7 @@ std::shared_ptr<SimpleMesh> GcodeViewer::generate_arc_from_move(const MoveVertex
 	return SimpleMesh::create_vertex_normal_arc_mesh(face_center_pos, face_left_vec, face_up_vec);
 }
 
-void GcodeViewer::parse_moves(std::vector<MoveVertex> moves)
+void GcodeTrace::parse_moves(std::vector<MoveVertex> moves)
 {
 	ExtrusionRole prev_role = ExtrusionRole::erNone;
 	for (size_t move_id = 1; move_id < moves.size(); move_id++) {
@@ -271,7 +271,7 @@ void GcodeViewer::parse_moves(std::vector<MoveVertex> moves)
 	refresh();
 }
 
-void GcodeViewer::refresh()
+void GcodeTrace::refresh()
 {
 	int begin_move_id = m_layers[m_layer_scope[0]].begin_move_id;
 	int end_move_id = m_move_scope[1];

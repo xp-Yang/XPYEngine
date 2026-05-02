@@ -5,8 +5,6 @@
 #include "Logical/FrameWork/World/Scene.hpp"
 #include "GlobalContext.hpp"
 #include <imgui.h>
-// TODO remove
-#include <glad/glad.h>
 
 GUIInput::GUIInput(std::shared_ptr<ImGuiEditor> editor)
 	: ref_editor(editor)

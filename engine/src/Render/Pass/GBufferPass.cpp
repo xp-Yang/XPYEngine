@@ -77,7 +77,7 @@ void GBufferPass::draw()
             g_shader->setTexture("diffuse_map", 0, material.diffuse_map);
             g_shader->setTexture("specular_map", 1, material.specular_map);
         }
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->mesh.indicesCount());
+        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
     }
     g_shader->stop_using();
 

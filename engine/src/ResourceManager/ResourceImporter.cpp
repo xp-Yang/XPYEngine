@@ -79,6 +79,7 @@ std::shared_ptr<Material> ResourceImporter::materialOfNode(int ai_mesh_idx)
     return load_material(material);
 }
 
+// TODO 可以这样吗？
 std::vector<int> ResourceImporter::getSubMeshesIds() const
 {
     std::vector<int> res;

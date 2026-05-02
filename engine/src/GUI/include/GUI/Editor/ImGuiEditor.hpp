@@ -2,6 +2,8 @@
 #define ImGuiEditor_hpp
 
 #include "GUI/Viewport.hpp"
+#include <functional>
+#include <string>
 
 class MainCanvas;
 class PreviewCanvas;
@@ -11,6 +13,8 @@ class ImGuiGlobalConsole;
 class ImGuiDebugWindow;
 class ImGuiEditor {
 public:
+	using ExternalOpenFileHandler = std::function<bool(const std::string&)>;
+
 	ImGuiEditor();
 	~ImGuiEditor();
 	void onUpdate();
@@ -19,6 +23,7 @@ public:
 	Viewport getMainViewport() const;
 	void popUpMenu();
 	bool isInMainCanvas() const;
+	void setExternalOpenFileHandler(ExternalOpenFileHandler handler);
 
 protected:
 	void renderMenuBar();
@@ -34,6 +39,7 @@ private:
 	std::unique_ptr<ImGuiDebugWindow> m_debug_window;
 
 	bool m_show_debug{ false };
+	ExternalOpenFileHandler m_external_open_file_handler;
 };
 
 #endif

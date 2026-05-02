@@ -12,8 +12,6 @@ enum class ShaderType {
 	DeferredLightingShader,
 	BlinnPhongShader,
 	PBRShader,
-	GcodeShader,
-	GcodeInstancingShader,
 	OneColorShader,
 	SkyboxShader,
 	NormalShader,
