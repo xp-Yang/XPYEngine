@@ -1,3 +1,4 @@
+set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/thirdparty)
 set(third_party_folder "ThirdParty")
 
 #glad

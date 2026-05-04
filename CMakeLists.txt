@@ -15,6 +15,7 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 
+add_subdirectory(thirdparty)
 add_subdirectory(engine)
 add_subdirectory(samples)
 
