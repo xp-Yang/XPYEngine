@@ -140,44 +140,60 @@ void RenderMeshData::update_instancing(void* instancing_data, int instancing_dat
 
 RenderMaterialData::RenderMaterialData(std::shared_ptr<Material> material_)
 {
+    material_version = material_->version;
     alpha = material_->alpha;
-    //// temp
-    // albedo = material_->albedo;
-    // metallic = material_->metallic;
-    // roughness = material_->roughness;
-    // ao = material_->ao;
+    base_color_factor = material_->base_color_factor;
+    metallic_factor = material_->metallic_factor;
+    roughness_factor = material_->roughness_factor;
+    ao_factor = material_->ao_factor;
+    diffuse_factor = material_->diffuse_factor;
+    specular_factor = material_->specular_factor;
 
     // TODO 贴图更新了，texture数据的释放和加载
+    if (albedo_map == 0)
+    {
+        albedo_map = RenderTextureData(material_->albedo_texture).id;
+    }
+    if (metallic_map == 0)
+    {
+        metallic_map = RenderTextureData(material_->metallic_texture).id;
+    }
+    if (roughness_map == 0)
+    {
+        roughness_map = RenderTextureData(material_->roughness_texture).id;
+    }
+    if (ao_map == 0)
+    {
+        ao_map = RenderTextureData(material_->ao_texture).id;
+    }
     if (diffuse_map == 0)
     {
-        unsigned int diffuse_map = RenderTextureData(material_->diffuse_texture).id;
-        diffuse_map = diffuse_map;
+        diffuse_map = RenderTextureData(material_->diffuse_texture).id;
     }
     if (specular_map == 0)
     {
-        unsigned int specular_map = RenderTextureData(material_->specular_texture).id;
-        specular_map = specular_map;
+        specular_map = RenderTextureData(material_->specular_texture).id;
     }
     if (normal_map == 0)
     {
-        unsigned int normal_map = RenderTextureData(material_->normal_texture).id;
-        normal_map = normal_map;
+        normal_map = RenderTextureData(material_->normal_texture).id;
     }
     if (height_map == 0)
     {
-        unsigned int height_map = RenderTextureData(material_->height_texture).id;
-        height_map = height_map;
+        height_map = RenderTextureData(material_->height_texture).id;
     }
 }
 
 void RenderMeshNode::updateRenderMaterialData(std::shared_ptr<Material> material_)
 {
+    material.material_version = material_->version;
     material.alpha = material_->alpha;
-    //// temp
-    // material.albedo = material_->albedo;
-    // material.metallic = material_->metallic;
-    // material.roughness = material_->roughness;
-    // material.ao = material_->ao;
+    material.base_color_factor = material_->base_color_factor;
+    material.metallic_factor = material_->metallic_factor;
+    material.roughness_factor = material_->roughness_factor;
+    material.ao_factor = material_->ao_factor;
+    material.diffuse_factor = material_->diffuse_factor;
+    material.specular_factor = material_->specular_factor;
 
     // TODO 贴图更新了，texture数据的释放和加载
     if (material.albedo_map == 0)

@@ -81,17 +81,18 @@ void GBufferPass::draw()
         g_shader->setMatrix("model", 1, render_node->model_matrix);
         auto& material = render_node->material;
         if (m_pbr) {
-            //g_shader->setFloat3("albedo", Vec3(0.25f));
-            //g_shader->setFloat("metallic", 0.0f);
-            //g_shader->setFloat("roughness", 1.0f);
-            //g_shader->setFloat("ao", 0.0f);
-
+            g_shader->setFloat4("base_color_factor", material.base_color_factor);
+            g_shader->setFloat("metallic_factor", material.metallic_factor);
+            g_shader->setFloat("roughness_factor", material.roughness_factor);
+            g_shader->setFloat("ao_factor", material.ao_factor);
             g_shader->setTexture("albedo_map", 0, material.albedo_map);
             g_shader->setTexture("metallic_map", 1, material.metallic_map);
             g_shader->setTexture("roughness_map", 2, material.roughness_map);
             g_shader->setTexture("ao_map", 3, material.ao_map);
         }
         else {
+            g_shader->setFloat3("diffuse_factor", material.diffuse_factor);
+            g_shader->setFloat3("specular_factor", material.specular_factor);
             g_shader->setTexture("diffuse_map", 0, material.diffuse_map);
             g_shader->setTexture("specular_map", 1, material.specular_map);
         }

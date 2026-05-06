@@ -64,14 +64,16 @@ inline void allMetaRegister()
 		registerProperty(&Material::metallic_texture, "metallic_texture").
 		registerProperty(&Material::roughness_texture, "roughness_texture").
 		registerProperty(&Material::ao_texture, "ao_texture").
-		//registerProperty(&Material::albedo, "albedo").
-		//registerProperty(&Material::metallic, "metallic").
-		//registerProperty(&Material::roughness, "roughness").
-		//registerProperty(&Material::ao, "ao").
+		registerProperty(&Material::base_color_factor, "base_color_factor").
+		registerProperty(&Material::metallic_factor, "metallic_factor").
+		registerProperty(&Material::roughness_factor, "roughness_factor").
+		registerProperty(&Material::ao_factor, "ao_factor").
 		registerProperty(&Material::diffuse_texture, "diffuse_texture").
 		registerProperty(&Material::specular_texture, "specular_texture").
 		registerProperty(&Material::normal_texture, "normal_texture").
 		registerProperty(&Material::height_texture, "height_texture").
+		registerProperty(&Material::diffuse_factor, "diffuse_factor").
+		registerProperty(&Material::specular_factor, "specular_factor").
 		registerProperty(&Material::alpha, "alpha");
 	registerClass<Shader>("Shader");
 	registerClass<CubeTexture>("CubeTexture");
@@ -92,6 +94,12 @@ inline void allMetaRegister()
 		.registerProperty(&MaterialTexturesDTO::ao, "ao");
 	registerClass<MaterialDTO>("MaterialDTO")
 		.registerProperty(&MaterialDTO::alpha, "alpha")
+		.registerProperty(&MaterialDTO::base_color_factor, "base_color_factor")
+		.registerProperty(&MaterialDTO::metallic_factor, "metallic_factor")
+		.registerProperty(&MaterialDTO::roughness_factor, "roughness_factor")
+		.registerProperty(&MaterialDTO::ao_factor, "ao_factor")
+		.registerProperty(&MaterialDTO::diffuse_factor, "diffuse_factor")
+		.registerProperty(&MaterialDTO::specular_factor, "specular_factor")
 		.registerProperty(&MaterialDTO::textures, "textures");
 	registerClass<SubMeshDTO>("SubMeshDTO")
 		.registerProperty(&SubMeshDTO::sub_mesh_index, "index")

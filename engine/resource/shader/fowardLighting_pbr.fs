@@ -14,6 +14,11 @@ uniform sampler2D metallic_map;
 uniform sampler2D roughness_map;
 uniform sampler2D ao_map;
 
+uniform vec4 base_color_factor;
+uniform float metallic_factor;
+uniform float roughness_factor;
+uniform float ao_factor;
+
 uniform vec3 cameraPos;
 
 out vec4 FragColor;
@@ -23,10 +28,10 @@ void main()
     vec3 N = normalize(fs_in.fragWorldNormal);
     vec3 V = normalize(cameraPos - fs_in.fragWorldPos);
 
-    vec3 albedo = texture(albedo_map, fs_in.fragUV).rgb;
-    float metallic = texture(metallic_map, fs_in.fragUV).r;
-    float roughness = texture(roughness_map, fs_in.fragUV).r;
-    float ao = texture(ao_map, fs_in.fragUV).r;
+    vec3 albedo = texture(albedo_map, fs_in.fragUV).rgb * base_color_factor.rgb;
+    float metallic = texture(metallic_map, fs_in.fragUV).r * metallic_factor;
+    float roughness = texture(roughness_map, fs_in.fragUV).r * roughness_factor;
+    float ao = texture(ao_map, fs_in.fragUV).r * ao_factor;
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
@@ -70,3 +75,4 @@ void main()
 
     FragColor = vec4(color, 1.0);
 }
+

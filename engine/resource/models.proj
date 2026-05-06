@@ -2,10 +2,187 @@
   "objects": [
     {
       "file_type": 1,
+      "filepath": "model/basic/cube.obj",
+      "materials": [
+        {
+          "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "textures": {
+            "albedo": "images/pure_white_map.png",
+            "ao": "images/pure_white_map.png",
+            "diffuse": "images/pure_white_map.png",
+            "height": "images/pure_white_map.png",
+            "metallic": "images/pure_white_map.png",
+            "normal": "images/pure_white_map.png",
+            "roughness": "images/pure_white_map.png",
+            "specular": "images/pure_white_map.png"
+          }
+        }
+      ],
+      "name": "Ground",
+      "sub_meshes": [
+        {
+          "index": 0,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      ],
+      "transform": {
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 30,
+          "y": 0.0010000000474974513,
+          "z": 30
+        },
+        "translation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "visible": true
+    },
+    {
+      "file_type": 1,
+      "filepath": "model/vampire/dancing_vampire.dae",
+      "materials": [
+        {
+          "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "textures": {
+            "albedo": "",
+            "ao": "",
+            "diffuse": "model/vampire/textures/Vampire_diffuse.png",
+            "height": "",
+            "metallic": "",
+            "normal": "",
+            "roughness": "",
+            "specular": "model/vampire/textures/Vampire_specular.png"
+          }
+        }
+      ],
+      "name": "AnimatedVampire",
+      "sub_meshes": [
+        {
+          "index": 0,
+          "local_transform": {
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "translation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        }
+      ],
+      "transform": {
+        "rotation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "translation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "visible": true
+    },
+    {
+      "file_type": 1,
       "filepath": "model/nanosuit/nanosuit.obj",
       "materials": [
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -19,6 +196,25 @@
         },
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -32,6 +228,25 @@
         },
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -45,6 +260,25 @@
         },
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -58,6 +292,25 @@
         },
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -71,6 +324,25 @@
         },
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -84,6 +356,25 @@
         },
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -102,18 +393,18 @@
           "index": 0,
           "local_transform": {
             "rotation": {
-              "x": -2.2999999523162842,
-              "y": 6,
-              "z": 3.2999999523162842
+              "x": 0,
+              "y": 0,
+              "z": 0
             },
             "scale": {
               "x": 1,
               "y": 1,
-              "z": 1.8999999761581421
+              "z": 1
             },
             "translation": {
-              "x": 3.4000000953674316,
-              "y": 1.8999999761581421,
+              "x": 0,
+              "y": 0,
               "z": 0
             }
           }
@@ -132,7 +423,7 @@
               "z": 1
             },
             "translation": {
-              "x": 11.300000190734863,
+              "x": 0,
               "y": 0,
               "z": 0
             }
@@ -152,7 +443,7 @@
               "z": 1
             },
             "translation": {
-              "x": 12.199999809265137,
+              "x": 0,
               "y": 0,
               "z": 0
             }
@@ -167,14 +458,14 @@
               "z": 0
             },
             "scale": {
-              "x": 26.799999237060547,
-              "y": 25.399999618530273,
-              "z": 10.300000190734863
+              "x": 1,
+              "y": 1,
+              "z": 1
             },
             "translation": {
-              "x": 9.8000001907348633,
-              "y": 5.9000000953674316,
-              "z": 2.4000000953674316
+              "x": 0,
+              "y": 0,
+              "z": 0
             }
           }
         },
@@ -192,7 +483,7 @@
               "z": 1
             },
             "translation": {
-              "x": 8.3000001907348633,
+              "x": 0,
               "y": 0,
               "z": 0
             }
@@ -212,7 +503,7 @@
               "z": 1
             },
             "translation": {
-              "x": 5,
+              "x": 0,
               "y": 0,
               "z": 0
             }
@@ -232,7 +523,7 @@
               "z": 1
             },
             "translation": {
-              "x": -4.9000000953674316,
+              "x": 0,
               "y": 0,
               "z": 0
             }
@@ -251,7 +542,7 @@
           "z": 1
         },
         "translation": {
-          "x": -12.721484184265137,
+          "x": 0,
           "y": 0,
           "z": 0
         }
@@ -264,6 +555,25 @@
       "materials": [
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -324,6 +634,25 @@
       "materials": [
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -362,7 +691,7 @@
       "transform": {
         "rotation": {
           "x": 0,
-          "y": -0,
+          "y": 0,
           "z": 0
         },
         "scale": {
@@ -384,6 +713,25 @@
       "materials": [
         {
           "alpha": 1,
+          "ao_factor": 1,
+          "base_color_factor": {
+            "w": 1,
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "diffuse_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "metallic_factor": 1,
+          "roughness_factor": 1,
+          "specular_factor": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
           "textures": {
             "albedo": "",
             "ao": "",
@@ -422,7 +770,7 @@
       "transform": {
         "rotation": {
           "x": 0,
-          "y": -0,
+          "y": 0,
           "z": 0
         },
         "scale": {

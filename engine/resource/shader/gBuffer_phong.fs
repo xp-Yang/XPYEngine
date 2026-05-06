@@ -13,11 +13,13 @@ in VS_OUT{
 
 uniform sampler2D diffuse_map;
 uniform sampler2D specular_map;
+uniform vec3 diffuse_factor;
+uniform vec3 specular_factor;
 
 void main()
 {    
     gPosition = vec4(fs_in.fragWorldPos, 1.0);
     gNormal = vec4(normalize(fs_in.fragWorldNormal), 1.0);
-    gDiffuse = vec4(texture(diffuse_map, fs_in.fragUV).rgb, 1.0);
-    gSpecular = vec4(texture(specular_map, fs_in.fragUV).rgb, 1.0);
+    gDiffuse = vec4(texture(diffuse_map, fs_in.fragUV).rgb * diffuse_factor, 1.0);
+    gSpecular = vec4(texture(specular_map, fs_in.fragUV).rgb * specular_factor, 1.0);
 }  

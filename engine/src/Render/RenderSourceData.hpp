@@ -8,6 +8,8 @@
 #include "RenderShaderObject.hpp"
 #include "Render/RHI/rhi.hpp"
 
+#include <cstdint>
+
 using GL_RESOURCE_HANLE = unsigned int;
 
 struct RenderTextureData {
@@ -26,18 +28,20 @@ struct RenderMaterialData {
     GL_RESOURCE_HANLE metallic_map{ 0 };
     GL_RESOURCE_HANLE roughness_map{ 0 };
     GL_RESOURCE_HANLE ao_map{ 0 };
-    //// temp
-    //Vec3 albedo{ Vec3(1.0f) };
-    //float metallic{ 1.0f };
-    //float roughness{ 0.5f };
-    //float ao{ 0.01f };
+    Vec4 base_color_factor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    float metallic_factor{ 1.0f };
+    float roughness_factor{ 1.0f };
+    float ao_factor{ 1.0f };
 
     GL_RESOURCE_HANLE diffuse_map{ 0 };
     GL_RESOURCE_HANLE specular_map{ 0 };
     GL_RESOURCE_HANLE normal_map{ 0 };
     GL_RESOURCE_HANLE height_map{ 0 };
+    Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
+    Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
 
     float alpha{ 1.0f };
+    uint64_t material_version{ 0 };
 };
 
 class RenderMeshData {

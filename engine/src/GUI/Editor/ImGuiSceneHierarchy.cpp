@@ -38,7 +38,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         ImGui::PopID();
     };
 
-    auto DrawFloatControl = [columnWidth](const std::string& label, float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f) {
+    auto DrawFloatControl = [columnWidth](const std::string& label, float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f) -> bool {
         ImGui::PushID(label.c_str());
 
         ImGui::Columns(2, nullptr, false);
@@ -46,14 +46,16 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
         ImGui::Text("%s", label.c_str());
         ImGui::NextColumn();
-        ImGui::DragFloat(("##" + label).c_str(), &value, speed, min, max);
+        bool changed = ImGui::DragFloat(("##" + label).c_str(), &value, speed, min, max);
 
         ImGui::Columns(1);
         ImGui::PopID();
+        return changed;
     };
 
-    auto DrawVec3Control = [columnWidth](const std::string& label, Vec3& values, float resetValue = 0.0f)
+    auto DrawVec3Control = [columnWidth](const std::string& label, Vec3& values, float resetValue = 0.0f) -> bool
     {
+        bool changed = false;
         ImGui::PushID(label.c_str());
 
         ImGui::Columns(2, nullptr, false);
@@ -70,45 +72,53 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
-        if (ImGui::Button("X", buttonSize))
+        if (ImGui::Button("X", buttonSize)) {
             values.x = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
+        changed |= ImGui::DragFloat("##X", &values.x, 0.1f, 0.0f, 0.0f, "%.2f");
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.3f, 0.55f, 0.3f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
-        if (ImGui::Button("Y", buttonSize))
+        if (ImGui::Button("Y", buttonSize)) {
             values.y = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
+        changed |= ImGui::DragFloat("##Y", &values.y, 0.1f, 0.0f, 0.0f, "%.2f");
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
-        if (ImGui::Button("Z", buttonSize))
+        if (ImGui::Button("Z", buttonSize)) {
             values.z = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
+        changed |= ImGui::DragFloat("##Z", &values.z, 0.1f, 0.0f, 0.0f, "%.2f");
         ImGui::PopItemWidth();
 
         ImGui::PopStyleVar();
 
         ImGui::Columns(1);
         ImGui::PopID();
+        return changed;
     };
 
-    auto DrawVec4Control = [columnWidth](const std::string& label, Vec4& values, float resetValue = 1.0f) {
+    auto DrawVec4Control = [columnWidth](const std::string& label, Vec4& values, float resetValue = 1.0f) -> bool {
+        bool changed = false;
         ImGui::PushID(label.c_str());
 
         ImGui::Columns(2, nullptr, false);
@@ -125,54 +135,63 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
-        if (ImGui::Button("R", buttonSize))
+        if (ImGui::Button("R", buttonSize)) {
             values.x = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##R", &values.x, 0.01f, 0.0f, 1.0f, "%.2f");
+        changed |= ImGui::DragFloat("##R", &values.x, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.3f, 0.55f, 0.3f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.2f, 0.45f, 0.2f, 1.0f });
-        if (ImGui::Button("G", buttonSize))
+        if (ImGui::Button("G", buttonSize)) {
             values.y = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##G", &values.y, 0.01f, 0.0f, 1.0f, "%.2f");
+        changed |= ImGui::DragFloat("##G", &values.y, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
-        if (ImGui::Button("B", buttonSize))
+        if (ImGui::Button("B", buttonSize)) {
             values.z = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##B", &values.z, 0.01f, 0.0f, 1.0f, "%.2f");
+        changed |= ImGui::DragFloat("##B", &values.z, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.45f, 0.45f, 0.45f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.55f, 0.55f, 0.55f, 1.0f });
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.45f, 0.45f, 0.45f, 1.0f });
-        if (ImGui::Button("W", buttonSize))
+        if (ImGui::Button("W", buttonSize)) {
             values.w = resetValue;
+            changed = true;
+        }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        ImGui::DragFloat("##W", &values.w, 0.01f, 0.0f, 1.0f, "%.2f");
+        changed |= ImGui::DragFloat("##W", &values.w, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::PopItemWidth();
 
         ImGui::PopStyleVar();
 
         ImGui::Columns(1);
         ImGui::PopID();
+        return changed;
     };
 
     auto DrawTexturePreview = [columnWidth](const std::string& label, const std::shared_ptr<Texture>& tex)
@@ -265,9 +284,9 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<MeshComponent>().typeName()] = [this, DrawVec3Control, DrawTexturePreview, columnWidth, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<MeshComponent>().typeName()] = [this, DrawFloatControl, DrawVec3Control, DrawVec4Control, DrawTexturePreview, columnWidth, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        auto DrawSubMeshControl = [DrawTexturePreview, DrawVec3Control, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh)
+        auto DrawSubMeshControl = [DrawTexturePreview, DrawFloatControl, DrawVec3Control, DrawVec4Control, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh)
         {
             ImGui::PushID(label.c_str());
             if (TreeNodeExWithTitleFont(label.c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) {
@@ -293,12 +312,16 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 if (sub_mesh.material) {
                     if (TreeNodeExWithTitleFont(("Material##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
                     {
-                        ImGui::Columns(2, nullptr, false);
-                        ImGui::SetColumnWidth(0, columnWidth);
-                        ImGui::Text("alpha");
-                        ImGui::NextColumn();
-                        ImGui::DragFloat("##alpha", &sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f);
-                        ImGui::Columns(1);
+                        bool material_changed = false;
+                        material_changed |= DrawVec4Control("base color", sub_mesh.material->base_color_factor);
+                        material_changed |= DrawFloatControl("metallic", sub_mesh.material->metallic_factor, 0.01f, 0.0f, 1.0f);
+                        material_changed |= DrawFloatControl("roughness", sub_mesh.material->roughness_factor, 0.01f, 0.0f, 1.0f);
+                        material_changed |= DrawFloatControl("ao", sub_mesh.material->ao_factor, 0.01f, 0.0f, 1.0f);
+                        material_changed |= DrawVec3Control("diffuse", sub_mesh.material->diffuse_factor, 1.0f);
+                        material_changed |= DrawVec3Control("specular", sub_mesh.material->specular_factor, 1.0f);
+                        material_changed |= DrawFloatControl("alpha", sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f);
+                        if (material_changed)
+                            sub_mesh.material->markDirty();
 
                         DrawTexturePreview("albedo", sub_mesh.material->albedo_texture);
                         DrawTexturePreview("metallic", sub_mesh.material->metallic_texture);

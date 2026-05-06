@@ -27,6 +27,12 @@ struct MaterialTexturesDTO {
 
 struct MaterialDTO {
 	float alpha{ 1.0f };
+	Vec4 base_color_factor{ 1.0f, 1.0f, 1.0f, 1.0f };
+	float metallic_factor{ 1.0f };
+	float roughness_factor{ 1.0f };
+	float ao_factor{ 1.0f };
+	Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
+	Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
 	MaterialTexturesDTO textures;
 };
 

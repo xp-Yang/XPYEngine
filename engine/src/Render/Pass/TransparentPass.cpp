@@ -48,6 +48,8 @@ void TransparentPass::draw()
 
         auto& material = render_node->material;
 
+        shader->setFloat3("diffuse_factor", material.diffuse_factor);
+        shader->setFloat3("specular_factor", material.specular_factor);
         shader->setTexture("material.diffuse_map", 0, material.diffuse_map);
         shader->setTexture("material.specular_map", 1, material.specular_map);
         shader->setTexture("material.normal_map", 2, material.normal_map);

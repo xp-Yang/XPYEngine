@@ -43,6 +43,7 @@ void ImGuiContextMenu::render()
                 auto& sub_meshes = (*context_objs.begin())->getComponent<MeshComponent>()->sub_meshes;
                 for (auto& sub_mesh : sub_meshes) {
                     sub_mesh->material->alpha = obj_transparent ? 1.f : 0.3f;
+                    sub_mesh->material->markDirty();
                 }
             }
         }

@@ -96,6 +96,12 @@ ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& proje
 			MaterialDTO mat_dto;
 			if (sub->material) {
 				mat_dto.alpha = sub->material->alpha;
+				mat_dto.base_color_factor = sub->material->base_color_factor;
+				mat_dto.metallic_factor = sub->material->metallic_factor;
+				mat_dto.roughness_factor = sub->material->roughness_factor;
+				mat_dto.ao_factor = sub->material->ao_factor;
+				mat_dto.diffuse_factor = sub->material->diffuse_factor;
+				mat_dto.specular_factor = sub->material->specular_factor;
 				auto rel = [&project_dir](const std::shared_ptr<Texture>& t) {
 					return t ? PathService::tryMakeRelative(project_dir, t->texture_filepath) : std::string();
 				};
@@ -166,6 +172,12 @@ void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old)
 				if (!sub->material) sub->material = std::make_shared<Material>();
 				const auto& md = obj_dto.materials[i];
 				sub->material->alpha = md.alpha;
+				sub->material->base_color_factor = md.base_color_factor;
+				sub->material->metallic_factor = md.metallic_factor;
+				sub->material->roughness_factor = md.roughness_factor;
+				sub->material->ao_factor = md.ao_factor;
+				sub->material->diffuse_factor = md.diffuse_factor;
+				sub->material->specular_factor = md.specular_factor;
 				auto mktex = [&project_dir](const std::string& rel, TextureType type, bool gamma) -> std::shared_ptr<Texture> {
 					return rel.empty() ? nullptr : std::make_shared<Texture>(type, PathService::join(project_dir, rel), gamma);
 				};
@@ -177,6 +189,7 @@ void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old)
 				sub->material->metallic_texture = mktex(md.textures.metallic, TextureType::Metallic, false);
 				sub->material->roughness_texture = mktex(md.textures.roughness, TextureType::Roughness, false);
 				sub->material->ao_texture = mktex(md.textures.ao, TextureType::AO, false);
+				sub->material->markDirty();
 			}
 		}
 	}

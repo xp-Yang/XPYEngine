@@ -82,10 +82,10 @@ void MeshForwardLightingPass::draw()
         auto &material = render_node->material;
         if (m_pbr)
         {
-            // shader->setFloat3("albedo", material.albedo);
-            // shader->setFloat("metallic", material.metallic);
-            // shader->setFloat("roughness", material.roughness);
-            // shader->setFloat("ao", material.ao);
+            shader->setFloat4("base_color_factor", material.base_color_factor);
+            shader->setFloat("metallic_factor", material.metallic_factor);
+            shader->setFloat("roughness_factor", material.roughness_factor);
+            shader->setFloat("ao_factor", material.ao_factor);
             shader->setTexture("albedo_map", 0, material.albedo_map);
             shader->setTexture("metallic_map", 1, material.metallic_map);
             shader->setTexture("roughness_map", 2, material.roughness_map);
@@ -93,6 +93,8 @@ void MeshForwardLightingPass::draw()
         }
         else
         {
+            shader->setFloat3("diffuse_factor", material.diffuse_factor);
+            shader->setFloat3("specular_factor", material.specular_factor);
             shader->setTexture("material.diffuse_map", 0, material.diffuse_map);
             shader->setTexture("material.specular_map", 1, material.specular_map);
             shader->setTexture("material.normal_map", 2, material.normal_map);

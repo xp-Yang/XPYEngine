@@ -19,6 +19,8 @@ struct Material {
 
 uniform Material material;
 
+uniform vec3 diffuse_factor;
+uniform vec3 specular_factor;
 uniform vec3 cameraPos;
 
 uniform float alpha;
@@ -29,8 +31,8 @@ void main()
 {
     vec3 normal = normalize(fs_in.fragWorldNormal);
     vec3 view_direction = normalize(cameraPos - fs_in.fragWorldPos);
-    vec3 diffuse_coef = vec3(texture(material.diffuse_map, fs_in.fragUV));
-    vec3 specular_coef = vec3(texture(material.specular_map, fs_in.fragUV));
+    vec3 diffuse_coef = vec3(texture(material.diffuse_map, fs_in.fragUV)) * diffuse_factor;
+    vec3 specular_coef = vec3(texture(material.specular_map, fs_in.fragUV)) * specular_factor;
 
     vec3 ambient_light = vec3(0);
 	
