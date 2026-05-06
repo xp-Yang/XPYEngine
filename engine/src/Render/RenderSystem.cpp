@@ -20,6 +20,7 @@ RenderSystem::RenderSystem()
     m_deferred_path = std::make_shared<DeferredRenderPath>(this);
 
     m_curr_path = m_forward_path;
+    rebuildRenderTargets();
 }
 
 RenderParams &RenderSystem::renderParams()
@@ -36,6 +37,13 @@ unsigned int RenderSystem::renderPassTexture(RenderPass::Type render_pass_type)
 {
     RhiTexture *texture = m_curr_path->renderPassTexture(render_pass_type);
     return texture ? texture->id() : 0;
+}
+
+void RenderSystem::rebuildRenderTargets()
+{
+    const Vec2 sz = m_render_params.renderTargetPixels();
+    m_forward_path->rebuildFramebuffers(sz);
+    m_deferred_path->rebuildFramebuffers(sz);
 }
 
 void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)

@@ -23,6 +23,23 @@ RhiAttachment::RhiAttachment(RhiTexture* texture)
 {
 }
 
+void RhiAttachment::release()
+{
+	if (m_texture)
+	{
+		m_texture->destroy();
+		delete m_texture;
+		m_texture = nullptr;
+	}
+}
+
+void RhiTexture::destroy()
+{
+}
+
+void RhiFrameBuffer::destroyGPU()
+{
+}
 
 Rhi* Rhi::create()
 {

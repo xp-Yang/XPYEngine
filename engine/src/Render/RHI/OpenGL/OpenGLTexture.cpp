@@ -5,6 +5,15 @@ OpenGLTexture::OpenGLTexture(Format format_, const Vec2 &pixelSize_, int sampleC
 {
 }
 
+void OpenGLTexture::destroy()
+{
+	if (m_id != 0)
+	{
+		glDeleteTextures(1, &m_id);
+		m_id = 0;
+	}
+}
+
 bool OpenGLTexture::create()
 {
     // unsigned int pbo;

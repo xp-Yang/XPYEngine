@@ -125,13 +125,15 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 {
 	int x = (int)mouse_x;
 	int y = (int)mouse_y;
-	// map to picking framebuffer size
-	// picking framebuffer is {DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y} size
+	// map to picking framebuffer size (follows render resolution preset)
 	auto main_viewport = ref_editor->getMainViewport();
-	x *= DEFAULT_WINDOW_WIDTH / (float)main_viewport.width;
-	y *= DEFAULT_WINDOW_HEIGHT / (float)main_viewport.height;
+	Vec2 render_size = g_context.render_system->renderParams().renderTargetPixels();
+	const int fb_w = (int)render_size.x;
+	const int fb_h = (int)render_size.y;
+	x *= fb_w / (float)main_viewport.width;
+	y *= fb_h / (float)main_viewport.height;
 	// in gl coordinate system, left-bottom is as origin
-	y = DEFAULT_WINDOW_HEIGHT - y;
+	y = fb_h - y;
 
 	unsigned char data[4] = { 0,0,0,0 };
 	unsigned int frame_buffer_id = g_context.render_system->getPickingFBO();

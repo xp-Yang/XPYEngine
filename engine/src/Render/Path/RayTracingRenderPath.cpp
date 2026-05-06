@@ -22,3 +22,11 @@ void RayTracingRenderPath::render()
     m_combine_pass->setInputPasses({ m_ray_tracing_pass.get() });
     m_combine_pass->draw();
 }
+
+void RayTracingRenderPath::rebuildFramebuffers(const Vec2 &pixel_size)
+{
+	if (m_ray_tracing_pass)
+		m_ray_tracing_pass->rebuildFramebuffers(pixel_size);
+	if (m_combine_pass)
+		m_combine_pass->rebuildFramebuffers(pixel_size);
+}

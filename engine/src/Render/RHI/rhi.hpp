@@ -124,6 +124,7 @@ public:
     unsigned int id() const { return m_id; }
 
     virtual bool create() = 0; // true generate and bind texture
+    virtual void destroy(); // release GL name; safe to call multiple times
 
 protected:
     RhiTexture(Format format_, const Vec2 &pixelSize_, int sampleCount_, Flag flags_, unsigned char *data_);
@@ -190,6 +191,7 @@ public:
     RhiAttachment() = default;
     RhiAttachment(RhiTexture *texture);
     RhiTexture *texture() const { return m_texture; }
+    void release(); // destroy texture GPU data and delete object
 
 protected:
     RhiTexture *m_texture{nullptr};
@@ -231,6 +233,7 @@ public:
     virtual void unBind() = 0;
     virtual void clear(Color4 clear_color = Color4(0.f, 0.f, 0.f, 1.0f)) = 0;
     virtual void blitTo(RhiFrameBuffer *dest, RhiTexture::Format format = RhiTexture::Format::RGBA16F) = 0;
+    virtual void destroyGPU(); // delete FBO and attachment textures (OpenGL impl)
 
 protected:
     RhiFrameBuffer() = default;

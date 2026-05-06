@@ -7,6 +7,19 @@ OpenGLFrameBuffer::OpenGLFrameBuffer(const RhiAttachment &colorAttachment, const
 {
 }
 
+void OpenGLFrameBuffer::destroyGPU()
+{
+	if (m_id != 0)
+	{
+		glDeleteFramebuffers(1, &m_id);
+		m_id = 0;
+	}
+	for (auto &ca : m_colorAttachments)
+		ca.release();
+	m_depthAttachment.release();
+	m_depthStencilAttachment.release();
+}
+
 bool OpenGLFrameBuffer::create()
 {
     unsigned fbo_id;

@@ -1,4 +1,6 @@
 #include "ShadowPass.hpp"
+#include <algorithm>
+#include <glad/glad.h>
 
 ShadowPass::ShadowPass()
 {
@@ -8,23 +10,54 @@ ShadowPass::ShadowPass()
 
 void ShadowPass::init()
 {
-    RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    color_texture->create();
-    depth_texture->create();
-    RhiAttachment color_attachment = RhiAttachment(color_texture);
-    RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-    RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    fb->setDepthAttachment(depth_ttachment);
-    fb->create();
-    m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+}
 
-    size_t max_point_light_count = 8;
-    reinit_cube_maps(max_point_light_count);
+void ShadowPass::rebuildFramebuffer(const Vec2 &pixel_size, size_t cube_map_count)
+{
+	Vec2 sz = clampFramebufferPixelSize(pixel_size);
+	m_point_shadow_cube_edge = std::clamp(std::min((int)sz.x, (int)sz.y), 256, 4096);
 
-    m_cube_map_fbo = m_rhi->newFramebufferHandle();
-    m_rhi->bindFramebuffer(m_cube_map_fbo);
-    m_rhi->setFramebufferDrawReadNone();
+	if (m_framebuffer)
+	{
+		m_framebuffer->destroyGPU();
+		m_framebuffer.reset();
+	}
+
+	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, sz);
+	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, sz);
+	color_texture->create();
+	depth_texture->create();
+	RhiAttachment color_attachment = RhiAttachment(color_texture);
+	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
+	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, sz);
+	fb->setDepthAttachment(depth_ttachment);
+	fb->create();
+	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+
+	for (unsigned id : m_cube_maps)
+		if (id != 0)
+			glDeleteTextures(1, &id);
+	m_cube_maps.clear();
+
+	if (m_cube_map_fbo == 0)
+	{
+		m_cube_map_fbo = m_rhi->newFramebufferHandle();
+		m_rhi->bindFramebuffer(m_cube_map_fbo);
+		m_rhi->setFramebufferDrawReadNone();
+	}
+
+	reinit_cube_maps(std::max(cube_map_count, size_t(8)));
+}
+
+void ShadowPass::rebuildFramebuffers(const Vec2 &pixel_size)
+{
+	Vec2 sz = clampFramebufferPixelSize(pixel_size);
+	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
+		return;
+
+	const size_t cube_reserve = std::max(m_cube_maps.size(), size_t(8));
+	rebuildFramebuffer(sz, cube_reserve);
 }
 
 void ShadowPass::draw()
@@ -82,7 +115,7 @@ void ShadowPass::drawDirectionalLightShadowMap()
 void ShadowPass::drawPointLightShadowMap()
 {
     m_rhi->bindFramebuffer(m_cube_map_fbo);
-    m_rhi->setViewport(0, 0, (int)DEFAULT_RENDER_RESOLUTION_Y, (int)DEFAULT_RENDER_RESOLUTION_Y); // TODO 显然窗口大小变化后不是default大小
+    m_rhi->setViewport(0, 0, m_point_shadow_cube_edge, m_point_shadow_cube_edge);
 
     static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::CubeMapShader);
 
@@ -139,11 +172,13 @@ void ShadowPass::drawPointLightShadowMap()
 
 void ShadowPass::reinit_cube_maps(size_t count)
 {
-    m_rhi->bindFramebuffer(m_cube_map_fbo);
+	m_rhi->bindFramebuffer(m_cube_map_fbo);
 
-    m_cube_maps.assign(count, 0);
-    for (int i = 0; i < m_cube_maps.size(); i++)
-    {
-        m_cube_maps[i] = m_rhi->newDepthCubeMap((int)DEFAULT_RENDER_RESOLUTION_Y);
-    }
+	for (unsigned id : m_cube_maps)
+		if (id != 0)
+			glDeleteTextures(1, &id);
+
+	m_cube_maps.assign(count, 0);
+	for (size_t i = 0; i < m_cube_maps.size(); i++)
+		m_cube_maps[i] = m_rhi->newDepthCubeMap(m_point_shadow_cube_edge);
 }

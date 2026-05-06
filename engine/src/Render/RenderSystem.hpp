@@ -13,6 +13,9 @@ public:
     unsigned int getPickingFBO();
     unsigned int renderPassTexture(RenderPass::Type render_pass_type);
 
+    /** Reallocate all offscreen FBOs for current `renderParams().render_resolution`. Call after changing preset. */
+    void rebuildRenderTargets();
+
 protected:
     void updateRenderSourceData(std::shared_ptr<Scene> scene);
 

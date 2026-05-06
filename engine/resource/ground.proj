@@ -5,7 +5,7 @@
       "filepath": "model/basic/cube.obj",
       "materials": [
         {
-          "alpha": 1,
+          "alpha": 0.2800000011920929,
           "textures": {
             "albedo": "images/pure_white_map.png",
             "ao": "images/pure_white_map.png",
@@ -44,7 +44,7 @@
       "transform": {
         "rotation": {
           "x": 0,
-          "y": 0,
+          "y": -0,
           "z": 0
         },
         "scale": {

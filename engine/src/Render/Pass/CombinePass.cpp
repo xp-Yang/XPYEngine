@@ -8,19 +8,39 @@ CombinePass::CombinePass()
 
 void CombinePass::init()
 {
-	RhiTexture* color_texture = m_rhi->newTexture(RhiTexture::Format::RGB8, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-	RhiTexture* depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+}
+
+void CombinePass::rebuildFramebuffer(const Vec2 &pixel_size)
+{
+	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB8, pixel_size);
+	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
 	color_texture->create();
 	depth_texture->create();
 	RhiAttachment color_attachment = RhiAttachment(color_texture);
 	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer* fb = m_rhi->newFrameBuffer(color_attachment, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
 	fb->setDepthAttachment(depth_ttachment);
 	fb->create();
 	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
 
-	RhiFrameBuffer* default_fb = m_rhi->newFrameBuffer(RhiAttachment(), Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+	RhiFrameBuffer *default_fb = m_rhi->newFrameBuffer(RhiAttachment(), pixel_size);
 	m_default_framebuffer = std::unique_ptr<RhiFrameBuffer>(default_fb);
+}
+
+void CombinePass::rebuildFramebuffers(const Vec2 &pixel_size)
+{
+	Vec2 sz = clampFramebufferPixelSize(pixel_size);
+	if (m_framebuffer && m_default_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x &&
+		(int)m_framebuffer->pixelSize().y == (int)sz.y)
+		return;
+	if (m_framebuffer)
+	{
+		m_framebuffer->destroyGPU();
+		m_framebuffer.reset();
+	}
+	m_default_framebuffer.reset();
+	rebuildFramebuffer(sz);
 }
 
 void CombinePass::draw()

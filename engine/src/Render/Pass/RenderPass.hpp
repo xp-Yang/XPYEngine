@@ -2,9 +2,15 @@
 #define RenderPass_hpp
 
 #include "Render/RenderSourceData.hpp"
+#include <algorithm>
 
 static inline constexpr float DEFAULT_RENDER_RESOLUTION_X = 1920.0f;
 static inline constexpr float DEFAULT_RENDER_RESOLUTION_Y = 1080.0f;
+
+static inline Vec2 clampFramebufferPixelSize(Vec2 size)
+{
+	return Vec2(std::max(1.f, size.x), std::max(1.f, size.y));
+}
 
 // Interface class
 // each RenderPass corresponds to a framebuffer
@@ -48,6 +54,8 @@ public:
 	}
 	void setInputPasses(const std::vector<RenderPass*>& input_passes) { m_input_passes = input_passes; }
 	RhiFrameBuffer* getFrameBuffer() const { return m_framebuffer.get(); };
+
+	virtual void rebuildFramebuffers(const Vec2& pixel_size) {}
 
 protected:
 	virtual void init() = 0;

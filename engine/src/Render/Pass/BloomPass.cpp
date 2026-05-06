@@ -8,21 +8,43 @@ BloomPass::BloomPass()
 
 void BloomPass::init()
 {
-    RhiTexture* color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    color_texture->create();
-    RhiAttachment color_attachment = RhiAttachment(color_texture);
-    RhiFrameBuffer* fb = m_rhi->newFrameBuffer(color_attachment, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    fb->create();
-    m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+	rebuildFramebuffers(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+}
 
-    {
-        RhiTexture* color_texture_1 = m_rhi->newTexture(RhiTexture::Format::RGB16F, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-        color_texture_1->create();
-        RhiAttachment color_attachment_1 = RhiAttachment(color_texture_1);
-        RhiFrameBuffer* fb_1 = m_rhi->newFrameBuffer(color_attachment_1, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-        fb_1->create();
-        m_pingpong_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb_1);
-    }
+void BloomPass::rebuildFramebuffer(const Vec2 &pixel_size)
+{
+	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, pixel_size);
+	color_texture->create();
+	RhiAttachment color_attachment = RhiAttachment(color_texture);
+	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
+	fb->create();
+	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+
+	RhiTexture *color_texture_1 = m_rhi->newTexture(RhiTexture::Format::RGB16F, pixel_size);
+	color_texture_1->create();
+	RhiAttachment color_attachment_1 = RhiAttachment(color_texture_1);
+	RhiFrameBuffer *fb_1 = m_rhi->newFrameBuffer(color_attachment_1, pixel_size);
+	fb_1->create();
+	m_pingpong_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb_1);
+}
+
+void BloomPass::rebuildFramebuffers(const Vec2 &pixel_size)
+{
+	Vec2 sz = clampFramebufferPixelSize(pixel_size);
+	if (m_framebuffer && m_pingpong_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x &&
+		(int)m_framebuffer->pixelSize().y == (int)sz.y)
+		return;
+	if (m_framebuffer)
+	{
+		m_framebuffer->destroyGPU();
+		m_framebuffer.reset();
+	}
+	if (m_pingpong_framebuffer)
+	{
+		m_pingpong_framebuffer->destroyGPU();
+		m_pingpong_framebuffer.reset();
+	}
+	rebuildFramebuffer(sz);
 }
 
 void BloomPass::draw()

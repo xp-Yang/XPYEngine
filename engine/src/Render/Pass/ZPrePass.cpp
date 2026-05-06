@@ -8,13 +8,31 @@ ZPrePass::ZPrePass()
 
 void ZPrePass::init()
 {
-    RhiTexture* depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    depth_texture->create();
-    RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-    RhiFrameBuffer* fb = m_rhi->newFrameBuffer(RhiAttachment(), Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    fb->setDepthAttachment(depth_ttachment);
-    fb->create();
-    m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+}
+
+void ZPrePass::rebuildFramebuffer(const Vec2 &pixel_size)
+{
+	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
+	depth_texture->create();
+	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
+	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(RhiAttachment(), pixel_size);
+	fb->setDepthAttachment(depth_ttachment);
+	fb->create();
+	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+}
+
+void ZPrePass::rebuildFramebuffers(const Vec2 &pixel_size)
+{
+	Vec2 sz = clampFramebufferPixelSize(pixel_size);
+	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
+		return;
+	if (m_framebuffer)
+	{
+		m_framebuffer->destroyGPU();
+		m_framebuffer.reset();
+	}
+	rebuildFramebuffer(sz);
 }
 
 void ZPrePass::draw()

@@ -27,6 +27,11 @@ public:
         return nullptr;
     }
 
+    virtual void rebuildFramebuffers(const Vec2& pixel_size) {
+        for (auto& pass : m_render_passes)
+            pass.second->rebuildFramebuffers(pixel_size);
+    }
+
 protected:
     std::unordered_map<RenderPass::Type, std::unique_ptr<RenderPass>> m_render_passes;
 };

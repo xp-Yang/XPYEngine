@@ -8,16 +8,34 @@ CheckerBoardPass::CheckerBoardPass()
 
 void CheckerBoardPass::init()
 {
-    RhiTexture* color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    RhiTexture* depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    color_texture->create();
-    depth_texture->create();
-    RhiAttachment color_attachment = RhiAttachment(color_texture);
-    RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-    RhiFrameBuffer* fb = m_rhi->newFrameBuffer(color_attachment, Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-    fb->setDepthAttachment(depth_ttachment);
-    fb->create();
-    m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+}
+
+void CheckerBoardPass::rebuildFramebuffer(const Vec2 &pixel_size)
+{
+	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, pixel_size);
+	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
+	color_texture->create();
+	depth_texture->create();
+	RhiAttachment color_attachment = RhiAttachment(color_texture);
+	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
+	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
+	fb->setDepthAttachment(depth_ttachment);
+	fb->create();
+	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
+}
+
+void CheckerBoardPass::rebuildFramebuffers(const Vec2 &pixel_size)
+{
+	Vec2 sz = clampFramebufferPixelSize(pixel_size);
+	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
+		return;
+	if (m_framebuffer)
+	{
+		m_framebuffer->destroyGPU();
+		m_framebuffer.reset();
+	}
+	rebuildFramebuffer(sz);
 }
 
 void CheckerBoardPass::draw()

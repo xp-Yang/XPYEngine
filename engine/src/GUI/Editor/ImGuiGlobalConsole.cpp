@@ -36,6 +36,22 @@ void ImGuiGlobalConsole::render() {
     }
     ImGui::PopItemWidth();
 
+    ImGui::PushItemWidth(150.0f);
+    int resolution_option = (int)render_params.render_resolution;
+    std::array<std::string, 3> resolution_labels = { "1080p (1920x1080)", "2K (2560x1440)", "4K (3840x2160)" };
+    ImGui::Text("Render Resolution:");
+    if (ImGui::BeginCombo("##Render Resolution", resolution_labels[resolution_option].c_str())) {
+        for (int i = 0; i < resolution_labels.size(); i++) {
+            bool selected = resolution_option == i;
+            if (ImGui::Selectable(resolution_labels[i].c_str(), selected)) {
+                render_params.render_resolution = (RenderResolutionPreset)i;
+                g_context.render_system->rebuildRenderTargets();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::PopItemWidth();
+
     separator();
 
     ImGui::Text("Material Model:");
