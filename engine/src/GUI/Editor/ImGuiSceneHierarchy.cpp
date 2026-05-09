@@ -4,7 +4,7 @@
 #include <imgui_internal.h>
 
 #include "GUI/Editor/ImGuiEditor.hpp"
-#include "Logical/FrameWork/World/Scene.hpp"
+#include "Logical/Framework/World/Scene.hpp"
 #include "Render/RenderSourceData.hpp"
 #include "GlobalContext.hpp"
 
@@ -395,7 +395,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         {
             for (auto& prop : inst.metaType().properties())
             {
-                auto& inst_ = prop.getValue(inst);
+                auto inst_ = prop.getValue(inst);
                 if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
                     m_widget_creator[inst_.typeName()](prop.name, inst_);
             }
@@ -414,7 +414,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         {
             for (auto& prop : inst.metaType().properties())
             {
-                auto& inst_ = prop.getValue(inst);
+                auto inst_ = prop.getValue(inst);
                 if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
                     m_widget_creator[inst_.typeName()](prop.name, inst_);
             }

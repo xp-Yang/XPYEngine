@@ -11,36 +11,6 @@
 namespace Logger
 {
 
-    template <typename... Args>
-    void trace(const char *fmt, const Args &...args)
-    {
-        Logger::get().trace(fmt, args...);
-    }
-
-    template <typename... Args>
-    void debug(const char *fmt, const Args &...args)
-    {
-        Logger::get().debug(fmt, args...);
-    }
-
-    template <typename... Args>
-    void info(const char *fmt, const Args &...args)
-    {
-        Logger::get().info(fmt, args...);
-    }
-
-    template <typename... Args>
-    void warn(const char *fmt, const Args &...args)
-    {
-        Logger::get().warn(fmt, args...);
-    }
-
-    template <typename... Args>
-    void error(const char *fmt, const Args &...args)
-    {
-        Logger::get().error(fmt, args...);
-    }
-
     class Logger
     {
     public:
@@ -113,6 +83,36 @@ namespace Logger
         std::string m_directory;
         std::string m_full_filepath;
     };
+
+    template <typename... Args>
+    void trace(const char *fmt, const Args &...args)
+    {
+        Logger::get().trace(fmt, args...);
+    }
+
+    template <typename... Args>
+    void debug(const char *fmt, const Args &...args)
+    {
+        Logger::get().debug(fmt, args...);
+    }
+
+    template <typename... Args>
+    void info(const char *fmt, const Args &...args)
+    {
+        Logger::get().info(fmt, args...);
+    }
+
+    template <typename... Args>
+    void warn(const char *fmt, const Args &...args)
+    {
+        Logger::get().warn(fmt, args...);
+    }
+
+    template <typename... Args>
+    void error(const char *fmt, const Args &...args)
+    {
+        Logger::get().error(fmt, args...);
+    }
 
 } // namespace Logger
 

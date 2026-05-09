@@ -151,7 +151,7 @@ protected:
 	static void read_internal(const Json& json, Instance& inst) {
 		MetaType meta_type = inst.metaType();
 		for (int i = 0; i < meta_type.propertyCount(); i++) {
-			auto& prop = meta_type.property(i);
+			auto prop = meta_type.property(i);
 			std::string type_name = prop.type_name;
 			std::string name = prop.name;
 			Instance prop_value = prop.getValue(inst);
@@ -175,7 +175,7 @@ protected:
 		Json::object json_obj;
 		MetaType meta_type = inst.metaType();
 		for (int i = 0; i < meta_type.propertyCount(); i++) {
-			auto& prop = meta_type.property(i);
+			auto prop = meta_type.property(i);
 			std::string type_name = prop.type_name;
 			std::string name = prop.name;
 			Instance prop_value = prop.getValue(inst);

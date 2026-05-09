@@ -27,8 +27,8 @@ public slots:
 	void onPickedChanged(LightID light_id);
 
 protected:
-	friend ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& project_filepath);
-	friend void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old = true);
+	ProjectDTO buildProjectDTOFromScene(const std::string& project_filepath);
+	void applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old = true);
 
 private:
 	std::vector<std::shared_ptr<GObject>> m_objects;

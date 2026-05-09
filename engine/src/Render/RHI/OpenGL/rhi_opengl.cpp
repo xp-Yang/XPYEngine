@@ -5,11 +5,13 @@
 #include "OpenGLVertexLayout.hpp"
 #include "OpenGLRenderer.hpp"
 
+#include <stdexcept>
+
 RhiOpenGL::RhiOpenGL()
 {
 	// 初始化GLAD，使其可以管理OpenGL函数指针
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-		assert(false);
+		throw std::runtime_error("Failed to initialize GLAD");
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);

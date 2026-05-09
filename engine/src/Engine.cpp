@@ -4,7 +4,7 @@
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "GUI/Editor/ImGuiInput.hpp"
 #include "Logical/Animation/AnimationSystem.hpp"
-#include "Logical/FrameWork/World/Scene.hpp"
+#include "Logical/Framework/World/Scene.hpp"
 #include "GlobalContext.hpp"
 #include <utility>
 

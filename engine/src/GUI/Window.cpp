@@ -1,10 +1,30 @@
 #include "GUI/Window.hpp"
 
 #include <GLFW/glfw3.h>
+#include "GUI/FileDialog.hpp"
+#ifdef _WIN32
 #include "GUI/Platform/Windows/WindowsFileDialog.hpp"
+#elif defined(__APPLE__)
+#include "GUI/Platform/Mac/MacFileDialog.hpp"
+#endif
 
 #include <assert.h>
+#include <stdexcept>
 #include <utility>
+
+namespace
+{
+#if !defined(_WIN32) && !defined(__APPLE__)
+class NullFileDialog : public FileDialog
+{
+public:
+	NullFileDialog(Window* window) : FileDialog(window) {}
+
+	std::string OpenFile(const char* filter) override { return {}; }
+	std::string SaveFile(const char* filter) override { return {}; }
+};
+#endif
+}
 
 static void drop_file_callback(GLFWwindow *window, int count, const char **paths)
 {
@@ -19,8 +39,14 @@ Window::Window(int width, int height)
 	: m_width(width), m_height(height)
 {
 	glfwInit(); // 初始化GLFW;
+#ifdef __APPLE__
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#else
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#endif
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	// glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);//不允许用户调整窗口的大小
 	// glEnable(GL_MULTISAMPLE);
@@ -33,8 +59,8 @@ Window::Window(int width, int height)
 	m_window = glfwCreateWindow(width, height, "XPYEngine", nullptr, nullptr);
 	if (m_window == nullptr)
 	{
-		assert(false);
 		glfwTerminate();
+		throw std::runtime_error("Failed to create GLFW window");
 	}
 	glfwMakeContextCurrent(m_window);
 	glfwSwapInterval(0); // disable vsync
@@ -91,9 +117,12 @@ float Window::getAspectRatio() const
 
 FileDialog *Window::createFileDialog()
 {
+#ifdef _WIN32
 	WindowsFileDialog *file_dialog = new WindowsFileDialog(this);
-#ifdef __LINUX__
-	auto file_dialog;
+#elif defined(__APPLE__)
+	MacFileDialog *file_dialog = new MacFileDialog(this);
+#else
+	NullFileDialog *file_dialog = new NullFileDialog(this);
 #endif
 	return file_dialog;
 }

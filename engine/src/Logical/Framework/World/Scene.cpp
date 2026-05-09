@@ -60,14 +60,14 @@ GObject* Scene::loadModel(const std::string& filepath)
 }
 
 // Scene -> DTO
-ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& project_filepath)
+ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 {
 	ProjectDTO dto;
 	dto.schema_version = 1;
     dto.project_name = PathService::getFileName(project_filepath);
 	const std::string project_dir = PathService::getDirectory(project_filepath);
 
-	for (const auto& obj_sp : scene.getObjects()) {
+	for (const auto& obj_sp : this->getObjects()) {
 		if (!obj_sp) continue;
 		GObject& obj = *obj_sp;
 		const TransformComponent* tc = obj.getComponent<TransformComponent>();
@@ -122,14 +122,14 @@ ProjectDTO buildProjectDTOFromScene(const Scene& scene, const std::string& proje
 }
 
 // DTO -> Scene
-void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old)
+void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 {
     if (clear_old) {
-        scene.m_objects.clear();
-        scene.m_picked_objects.clear();
+        this->m_objects.clear();
+        this->m_picked_objects.clear();
     }
 
-	const std::string project_dir = PathService::getDirectory(scene.m_current_project_filepath);
+	const std::string project_dir = PathService::getDirectory(this->m_current_project_filepath);
 
 	for (const auto& obj_dto : dto.objects) {
 		if (obj_dto.filepath.empty()) continue;
@@ -137,7 +137,7 @@ void applyProjectDTOToScene(const ProjectDTO& dto, Scene& scene, bool clear_old)
 		const FileType ft = static_cast<FileType>(obj_dto.file_type);
 		GObject* obj = nullptr;
 		if (ft == FileType::OBJ || ft == FileType::None)
-			obj = scene.loadModel(model_abs);
+			obj = this->loadModel(model_abs);
 		if (!obj) continue;
 
 		obj->setName(obj_dto.name.empty() ? obj->name() : obj_dto.name);
@@ -200,14 +200,14 @@ bool Scene::loadProject(const std::string& project_filepath, bool clear_old)
 	m_current_project_filepath = project_filepath;
 	ProjectDTO dto;
 	Meta::Serialization::Serializer::loadFromJsonFile(project_filepath, dto);
-	applyProjectDTOToScene(dto, *this, clear_old);
+	applyProjectDTOToScene(dto, clear_old);
 	return true;
 }
 
 bool Scene::saveProject(const std::string& project_filepath)
 {
 	m_current_project_filepath = project_filepath;
-	ProjectDTO dto = buildProjectDTOFromScene(*this, m_current_project_filepath);
+	ProjectDTO dto = buildProjectDTOFromScene(m_current_project_filepath);
 	Meta::Serialization::Serializer::saveToJsonFile(project_filepath, dto);
 	return true;
 }

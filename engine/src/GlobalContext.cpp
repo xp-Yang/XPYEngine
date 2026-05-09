@@ -1,6 +1,6 @@
 #include "GlobalContext.hpp"
 #include "GUI/Window.hpp"
-#include "Logical/FrameWork/World/Scene.hpp"
+#include "Logical/Framework/World/Scene.hpp"
 #include "Render/RenderSystem.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "GUI/Editor/ImGuiInput.hpp"

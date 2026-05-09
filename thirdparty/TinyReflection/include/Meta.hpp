@@ -50,9 +50,7 @@ class Instance;
 class Variant;
 
 template<typename... Args, typename std::size_t... I>
-std::tuple<Args...> transformArguments(const std::vector<Instance>&args, std::index_sequence<I...>) {
-    return std::make_tuple(args[I].getValue<Args>()...);
-}
+std::tuple<Args...> transformArguments(const std::vector<Instance>&args, std::index_sequence<I...>);
 
 struct Property {
     enum Type : int {
@@ -82,10 +80,10 @@ struct Property {
     Instance getValue(const Instance& instance) const;
 
     template<typename T>
-    T getValue(const Instance& instance) const { return getValue(instance).getValue<T>(); }
+    T getValue(const Instance& instance) const;
 
     template<typename T>
-    void setValue(const Instance& instance, T&& value) const { getValue(instance).setValue(value); }
+    void setValue(const Instance& instance, T&& value) const;
 };
 
 struct Constructor {
@@ -93,19 +91,7 @@ struct Constructor {
     std::function<Variant(const std::initializer_list<Instance>&)> invoker;
 
     template <typename ... Args>
-    Variant invoke(Args&&... args) const {
-        if (sizeof...(Args) != arg_types.size())
-            return Variant();
-        const auto& arg_types_ = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
-        auto it = arg_types.begin();
-        auto it_ = arg_types_.begin();
-        for (; it != arg_types.end(); it++, it_++) {
-            if (*it != *it_)
-                return Variant();
-        }
-
-        return invoker(std::initializer_list<Instance>{std::forward<Args>(args) ...});
-    }
+    Variant invoke(Args&&... args) const;
 };
 
 struct Method {
@@ -117,11 +103,7 @@ struct Method {
     std::string signature;
 
     template <typename ReturnType, typename T, typename ... Args>
-    ReturnType invoke(T&& instance, Args&&... args) const {
-        using ValueType = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
-        auto method = reinterpret_cast<ReturnType (ValueType::*)(Args...)>(func);
-        return (instance.*method)(std::forward<Args>(args)...);
-    }
+    ReturnType invoke(T&& instance, Args&&... args) const;
 };
 
 struct ClassInfo {
@@ -131,78 +113,13 @@ struct ClassInfo {
     std::vector<Constructor> ctor_infos;
 
     template <class T, class PropertyType>
-    inline ClassInfo& registerProperty(PropertyType T::* var_ptr, std::string property_name)
-    {
-        std::string property_type_name_ = MetaTypeOf<PropertyType>().typeName();
-        size_t offset = reinterpret_cast<size_t>(&(reinterpret_cast<T const volatile*>(nullptr)->*var_ptr));
-        using ValueType = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<PropertyType>>>;
-        int prop_type = Property::Type::Unknown;
-        if constexpr (traits::is_fundamental_v<ValueType>)
-            prop_type = Property::Type::Fundamental;
-        else if constexpr (traits::is_sequence_container_v<ValueType>)
-            prop_type = Property::Type::SequenceContainer;
-        else if constexpr (traits::is_associative_container_v<ValueType>)
-            prop_type = Property::Type::AssociativeContainer;
-        else if constexpr (std::is_class_v<ValueType>)
-            prop_type = Property::Type::Custom;
-        else if constexpr (std::is_enum_v<ValueType>)
-            prop_type = Property::Type::Enum;
-        if constexpr (std::is_pointer_v<PropertyType>) {
-            prop_type = prop_type | Property::Type::Pointer;
-        }
-        Property property_info = { prop_type, offset, sizeof(ValueType), property_type_name_, property_name };
-        if constexpr (traits::is_std_vector_v<ValueType>) {
-            using ElemType = typename ValueType::value_type;
-            property_info.value_type_name = MetaTypeOf<ElemType>().typeName();
-            property_info.sequence_size = [](Instance& instance) -> size_t {
-                auto& vec = instance.getValue<ValueType&>();
-                return vec.size();
-                };
-            property_info.sequence_resize = [](Instance& instance, size_t n) {
-                auto& vec = instance.getValue<ValueType&>();
-                vec.resize(n);
-                };
-            property_info.sequence_element_ptr = [](Instance& instance, size_t i) -> Instance {
-                auto& vec = instance.getValue<ValueType&>();
-                return Instance(vec[i]);
-                };
-        }
-
-        property_infos.emplace_back(property_info);
-        return *this;
-    }
+    inline ClassInfo& registerProperty(PropertyType T::* var_ptr, std::string property_name);
 
     template <typename T, typename ... Args>
-    inline ClassInfo& registerConstructor()
-    {
-        Constructor ctor_info;
-        ctor_info.arg_types = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
-        ctor_info.invoker = [](const std::initializer_list<Instance>& args) -> Variant {
-            auto arg_tuple = transformArguments<Args...>(args, std::index_sequence_for<Args...>{});
-            return Variant(T(std::get<Args>(arg_tuple)...));
-        };
-        ctor_infos.emplace_back(ctor_info);
-        return *this;
-    }
+    inline ClassInfo& registerConstructor();
 
     template <class T, class ReturnType, typename ... Args>
-    inline ClassInfo& registerMethod(ReturnType(T::* method_ptr)(Args...), std::string method_name)
-    {
-        std::string return_type_name = MetaTypeOf<ReturnType>().typeName();
-        auto arg_types = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
-        std::string method_signature = return_type_name + " " + method_name + "(";
-        if (arg_types.size() == 0)
-            method_signature += std::string(")");
-        else {
-            for (auto it = arg_types.begin(); it != arg_types.end(); it++) {
-                method_signature += *it;
-                method_signature += ((it + 1) == arg_types.end()) ? std::string(")") : std::string(", ");
-            }
-        }
-        Method method_info = { reinterpret_cast<void (Method::Dumb::*)()>(method_ptr), return_type_name, method_name, arg_types, method_signature };
-        method_infos.emplace_back(method_info);
-        return *this;
-    }
+    inline ClassInfo& registerMethod(ReturnType(T::* method_ptr)(Args...), std::string method_name);
 };
 
 inline std::unordered_map<std::string, std::string> type_name_map;
@@ -253,7 +170,7 @@ public:
 
     const std::string& typeName() const { return m_class_info.class_name; }
     template <typename T>
-    bool isType() const { return typeName() == MetaTypeOf<T>().typeName(); }
+    bool isType() const;
 
     int propertyCount() const { return m_class_info.property_infos.size(); }
     Property property(int index) const { return m_class_info.property_infos[index]; }
@@ -265,26 +182,12 @@ public:
             return *it;
         return {};
     }
-    std::vector<Property> properties() const { return m_class_info.property_infos; }
+    const std::vector<Property>& properties() const { return m_class_info.property_infos; }
 
     int constructorCount() const { return m_class_info.ctor_infos.size(); }
     Constructor constructor(int index) const { return m_class_info.ctor_infos[index]; }
     template<typename ... Args>
-    Constructor constructor() const {
-        const auto& arg_types = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
-        for (const auto& ctor_info : m_class_info.ctor_infos) {
-            if (ctor_info.arg_types.size() != arg_types.size())
-                continue;
-            auto it = ctor_info.arg_types.begin();
-            auto initializer_it = arg_types.begin();
-            for (; it != ctor_info.arg_types.end(); it++, initializer_it++) {
-                if (*it != *initializer_it)
-                    continue;
-            }
-            return ctor_info;
-        }
-        throw std::exception();
-    }
+    Constructor constructor() const;
     const std::vector<Constructor>& constructors() const { return m_class_info.ctor_infos; }
 
     int methodCount() const { return m_class_info.method_infos.size(); }
@@ -318,10 +221,7 @@ class Instance {
 public:
     template <typename T,
         typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, Instance>>>
-    Instance(T&& obj)
-        : m_meta(MetaTypeOf(std::forward<T>(obj)))
-        , m_data((void*)(&obj))
-    {}
+    Instance(T&& obj);
     Instance(const Instance& rhs)
         : m_meta(rhs.m_meta)
         , m_data(rhs.m_data)
@@ -338,54 +238,13 @@ public:
 
 public:
     template <typename T>
-    bool isType() const { return m_meta.isType<T>(); }
+    bool isType() const;
 
     template<typename T>
-    T getValue() const {
-        // T是指针类型，说明数据本身就是指针类型，走T为值类型的分支
-        using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
-        if (!isType<ValueType>())
-            throw std::exception();
-        if constexpr (std::is_lvalue_reference_v<T>) {
-            if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
-                // T是const左值引用
-                return *reinterpret_cast<const ValueType*>(m_data);
-            }
-            else {
-                // T是非const左值引用
-                return *reinterpret_cast<ValueType*>(m_data);
-            }
-        }
-        else if constexpr (std::is_rvalue_reference_v<T>) {
-            // T是右值引用
-            return std::move(*reinterpret_cast<ValueType*>(m_data));
-        }
-        else {
-            // T是值类型
-            return *reinterpret_cast<T*>(m_data);
-        }
-    }
+    T getValue() const;
 
     template<typename T>
-    void setValue(T&& value) const {
-        using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
-        if (!isType<ValueType>())
-            throw std::exception();
-        if constexpr (std::is_lvalue_reference_v<T>) {
-            if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
-                // const左值引用
-                getValue<ValueType&>() = value;
-            }
-            else {
-                // 非const左值引用
-                getValue<T>() = value;
-            }
-        }
-        else if constexpr (std::is_rvalue_reference_v<T&&>) {
-            // 右值引用
-            getValue<T&>() = value;
-        }
-    }
+    void setValue(T&& value) const;
 
 private:
     Instance() = delete;
@@ -406,13 +265,7 @@ public:
     Variant() = default;
     Variant(const Variant& rhs) = default;
     template <class T>
-    Variant(T&& obj) {
-        m_meta = MetaTypeOf(std::forward<T>(obj));
-        m_data_size = sizeof(T);
-        using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
-        // 调用T的拷贝or移动构造
-        m_data = new ValueType(std::forward<T>(obj));
-    }
+    Variant(T&& obj);
     
 public:
     bool isValid() const { return m_data != nullptr; }
@@ -428,22 +281,235 @@ public:
 
 public:
     template <typename T>
-    bool isType() const { return m_meta.isType<T>(); }
+    bool isType() const;
 
     template<typename T>
-    T getValue() const { return Instance(typeName(), m_data).getValue<T>(); }
+    T getValue() const;
 
     template<typename T>
-    void setValue(T&& value) {
-        // TODO 释放m_data
-        *this = Variant(value);
-    }
+    void setValue(T&& value);
 
 private:
     void* m_data = nullptr;
     size_t m_data_size = 0;
     MetaType m_meta;
 };
+
+template<typename... Args, typename std::size_t... I>
+std::tuple<Args...> transformArguments(const std::vector<Instance>& args, std::index_sequence<I...>) {
+    return std::make_tuple(args[I].getValue<Args>()...);
+}
+
+template <typename ReturnType, typename T, typename ... Args>
+ReturnType Method::invoke(T&& instance, Args&&... args) const {
+    using ValueType = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
+    auto method = reinterpret_cast<ReturnType (ValueType::*)(Args...)>(func);
+    return (instance.*method)(std::forward<Args>(args)...);
+}
+
+template <typename T>
+bool MetaType::isType() const {
+    return typeName() == MetaTypeOf<T>().typeName();
+}
+
+template<typename ... Args>
+Constructor MetaType::constructor() const {
+    const auto& arg_types = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
+    for (const auto& ctor_info : m_class_info.ctor_infos) {
+        if (ctor_info.arg_types.size() != arg_types.size())
+            continue;
+        auto it = ctor_info.arg_types.begin();
+        auto initializer_it = arg_types.begin();
+        for (; it != ctor_info.arg_types.end(); it++, initializer_it++) {
+            if (*it != *initializer_it)
+                continue;
+        }
+        return ctor_info;
+    }
+    throw std::exception();
+}
+
+template <typename T, typename>
+Instance::Instance(T&& obj)
+    : m_meta(MetaTypeOf(std::forward<T>(obj)))
+    , m_data((void*)(&obj))
+{}
+
+template <typename T>
+bool Instance::isType() const {
+    return m_meta.isType<T>();
+}
+
+template<typename T>
+T Instance::getValue() const {
+    // T是指针类型，说明数据本身就是指针类型，走T为值类型的分支
+    using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
+    if (!isType<ValueType>())
+        throw std::exception();
+    if constexpr (std::is_lvalue_reference_v<T>) {
+        if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
+            // T是const左值引用
+            return *reinterpret_cast<const ValueType*>(m_data);
+        }
+        else {
+            // T是非const左值引用
+            return *reinterpret_cast<ValueType*>(m_data);
+        }
+    }
+    else if constexpr (std::is_rvalue_reference_v<T>) {
+        // T是右值引用
+        return std::move(*reinterpret_cast<ValueType*>(m_data));
+    }
+    else {
+        // T是值类型
+        return *reinterpret_cast<T*>(m_data);
+    }
+}
+
+template<typename T>
+void Instance::setValue(T&& value) const {
+    using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
+    if (!isType<ValueType>())
+        throw std::exception();
+    if constexpr (std::is_lvalue_reference_v<T>) {
+        if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
+            // const左值引用
+            getValue<ValueType&>() = value;
+        }
+        else {
+            // 非const左值引用
+            getValue<T>() = value;
+        }
+    }
+    else if constexpr (std::is_rvalue_reference_v<T&&>) {
+        // 右值引用
+        getValue<T&>() = value;
+    }
+}
+
+template <class T>
+Variant::Variant(T&& obj) {
+    m_meta = MetaTypeOf(std::forward<T>(obj));
+    m_data_size = sizeof(T);
+    using ValueType = std::remove_const_t<std::remove_reference_t<T>>;
+    // 调用T的拷贝or移动构造
+    m_data = new ValueType(std::forward<T>(obj));
+}
+
+template <typename T>
+bool Variant::isType() const {
+    return m_meta.isType<T>();
+}
+
+template<typename T>
+T Variant::getValue() const {
+    return Instance(typeName(), m_data).getValue<T>();
+}
+
+template<typename T>
+void Variant::setValue(T&& value) {
+    // TODO 释放m_data
+    *this = Variant(value);
+}
+
+template<typename T>
+T Property::getValue(const Instance& instance) const {
+    return getValue(instance).getValue<T>();
+}
+
+template<typename T>
+void Property::setValue(const Instance& instance, T&& value) const {
+    getValue(instance).setValue(value);
+}
+
+template <typename ... Args>
+Variant Constructor::invoke(Args&&... args) const {
+    if (sizeof...(Args) != arg_types.size())
+        return Variant();
+    const auto& arg_types_ = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
+    auto it = arg_types.begin();
+    auto it_ = arg_types_.begin();
+    for (; it != arg_types.end(); it++, it_++) {
+        if (*it != *it_)
+            return Variant();
+    }
+
+    return invoker(std::initializer_list<Instance>{std::forward<Args>(args) ...});
+}
+
+template <class T, class PropertyType>
+inline ClassInfo& ClassInfo::registerProperty(PropertyType T::* var_ptr, std::string property_name)
+{
+    std::string property_type_name_ = MetaTypeOf<PropertyType>().typeName();
+    size_t offset = reinterpret_cast<size_t>(&(reinterpret_cast<T const volatile*>(0)->*var_ptr));
+    using ValueType = std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<PropertyType>>>;
+    int prop_type = Property::Type::Unknown;
+    if constexpr (traits::is_fundamental_v<ValueType>)
+        prop_type = Property::Type::Fundamental;
+    else if constexpr (traits::is_sequence_container_v<ValueType>)
+        prop_type = Property::Type::SequenceContainer;
+    else if constexpr (traits::is_associative_container_v<ValueType>)
+        prop_type = Property::Type::AssociativeContainer;
+    else if constexpr (std::is_class_v<ValueType>)
+        prop_type = Property::Type::Custom;
+    else if constexpr (std::is_enum_v<ValueType>)
+        prop_type = Property::Type::Enum;
+    if constexpr (std::is_pointer_v<PropertyType>) {
+        prop_type = prop_type | Property::Type::Pointer;
+    }
+    Property property_info = { prop_type, offset, sizeof(ValueType), property_type_name_, property_name };
+    if constexpr (traits::is_std_vector_v<ValueType>) {
+        using ElemType = typename ValueType::value_type;
+        property_info.value_type_name = MetaTypeOf<ElemType>().typeName();
+        property_info.sequence_size = [](Instance& instance) -> size_t {
+            auto& vec = instance.getValue<ValueType&>();
+            return vec.size();
+            };
+        property_info.sequence_resize = [](Instance& instance, size_t n) {
+            auto& vec = instance.getValue<ValueType&>();
+            vec.resize(n);
+            };
+        property_info.sequence_element_ptr = [](Instance& instance, size_t i) -> Instance {
+            auto& vec = instance.getValue<ValueType&>();
+            return Instance(vec[i]);
+            };
+    }
+
+    property_infos.emplace_back(property_info);
+    return *this;
+}
+
+template <typename T, typename ... Args>
+inline ClassInfo& ClassInfo::registerConstructor()
+{
+    Constructor ctor_info;
+    ctor_info.arg_types = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
+    ctor_info.invoker = [](const std::initializer_list<Instance>& args) -> Variant {
+        auto arg_tuple = transformArguments<Args...>(args, std::index_sequence_for<Args...>{});
+        return Variant(T(std::get<Args>(arg_tuple)...));
+    };
+    ctor_infos.emplace_back(ctor_info);
+    return *this;
+}
+
+template <class T, class ReturnType, typename ... Args>
+inline ClassInfo& ClassInfo::registerMethod(ReturnType(T::* method_ptr)(Args...), std::string method_name)
+{
+    std::string return_type_name = MetaTypeOf<ReturnType>().typeName();
+    auto arg_types = std::initializer_list<std::string>{ traits::getArgTypeName<Args>() ... };
+    std::string method_signature = return_type_name + " " + method_name + "(";
+    if (arg_types.size() == 0)
+        method_signature += std::string(")");
+    else {
+        for (auto it = arg_types.begin(); it != arg_types.end(); it++) {
+            method_signature += *it;
+            method_signature += ((it + 1) == arg_types.end()) ? std::string(")") : std::string(", ");
+        }
+    }
+    Method method_info = { reinterpret_cast<void (Method::Dumb::*)()>(method_ptr), return_type_name, method_name, arg_types, method_signature };
+    method_infos.emplace_back(method_info);
+    return *this;
+}
 
 inline Instance Property::getValue(const Instance& instance) const {
     return Instance(type_name, ((char*)instance.rawData() + offset));

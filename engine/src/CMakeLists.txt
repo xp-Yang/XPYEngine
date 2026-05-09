@@ -5,8 +5,19 @@ set(LOGICAL_INCLUDE_DIR ${ENGINE_SRC_DIR}/Logical/include)
 set(GUI_INCLUDE_DIR ${ENGINE_SRC_DIR}/GUI/include)
 
 file(GLOB_RECURSE SRC_FILES "${ENGINE_SRC_DIR}/*.cpp" "${ENGINE_SRC_DIR}/*.c")
+if(APPLE)
+	file(GLOB_RECURSE OBJCXX_SRC_FILES "${ENGINE_SRC_DIR}/*.mm")
+	list(APPEND SRC_FILES ${OBJCXX_SRC_FILES})
+endif()
 file(GLOB_RECURSE HEAD_FILES "${ENGINE_SRC_DIR}/*.hpp" "${ENGINE_SRC_DIR}/*.h" "${ENGINE_INCLUDE_DIR}/*.hpp" "${ENGINE_INCLUDE_DIR}/*.h")
 file(GLOB_RECURSE RC_FILES "${ENGINE_RESOURCE_DIR}/*.*")
+
+if(NOT WIN32)
+	list(FILTER SRC_FILES EXCLUDE REGEX ".*/GUI/Platform/Windows/.*")
+endif()
+if(NOT APPLE)
+	list(FILTER SRC_FILES EXCLUDE REGEX ".*/GUI/Platform/Mac/.*")
+endif()
 
 #使ide呈现文件夹层级结构
 #Note: 只有add_library/add_executable中的文件才会被source_group分组
@@ -37,6 +48,11 @@ target_link_libraries(${LIB_NAME}
 	PUBLIC TinyReflection
 	PRIVATE glfw
 	PRIVATE assimp)
+
+if(APPLE)
+	target_link_libraries(${LIB_NAME} PRIVATE "-framework AppKit")
+	target_link_libraries(${LIB_NAME} PRIVATE "-framework UniformTypeIdentifiers")
+endif()
 
 #通过宏定义告诉程序resource目录
 target_compile_definitions(EngineRuntime PUBLIC RESOURCE_DIR="${ENGINE_RESOURCE_DIR}")

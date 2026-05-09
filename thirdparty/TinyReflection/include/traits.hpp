@@ -12,6 +12,11 @@
 
 namespace Meta {
 
+class MetaType;
+
+template <class T>
+MetaType MetaTypeOf();
+
 namespace traits {
 
 //template<typename T>
@@ -54,12 +59,12 @@ namespace traits {
 // T* const -> T * __ptrXX
 // const T* const & -> T const * __ptrXX
 template<typename T>
-constexpr std::string rawTypeName() noexcept {
+inline std::string rawTypeName() noexcept {
     return typeid(T).name();
 }
 
 template<typename T>
-constexpr std::string rawTypeName(T&& obj) noexcept {
+inline std::string rawTypeName(T&& obj) noexcept {
     return typeid(obj).name();
 }
 

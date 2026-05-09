@@ -495,8 +495,8 @@ public:
         m_targetBlends.clear();
         std::copy(first, last, std::back_inserter(m_targetBlends));
     }
-    const TargetBlend *cbeginTargetBlends() const { return &m_targetBlends.front(); }
-    const TargetBlend *cendTargetBlends() const { return &m_targetBlends.back(); }
+    const TargetBlend *cbeginTargetBlends() const { return m_targetBlends.data(); }
+    const TargetBlend *cendTargetBlends() const { return m_targetBlends.data() + m_targetBlends.size(); }
 
     bool hasDepthTest() const { return m_depthTest; }
     void setDepthTest(bool enable) { m_depthTest = enable; }
@@ -564,7 +564,7 @@ protected:
     Topology m_topology = Triangles;
     CullMode m_cullMode = None;
     FrontFace m_frontFace = CCW;
-    std::array<TargetBlend, 8> m_targetBlends;
+    std::vector<TargetBlend> m_targetBlends;
     bool m_depthTest = false;
     bool m_depthWrite = false;
     CompareOp m_depthOp = Less;

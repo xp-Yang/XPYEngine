@@ -13,17 +13,7 @@ public:
     void reset() { memset(m_position, 0, sizeof(m_position)); }
 
     template<typename Callback>
-    void parse_buffer(const std::string& buffer, Callback callback)
-    {
-        const char* ptr = buffer.c_str();
-        const char* end = ptr + buffer.size();
-        GCodeLine gline;
-        m_parsing = true;
-        while (m_parsing && *ptr != 0) {
-            gline.reset();
-            ptr = this->parse_line(ptr, end, gline, callback);
-        }
-    }
+    void parse_buffer(const std::string& buffer, Callback callback);
 
     void parse_buffer(const std::string& buffer)
     {
@@ -31,20 +21,10 @@ public:
     }
 
     template<typename Callback>
-    const char* parse_line(const char* ptr, const char* end, GCodeLine& gline, Callback& callback)
-    {
-        std::pair<const char*, const char*> cmd;
-        const char* line_end = parse_line_internal(ptr, end, gline, cmd);
-        callback(*this, gline);
-        update_coordinates(gline, cmd);
-        return line_end;
-    }
+    const char* parse_line(const char* ptr, const char* end, GCodeLine& gline, Callback& callback);
 
     template<typename Callback>
-    void parse_line(const std::string& line, Callback callback)
-    {
-        GCodeLine gline; this->parse_line(line.c_str(), line.c_str() + line.size(), gline, callback);
-    }
+    void parse_line(const std::string& line, Callback callback);
 
     // Returns false if reading the file failed.
     bool parse_file(const std::string& file, callback_t callback);
@@ -161,5 +141,35 @@ private:
     uint32_t         m_mask;
     friend class GCodeReader;
 };
+
+template<typename Callback>
+void GCodeReader::parse_buffer(const std::string& buffer, Callback callback)
+{
+    const char* ptr = buffer.c_str();
+    const char* end = ptr + buffer.size();
+    GCodeLine gline;
+    m_parsing = true;
+    while (m_parsing && *ptr != 0) {
+        gline.reset();
+        ptr = this->parse_line(ptr, end, gline, callback);
+    }
+}
+
+template<typename Callback>
+const char* GCodeReader::parse_line(const char* ptr, const char* end, GCodeLine& gline, Callback& callback)
+{
+    std::pair<const char*, const char*> cmd;
+    const char* line_end = parse_line_internal(ptr, end, gline, cmd);
+    callback(*this, gline);
+    update_coordinates(gline, cmd);
+    return line_end;
+}
+
+template<typename Callback>
+void GCodeReader::parse_line(const std::string& line, Callback callback)
+{
+    GCodeLine gline;
+    this->parse_line(line.c_str(), line.c_str() + line.size(), gline, callback);
+}
 
 #endif

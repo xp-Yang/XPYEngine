@@ -18,7 +18,7 @@
 #include "GUI/FileDialog.hpp"
 #include "GUI/Window.hpp"
 #include "Render/RenderSystem.hpp"
-#include "Logical/FrameWork/World/Scene.hpp"
+#include "Logical/Framework/World/Scene.hpp"
 #include "Base/Logger/Logger.hpp"
 #include "GlobalContext.hpp"
 
@@ -40,7 +40,11 @@ ImGuiEditor::ImGuiEditor()
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
         ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)g_context.window->getNativeWindowHandle(), true);
+#ifdef __APPLE__
+        ImGui_ImplOpenGL3_Init("#version 410 core");
+#else
         ImGui_ImplOpenGL3_Init("#version 430");
+#endif
     }
 
     configUIStyle();
