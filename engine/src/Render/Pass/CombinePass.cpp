@@ -10,7 +10,7 @@ void CombinePass::draw(RenderPassContext& context)
 {
 	RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
 	RhiFrameBuffer* default_framebuffer = context.defaultFrameBuffer();
-	RhiFrameBuffer* source_framebuffer = context.readFrameBuffer(RGSlot::Source);
+	RhiFrameBuffer* source_framebuffer = context.frameBuffer(RGResource::SceneColor);
 	if (!framebuffer || !default_framebuffer || !source_framebuffer)
 		return;
 
@@ -28,7 +28,7 @@ void CombinePass::draw(RenderPassContext& context)
 	combine_shader->start_using();
 	auto lighted_map = framebuffer->colorAttachmentAt(0)->texture()->id();
 	combine_shader->setTexture("Texture", 0, lighted_map);
-	RhiTexture* blurred_bright_texture = context.readTexture(RGSlot::Bloom);
+	RhiTexture* blurred_bright_texture = context.texture(RGResource::BloomColor);
 	if (blurred_bright_texture) {
 		auto blurred_bright_map = blurred_bright_texture->id();
 		combine_shader->setTexture("bloomMap", 1, blurred_bright_map);

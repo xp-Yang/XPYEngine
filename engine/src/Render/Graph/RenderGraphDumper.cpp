@@ -142,24 +142,6 @@ std::string joinStrings(const std::vector<std::string>& values)
     return stream.str();
 }
 
-std::string joinSlots(const std::unordered_map<std::string, std::string>& values)
-{
-    std::vector<std::string> names;
-    names.reserve(values.size());
-    for (const auto& value : values)
-        names.push_back(value.first);
-    std::sort(names.begin(), names.end());
-
-    std::ostringstream stream;
-    for (size_t i = 0; i < names.size(); ++i)
-    {
-        if (i > 0)
-            stream << ", ";
-        stream << names[i] << "=" << values.at(names[i]);
-    }
-    return stream.str();
-}
-
 std::string joinTargets(const std::vector<RenderGraph::PassNode::TargetDeclaration>& values)
 {
     std::ostringstream stream;
@@ -224,12 +206,8 @@ std::string RenderGraphDumper::graph() const
                << (node.m_enabled ? "enabled" : "disabled") << "\n";
         if (!node.m_reads.empty())
             stream << "  reads: " << joinStrings(node.m_reads) << "\n";
-        if (!node.m_read_slots.empty())
-            stream << "  read slots: " << joinSlots(node.m_read_slots) << "\n";
         if (!node.m_read_writes.empty())
             stream << "  read-writes: " << joinStrings(node.m_read_writes) << "\n";
-        if (!node.m_read_write_slots.empty())
-            stream << "  read-write slots: " << joinSlots(node.m_read_write_slots) << "\n";
         if (!node.m_targets.empty())
             stream << "  targets: " << joinTargets(node.m_targets) << "\n";
         if (!node.m_writes.empty())

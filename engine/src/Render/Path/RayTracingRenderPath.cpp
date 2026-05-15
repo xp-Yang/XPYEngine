@@ -18,7 +18,7 @@ void RayTracingRenderPath::render(RenderSourceData& render_source_data)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
 
     m_render_graph.addPass("Combined", RenderPass::Type::Combined, m_combine_pass.get())
-        .readAs(RGSlot::Source, RGResource::SceneColor)
+        .read(RGResource::SceneColor)
         .read(RGResource::SceneDepth)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)

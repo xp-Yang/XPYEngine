@@ -13,7 +13,7 @@ void WireFramePass::init()
 
 void WireFramePass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* target_framebuffer = context.readWriteFrameBuffer(RGSlot::Target);
+    RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
     if (!target_framebuffer)
         return;
     target_framebuffer->bind();

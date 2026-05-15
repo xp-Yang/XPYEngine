@@ -66,18 +66,18 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
 
     m_render_graph.addPass("SkyBox", RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
         .setEnabled(render_params.effect_params.skybox)
-        .readWriteAs(RGSlot::Target, RGResource::SceneColor)
+        .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass("Outline", RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
-        .readWriteAs(RGSlot::Target, RGResource::SceneColor)
+        .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
 
     m_render_graph.addPass("Combined", RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
-        .readAs(RGSlot::Source, RGResource::SceneColor)
+        .read(RGResource::SceneColor)
         .read(RGResource::SceneDepth)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)

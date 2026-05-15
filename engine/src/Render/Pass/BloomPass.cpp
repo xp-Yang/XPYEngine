@@ -20,7 +20,7 @@ void BloomPass::extractBright(RenderPassContext& context)
     framebuffer->bind();
     framebuffer->clear();
 
-    RhiTexture* lighted_texture = context.readTexture(RGSlot::Source);
+    RhiTexture* lighted_texture = context.texture(RGResource::SceneColor);
     auto lighted_map = lighted_texture ? lighted_texture->id() : 0;
     static RenderShaderObject* extract_bright_shader = RenderShaderObject::getShaderObject(ShaderType::ExtractBrightShader);
     extract_bright_shader->start_using();

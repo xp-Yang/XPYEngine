@@ -5,7 +5,6 @@
 
 #include <functional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace RGResource {
@@ -28,9 +27,6 @@ static inline constexpr const char* GBufferDepth = "GBuffer.Depth";
 static inline constexpr const char* SceneColor = "Scene.Color";
 static inline constexpr const char* SceneDepth = "Scene.Depth";
 
-static inline constexpr const char* CheckerBoardColor = "CheckerBoard.Color";
-static inline constexpr const char* CheckerBoardDepth = "CheckerBoard.Depth";
-
 static inline constexpr const char* BloomColor = "Bloom.Color";
 static inline constexpr const char* BloomPingPongColor = "Bloom.PingPongColor";
 
@@ -47,13 +43,6 @@ static inline constexpr const char* Backbuffer = "Backbuffer";
 static inline constexpr const char* BloomPingPong = "Bloom.PingPong";
 static inline constexpr const char* OutlineMask = "Outline.Mask";
 static inline constexpr const char* ShadowPointDepth = "Shadow.PointDepth";
-}
-
-namespace RGSlot {
-static inline constexpr const char* Source = "Source";
-static inline constexpr const char* Target = "Target";
-static inline constexpr const char* GBuffer = "GBuffer";
-static inline constexpr const char* Bloom = "Bloom";
 }
 
 // 渲染图本体的前置声明。
@@ -123,9 +112,7 @@ public:
     RenderGraphPassNode(std::string name, RenderPass::Type type, RenderPass* pass);
 
     RenderGraphPassNode& read(const std::string& resource_name);
-    RenderGraphPassNode& readAs(const std::string& slot_name, const std::string& resource_name);
     RenderGraphPassNode& readWrite(const std::string& resource_name);
-    RenderGraphPassNode& readWriteAs(const std::string& slot_name, const std::string& resource_name);
     RenderGraphPassNode& mainTarget();
     RenderGraphPassNode& target(const std::string& target_name, RenderGraphTargetKind kind = RenderGraphTargetKind::Texture);
     RenderGraphPassNode& backbuffer(const std::string& target_name = RGTarget::Backbuffer);
@@ -144,7 +131,6 @@ private:
 
     void declareTarget(const std::string& target_name, RenderGraphTargetKind kind, int initial_cube_map_count = 0);
     RenderGraphPassNode& writeTo(const std::string& target_name, const std::string& resource_name, RenderGraphResourceBinding binding, RenderGraphResourceDesc desc);
-    void bindSlot(std::unordered_map<std::string, std::string>& slot_bindings, const std::string& slot_name, const std::string& resource_name);
 
     std::string m_name;
     RenderPass::Type m_type;
@@ -155,8 +141,6 @@ private:
     std::vector<RenderPass::Type> m_resolved_dependencies;
     std::vector<std::string> m_reads;
     std::vector<std::string> m_read_writes;
-    std::unordered_map<std::string, std::string> m_read_slots;
-    std::unordered_map<std::string, std::string> m_read_write_slots;
     std::vector<TargetDeclaration> m_targets;
     std::vector<ResourceWrite> m_writes;
     std::function<void(RenderPass&)> m_setup;

@@ -53,7 +53,7 @@ void OutlinePass::draw(RenderPassContext& context)
     auto source_map = mask_framebuffer->colorAttachmentAt(0)->texture()->id();
 
 
-    RhiFrameBuffer* target_framebuffer = context.readWriteFrameBuffer(RGSlot::Target);
+    RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
     if (!target_framebuffer)
         return;
     target_framebuffer->bind();

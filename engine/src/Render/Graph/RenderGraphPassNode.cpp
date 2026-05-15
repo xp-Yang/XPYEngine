@@ -49,35 +49,11 @@ RenderGraphPassNode& RenderGraphPassNode::read(const std::string& resource_name)
     return *this;
 }
 
-RenderGraphPassNode& RenderGraphPassNode::readAs(const std::string& slot_name, const std::string& resource_name)
-{
-    bindSlot(m_read_slots, slot_name, resource_name);
-    return read(resource_name);
-}
-
 RenderGraphPassNode& RenderGraphPassNode::readWrite(const std::string& resource_name)
 {
     if (std::find(m_read_writes.begin(), m_read_writes.end(), resource_name) == m_read_writes.end())
         m_read_writes.push_back(resource_name);
     return *this;
-}
-
-RenderGraphPassNode& RenderGraphPassNode::readWriteAs(const std::string& slot_name, const std::string& resource_name)
-{
-    bindSlot(m_read_write_slots, slot_name, resource_name);
-    return readWrite(resource_name);
-}
-
-void RenderGraphPassNode::bindSlot(std::unordered_map<std::string, std::string>& slot_bindings, const std::string& slot_name, const std::string& resource_name)
-{
-    auto it = slot_bindings.find(slot_name);
-    if (it == slot_bindings.end())
-    {
-        slot_bindings.emplace(slot_name, resource_name);
-        return;
-    }
-    if (it->second != resource_name)
-        throw std::runtime_error("RenderGraph slot is rebound to a different resource: " + slot_name);
 }
 
 void RenderGraphPassNode::declareTarget(const std::string& target_name, RenderGraphTargetKind kind, int initial_cube_map_count)

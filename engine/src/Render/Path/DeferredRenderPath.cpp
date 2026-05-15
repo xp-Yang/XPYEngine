@@ -88,7 +88,7 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
     }
 
     auto& lighting_node = m_render_graph.addPass("DeferredLighting", RenderPass::Type::DeferredLighting, pass(RenderPass::Type::DeferredLighting))
-        .readAs(RGSlot::GBuffer, RGResource::GBufferPosition)
+        .read(RGResource::GBufferPosition)
         .read(RGResource::GBufferNormal)
         .read(RGResource::ShadowDirectionalDepth)
         .color(RGResource::SceneColor, RhiTexture::Format::RGBA16F)
@@ -116,49 +116,46 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
 
     m_render_graph.addPass("SkyBox", RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
         .setEnabled(render_params.effect_params.skybox)
-        .readWriteAs(RGSlot::Target, RGResource::SceneColor)
+        .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass("Transparent", RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
-        .readWriteAs(RGSlot::Target, RGResource::SceneColor)
+        .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass("Bloom", RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
         .setEnabled(bloom_used)
         .setDisabledExecution(RenderGraph::DisabledExecution::Clear)
-        .readAs(RGSlot::Source, RGResource::SceneColor)
+        .read(RGResource::SceneColor)
         .color(RGResource::BloomColor, RhiTexture::Format::RGB16F)
         .target(RGTarget::BloomPingPong)
         .color(RGResource::BloomPingPongColor, RhiTexture::Format::RGB16F);
 
     m_render_graph.addPass("CheckerBoard", RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
         .setEnabled(checkerboard_enabled)
-        .color(RGResource::CheckerBoardColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::CheckerBoardDepth, RhiTexture::Format::DEPTH);
-
-    const std::string main_color = checkerboard_enabled ? RGResource::CheckerBoardColor : RGResource::SceneColor;
-    const std::string main_depth = checkerboard_enabled ? RGResource::CheckerBoardDepth : RGResource::SceneDepth;
+        .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
 
     m_render_graph.addPass("Normal", RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
         .setEnabled(render_params.effect_params.show_normal)
-        .readWriteAs(RGSlot::Target, main_color)
-        .readWrite(main_depth);
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass("WireFrame", RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
         .setEnabled(render_params.effect_params.wireframe)
-        .readWriteAs(RGSlot::Target, main_color)
-        .readWrite(main_depth);
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass("Outline", RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
-        .readWriteAs(RGSlot::Target, main_color)
-        .readWrite(main_depth)
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
 
     auto& combine_node = m_render_graph.addPass("Combined", RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
-        .readAs(RGSlot::Source, main_color)
-        .read(main_depth)
+        .read(RGResource::SceneColor)
+        .read(RGResource::SceneDepth)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
         .backbuffer(RGTarget::Backbuffer)
@@ -168,7 +165,7 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
         });
 
     if (bloom_used)
-        combine_node.readAs(RGSlot::Bloom, RGResource::BloomColor);
+        combine_node.read(RGResource::BloomColor);
 
     m_render_graph.markOutput(RGResource::PickingColor);
     if (!bloom_used)

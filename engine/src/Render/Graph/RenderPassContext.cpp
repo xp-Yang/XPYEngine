@@ -55,27 +55,3 @@ void RenderPassContext::ensureCubeDepthTextureCount(const std::string& target_na
     if (m_graph && m_node)
         m_graph->ensureCubeDepthTargetCapacity(m_node->m_type, target_name, count);
 }
-
-RhiFrameBuffer* RenderPassContext::readFrameBuffer(const std::string& slot_name) const
-{
-    const std::string* resource_name = m_node ? resourceNameForSlot(m_node->m_read_slots, slot_name) : nullptr;
-    return resource_name && m_graph ? m_graph->frameBuffer(*resource_name) : nullptr;
-}
-
-RhiTexture* RenderPassContext::readTexture(const std::string& slot_name) const
-{
-    const std::string* resource_name = m_node ? resourceNameForSlot(m_node->m_read_slots, slot_name) : nullptr;
-    return resource_name ? texture(*resource_name) : nullptr;
-}
-
-RhiFrameBuffer* RenderPassContext::readWriteFrameBuffer(const std::string& slot_name) const
-{
-    const std::string* resource_name = m_node ? resourceNameForSlot(m_node->m_read_write_slots, slot_name) : nullptr;
-    return resource_name && m_graph ? m_graph->frameBuffer(*resource_name) : nullptr;
-}
-
-const std::string* RenderPassContext::resourceNameForSlot(const std::unordered_map<std::string, std::string>& slot_bindings, const std::string& slot_name) const
-{
-    auto it = slot_bindings.find(slot_name);
-    return it == slot_bindings.end() ? nullptr : &it->second;
-}
