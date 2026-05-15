@@ -313,12 +313,13 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                     if (TreeNodeExWithTitleFont(("Material##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
                     {
                         bool material_changed = false;
-                        material_changed |= DrawVec4Control("base color", sub_mesh.material->base_color_factor);
+                        material_changed |= DrawVec3Control("base color", sub_mesh.material->base_color_factor);
                         material_changed |= DrawFloatControl("metallic", sub_mesh.material->metallic_factor, 0.01f, 0.0f, 1.0f);
                         material_changed |= DrawFloatControl("roughness", sub_mesh.material->roughness_factor, 0.01f, 0.0f, 1.0f);
                         material_changed |= DrawFloatControl("ao", sub_mesh.material->ao_factor, 0.01f, 0.0f, 1.0f);
                         material_changed |= DrawVec3Control("diffuse", sub_mesh.material->diffuse_factor, 1.0f);
                         material_changed |= DrawVec3Control("specular", sub_mesh.material->specular_factor, 1.0f);
+                        material_changed |= DrawFloatControl("shininess", sub_mesh.material->shininess, 1.0f, 1.0f, 1024.0f);
                         material_changed |= DrawFloatControl("alpha", sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f);
                         if (material_changed)
                             sub_mesh.material->markDirty();

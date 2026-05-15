@@ -19,6 +19,9 @@ struct Material
 
     Material() = default;
 
+    void fillPBRFromBlinnPhong();
+    void fillBlinnPhongFromPBR();
+
     void markDirty() { ++version; }
 
     uint64_t version{0};
@@ -29,10 +32,10 @@ struct Material
     std::shared_ptr<Texture> roughness_texture;
     std::shared_ptr<Texture> ao_texture;
 
-    Vec4 base_color_factor{1.0f, 1.0f, 1.0f, 1.0f};
-    float metallic_factor{1.0f};
-    float roughness_factor{1.0f};
-    float ao_factor{1.0f};
+    Vec3 base_color_factor{ 1.0f, 1.0f, 1.0f };
+    float metallic_factor{ 0.0f };
+    float roughness_factor{ 1.0f };
+    float ao_factor{ 1.0f };
 
     // blinn phong
     std::shared_ptr<Texture> diffuse_texture;
@@ -40,10 +43,11 @@ struct Material
     std::shared_ptr<Texture> normal_texture;
     std::shared_ptr<Texture> height_texture;
 
-    Vec3 diffuse_factor{1.0f, 1.0f, 1.0f};
-    Vec3 specular_factor{1.0f, 1.0f, 1.0f};
+    Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
+    Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
+    float shininess{ 128.0f };
 
-    float alpha{1.0f};
+    float alpha{ 1.0f };
 };
 
 #endif

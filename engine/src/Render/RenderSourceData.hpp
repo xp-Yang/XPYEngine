@@ -28,8 +28,8 @@ struct RenderMaterialData {
     GL_RESOURCE_HANLE metallic_map{ 0 };
     GL_RESOURCE_HANLE roughness_map{ 0 };
     GL_RESOURCE_HANLE ao_map{ 0 };
-    Vec4 base_color_factor{ 1.0f, 1.0f, 1.0f, 1.0f };
-    float metallic_factor{ 1.0f };
+    Vec3 base_color_factor{ 1.0f, 1.0f, 1.0f };
+    float metallic_factor{ 0.0f };
     float roughness_factor{ 1.0f };
     float ao_factor{ 1.0f };
 
@@ -39,6 +39,7 @@ struct RenderMaterialData {
     GL_RESOURCE_HANLE height_map{ 0 };
     Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
     Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
+    float shininess{ 128.0f };
 
     float alpha{ 1.0f };
     uint64_t material_version{ 0 };

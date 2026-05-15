@@ -21,7 +21,9 @@ void main()
     vec3 Position = texture(gPosition, fragUV).rgb;
     vec3 Normal = texture(gNormal, fragUV).rgb;
     vec3 Diffuse = texture(gDiffuse, fragUV).rgb;
-    vec3 Specular = texture(gSpecular, fragUV).rgb;
+    vec4 SpecularSample = texture(gSpecular, fragUV);
+    vec3 Specular = SpecularSample.rgb;
+    float Shininess = SpecularSample.a;
 
     if (Normal.xyz == vec3(0.0)){
         // return if sample the blank area in GBuffer
@@ -32,7 +34,7 @@ void main()
 
     // Directional Light Source:
     vec3 lightDir = normalize(directionalLight.direction);
-    vec3 lightingByDirectionalLight = BlinnPhong(directionalLight.color.xyz, Normal, viewDir, -lightDir, Diffuse, Specular);
+    vec3 lightingByDirectionalLight = BlinnPhong(directionalLight.color.xyz, Normal, viewDir, -lightDir, Diffuse, Specular, Shininess);
     // Directional Light Shadow:
     vec4 fragPosLightSpace = lightSpaceMatrix * vec4(Position, 1.0);
     float shadowFactor = ShadowCalculation(fragPosLightSpace, shadow_map);
@@ -45,7 +47,7 @@ void main()
         vec3 lightDir = normalize(Position - pointLights[i].position);
         float distance = length(Position - pointLights[i].position);
         float attenuation = PointLightAttenuation(distance, pointLights[i].radius);
-        lightingByPointLights[i] = BlinnPhong(pointLights[i].color.xyz * attenuation, Normal, viewDir, -lightDir, Diffuse, Specular);
+        lightingByPointLights[i] = BlinnPhong(pointLights[i].color.xyz * attenuation, Normal, viewDir, -lightDir, Diffuse, Specular, Shininess);
         // Point Light Shadow:
         float pointShadowFactor = OmnidirectionalShadowCalculation(Position - pointLights[i].position, cube_shadow_maps[i], pointLights[i].radius);
         lightingByPointLights[i] *= pointShadowFactor;

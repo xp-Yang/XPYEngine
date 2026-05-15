@@ -54,7 +54,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         auto &material = render_node->material;
         if (m_pbr)
         {
-            shader->setFloat4("base_color_factor", material.base_color_factor);
+            shader->setFloat3("base_color_factor", material.base_color_factor);
             shader->setFloat("metallic_factor", material.metallic_factor);
             shader->setFloat("roughness_factor", material.roughness_factor);
             shader->setFloat("ao_factor", material.ao_factor);
@@ -67,6 +67,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         {
             shader->setFloat3("diffuse_factor", material.diffuse_factor);
             shader->setFloat3("specular_factor", material.specular_factor);
+            shader->setFloat("shininess", material.shininess);
             shader->setTexture("material.diffuse_map", 0, material.diffuse_map);
             shader->setTexture("material.specular_map", 1, material.specular_map);
             shader->setTexture("material.normal_map", 2, material.normal_map);

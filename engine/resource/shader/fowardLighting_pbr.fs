@@ -14,7 +14,7 @@ uniform sampler2D metallic_map;
 uniform sampler2D roughness_map;
 uniform sampler2D ao_map;
 
-uniform vec4 base_color_factor;
+uniform vec3 base_color_factor;
 uniform float metallic_factor;
 uniform float roughness_factor;
 uniform float ao_factor;

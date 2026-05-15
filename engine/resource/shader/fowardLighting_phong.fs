@@ -20,6 +20,7 @@ uniform Material material;
 
 uniform vec3 diffuse_factor;
 uniform vec3 specular_factor;
+uniform float shininess;
 uniform vec3 cameraPos;
 
 out vec4 outColor;
@@ -33,13 +34,13 @@ void main()
 
     // Directional Light Source:
 	vec3 lightDir = normalize(directionalLight.direction);
-	vec3 lightingByDirectionalLight = BlinnPhong(directionalLight.color.xyz, normal, view_direction, -lightDir, diffuse_coef, specular_coef);
+	vec3 lightingByDirectionalLight = BlinnPhong(directionalLight.color.xyz, normal, view_direction, -lightDir, diffuse_coef, specular_coef, shininess);
 	
 	// Point Light Source:
     vec3 lightingByPointLight = vec3(0);
     for(int i = 0; i < point_lights_size; i++){
         vec3 lightDir = normalize(fs_in.fragWorldPos - pointLights[i].position);
-        lightingByPointLight += BlinnPhong(pointLights[i].color.xyz, normal, view_direction, -lightDir, diffuse_coef, specular_coef);
+        lightingByPointLight += BlinnPhong(pointLights[i].color.xyz, normal, view_direction, -lightDir, diffuse_coef, specular_coef, shininess);
     }
 
 	// Shadow:

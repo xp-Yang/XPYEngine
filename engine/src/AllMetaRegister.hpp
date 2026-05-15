@@ -74,6 +74,7 @@ inline void allMetaRegister()
 		registerProperty(&Material::height_texture, "height_texture").
 		registerProperty(&Material::diffuse_factor, "diffuse_factor").
 		registerProperty(&Material::specular_factor, "specular_factor").
+		registerProperty(&Material::shininess, "shininess").
 		registerProperty(&Material::alpha, "alpha");
 	registerClass<Shader>("Shader");
 	registerClass<CubeTexture>("CubeTexture");
@@ -100,6 +101,7 @@ inline void allMetaRegister()
 		.registerProperty(&MaterialDTO::ao_factor, "ao_factor")
 		.registerProperty(&MaterialDTO::diffuse_factor, "diffuse_factor")
 		.registerProperty(&MaterialDTO::specular_factor, "specular_factor")
+		.registerProperty(&MaterialDTO::shininess, "shininess")
 		.registerProperty(&MaterialDTO::textures, "textures");
 	registerClass<SubMeshDTO>("SubMeshDTO")
 		.registerProperty(&SubMeshDTO::sub_mesh_index, "index")

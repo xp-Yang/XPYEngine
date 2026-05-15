@@ -40,7 +40,7 @@ void GBufferPass::draw(RenderPassContext& context)
         g_shader->setMatrix("model", 1, render_node->model_matrix);
         auto& material = render_node->material;
         if (m_pbr) {
-            g_shader->setFloat4("base_color_factor", material.base_color_factor);
+            g_shader->setFloat3("base_color_factor", material.base_color_factor);
             g_shader->setFloat("metallic_factor", material.metallic_factor);
             g_shader->setFloat("roughness_factor", material.roughness_factor);
             g_shader->setFloat("ao_factor", material.ao_factor);
@@ -52,6 +52,7 @@ void GBufferPass::draw(RenderPassContext& context)
         else {
             g_shader->setFloat3("diffuse_factor", material.diffuse_factor);
             g_shader->setFloat3("specular_factor", material.specular_factor);
+            g_shader->setFloat("shininess", material.shininess);
             g_shader->setTexture("diffuse_map", 0, material.diffuse_map);
             g_shader->setTexture("specular_map", 1, material.specular_map);
         }

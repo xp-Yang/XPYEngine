@@ -148,6 +148,7 @@ RenderMaterialData::RenderMaterialData(std::shared_ptr<Material> material_)
     ao_factor = material_->ao_factor;
     diffuse_factor = material_->diffuse_factor;
     specular_factor = material_->specular_factor;
+    shininess = material_->shininess;
 
     // TODO 贴图更新了，texture数据的释放和加载
     if (albedo_map == 0)
@@ -194,6 +195,7 @@ void RenderMeshNode::updateRenderMaterialData(std::shared_ptr<Material> material
     material.ao_factor = material_->ao_factor;
     material.diffuse_factor = material_->diffuse_factor;
     material.specular_factor = material_->specular_factor;
+    material.shininess = material_->shininess;
 
     // TODO 贴图更新了，texture数据的释放和加载
     if (material.albedo_map == 0)

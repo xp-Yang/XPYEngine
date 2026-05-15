@@ -4,10 +4,62 @@
 #include <assimp/postprocess.h>
 #include "Logical/Mesh.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+
 std::unordered_map<std::string, Assimp::Importer *> ResourceImporter::m_importers;
 
-namespace {
-Mat4 toMat4(const aiMatrix4x4 &mat)
+static std::shared_ptr<Texture> textureOfUnknownType(aiMaterial* material, TextureType engine_type, const std::string& directory, bool gamma,
+    std::initializer_list<const char*> keywords, std::initializer_list<const char*> rejected_keywords = {})
+{
+    if (!material)
+        return nullptr;
+
+    auto containsAny = [](std::string text, std::initializer_list<const char*> needles)
+    {
+        std::transform(text.begin(), text.end(), text.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        for (const char* needle : needles)
+        {
+            if (text.find(needle) != std::string::npos)
+                return true;
+        }
+        return false;
+    };
+
+    const unsigned int count = material->GetTextureCount(aiTextureType_UNKNOWN);
+    for (unsigned int i = 0; i < count; ++i)
+    {
+        aiString aiPath;
+        if (material->GetTexture(aiTextureType_UNKNOWN, i, &aiPath) != AI_SUCCESS)
+            continue;
+
+        std::string path = aiPath.C_Str();
+        if (!containsAny(path, keywords) || containsAny(path, rejected_keywords))
+            continue;
+
+        const std::string resolved_path = directory + '/' + path;
+        return resolved_path.empty() ? nullptr : std::make_shared<Texture>(engine_type, resolved_path, gamma);
+    }
+    return nullptr;
+}
+
+static std::shared_ptr<Texture> textureOfType(aiMaterial* material, aiTextureType ai_type, TextureType engine_type, const std::string& directory, bool gamma)
+{
+    if (!material || material->GetTextureCount(ai_type) == 0)
+        return nullptr;
+
+    aiString aiPath;
+    if (material->GetTexture(ai_type, 0, &aiPath) != AI_SUCCESS)
+        return nullptr;
+
+    const std::string resolved_path = directory + '/' + aiPath.C_Str();
+    return resolved_path.empty() ? nullptr : std::make_shared<Texture>(engine_type, resolved_path, gamma);
+};
+
+static Mat4 toMat4(const aiMatrix4x4 &mat)
 {
     Mat4 res(1.0f);
     res[0][0] = mat.a1;
@@ -28,7 +80,6 @@ Mat4 toMat4(const aiMatrix4x4 &mat)
     res[3][3] = mat.d4;
     return res;
 }
-} // namespace
 
 ResourceImporter::~ResourceImporter()
 {
@@ -206,31 +257,80 @@ void ResourceImporter::extractBoneWeightForVertices(std::vector<Vertex> &vertice
 
 std::shared_ptr<Material> ResourceImporter::load_material(aiMaterial *material)
 {
-    std::shared_ptr<Material> res = std::make_shared<Material>();
+    std::shared_ptr<Material> res = Material::create_complete_default_material();
 
-    aiString str;
-    if (material->GetTextureCount(aiTextureType_DIFFUSE))
+    auto materialLooksLikePBR = [](aiMaterial* material, const std::string& filepath)
     {
-        material->GetTexture(aiTextureType_DIFFUSE, 0, &str);
-        res->diffuse_texture = std::make_shared<Texture>(TextureType::Diffuse, m_directory + '/' + std::string(str.C_Str()), false);
+        const std::string ext = PathService::getFileSuffix(filepath);
+        if (ext == "gltf" || ext == "glb")
+            return true;
+
+        int shading_model = aiShadingMode_NoShading;
+        if (material && material->Get(AI_MATKEY_SHADING_MODEL, shading_model) == AI_SUCCESS)
+            return shading_model == aiShadingMode_CookTorrance;
+
+        return false;
+    };
+
+    if (materialLooksLikePBR(material, m_obj_filepath))
+    {
+        res->base_color_factor = res->diffuse_factor;
+        auto albedo_texture = textureOfUnknownType(material, TextureType::Albedo, m_directory, true,
+            { "basecolor", "base_color", "albedo" });
+        if (!albedo_texture)
+            albedo_texture = textureOfType(material, aiTextureType_DIFFUSE, TextureType::Albedo, m_directory, true);
+        if (albedo_texture)
+            res->albedo_texture = albedo_texture;
+
+        auto metallic_texture = textureOfUnknownType(material, TextureType::Metallic, m_directory, false,
+            { "metallic", "metalness" }, { "roughness" });
+        if (metallic_texture)
+            res->metallic_texture = metallic_texture;
+        auto roughness_texture = textureOfUnknownType(material, TextureType::Roughness, m_directory, false,
+            { "roughness" }, { "metallic", "metalness" });
+        if (roughness_texture)
+            res->roughness_texture = roughness_texture;
+        auto ao_texture = textureOfType(material, aiTextureType_LIGHTMAP, TextureType::AO, m_directory, false);
+        if (!ao_texture)
+            ao_texture = textureOfUnknownType(material, TextureType::AO, m_directory, false,
+                { "ao", "occlusion", "ambientocclusion", "ambient_occlusion" });
+        if (ao_texture)
+            res->ao_texture = ao_texture;
+
+        res->metallic_factor = metallic_texture ? 1.0f : 0.0f;
+        res->roughness_factor = roughness_texture ? 1.0f : 0.8f;
+        res->ao_factor = 1.0f;
+
+        res->fillBlinnPhongFromPBR();
     }
-
-    if (material->GetTextureCount(aiTextureType_SPECULAR))
+    else
     {
-        material->GetTexture(aiTextureType_SPECULAR, 0, &str);
-        res->specular_texture = std::make_shared<Texture>(TextureType::Specular, m_directory + '/' + std::string(str.C_Str()), false);
-    }
+        aiColor3D diffuse_color(1.0f, 1.0f, 1.0f);
+        if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color) == AI_SUCCESS)
+            res->diffuse_factor = Vec3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
 
-    if (material->GetTextureCount(aiTextureType_NORMALS))
-    {
-        material->GetTexture(aiTextureType_NORMALS, 0, &str);
-        res->normal_texture = std::make_shared<Texture>(TextureType::Normal, m_directory + '/' + std::string(str.C_Str()), false);
-    }
+        aiColor3D specular_color(1.0f, 1.0f, 1.0f);
+        if (material->Get(AI_MATKEY_COLOR_SPECULAR, specular_color) == AI_SUCCESS)
+            res->specular_factor = Vec3(specular_color.r, specular_color.g, specular_color.b);
 
-    if (material->GetTextureCount(aiTextureType_HEIGHT))
-    {
-        material->GetTexture(aiTextureType_HEIGHT, 0, &str);
-        res->height_texture = std::make_shared<Texture>(TextureType::Height, m_directory + '/' + std::string(str.C_Str()), false);
+        float shininess = res->shininess;
+        if (material->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
+            res->shininess = std::max(1.0f, std::min(shininess, 1024.0f));
+
+        if (auto texture = textureOfType(material, aiTextureType_DIFFUSE, TextureType::Diffuse, m_directory, true))
+            res->diffuse_texture = texture;
+        if (auto texture = textureOfType(material, aiTextureType_SPECULAR, TextureType::Specular, m_directory, false))
+            res->specular_texture = texture;
+        if (auto texture = textureOfType(material, aiTextureType_NORMALS, TextureType::Normal, m_directory, false))
+            res->normal_texture = texture;
+        else if (auto texture = textureOfType(material, aiTextureType_HEIGHT, TextureType::Normal, m_directory, false))
+            res->normal_texture = texture;
+        if (auto texture = textureOfType(material, aiTextureType_DISPLACEMENT, TextureType::Height, m_directory, false))
+            res->height_texture = texture;
+        else if (auto texture = textureOfType(material, aiTextureType_HEIGHT, TextureType::Height, m_directory, false))
+            res->height_texture = texture;
+
+        res->fillPBRFromBlinnPhong();
     }
 
     return res;

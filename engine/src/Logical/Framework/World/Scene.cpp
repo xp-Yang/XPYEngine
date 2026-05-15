@@ -102,6 +102,7 @@ ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 				mat_dto.ao_factor = sub->material->ao_factor;
 				mat_dto.diffuse_factor = sub->material->diffuse_factor;
 				mat_dto.specular_factor = sub->material->specular_factor;
+				mat_dto.shininess = sub->material->shininess;
 				auto rel = [&project_dir](const std::shared_ptr<Texture>& t) {
 					return t ? PathService::tryMakeRelative(project_dir, t->texture_filepath) : std::string();
 				};
@@ -178,6 +179,7 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 				sub->material->ao_factor = md.ao_factor;
 				sub->material->diffuse_factor = md.diffuse_factor;
 				sub->material->specular_factor = md.specular_factor;
+				sub->material->shininess = md.shininess;
 				auto mktex = [&project_dir](const std::string& rel, TextureType type, bool gamma) -> std::shared_ptr<Texture> {
 					return rel.empty() ? nullptr : std::make_shared<Texture>(type, PathService::join(project_dir, rel), gamma);
 				};
