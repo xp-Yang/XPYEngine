@@ -234,7 +234,7 @@ public:
 public:
     void* rawData() const { return m_data; }
     std::string typeName() const { return m_meta.typeName(); }
-    MetaType metaType() const { return m_meta; }
+    const MetaType& metaType() const { return m_meta; }
 
 public:
     template <typename T>
@@ -269,7 +269,7 @@ public:
     
 public:
     bool isValid() const { return m_data != nullptr; }
-    MetaType metaType() const { return m_meta; }
+    const MetaType& metaType() const { return m_meta; }
     std::string typeName() const { return m_meta.typeName(); }
     void* rawData() const { return m_data; }
     void clear() {
