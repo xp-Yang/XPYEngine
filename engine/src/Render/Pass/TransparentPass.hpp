@@ -6,7 +6,7 @@
 class TransparentPass : public RenderPass {
 public:
     TransparentPass();
-    void draw() override;
+    void draw(RenderPassContext& context) override;
 
 protected:
     void init();

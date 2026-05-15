@@ -4,6 +4,9 @@
 #include "Base/Common.hpp"
 #include "Render/Pass/RenderPass.hpp"
 
+#include <string>
+#include <vector>
+
 // Interface class
 class RenderPath {
 public:
@@ -13,24 +16,13 @@ public:
             pass.second->prepareRenderSourceData(render_source_data);
         }
     }
-    virtual unsigned int getPickingFBO() { 
-        if (m_render_passes.find(RenderPass::Type::Picking) != m_render_passes.end())
-            return m_render_passes[RenderPass::Type::Picking]->getFrameBuffer()->id();
-        return 0;
-    }
-    virtual RhiTexture* renderPassTexture(RenderPass::Type render_pass_type) {
-        if (m_render_passes.find(render_pass_type) != m_render_passes.end()) {
-            if (render_pass_type == RenderPass::Type::Shadow)
-                return m_render_passes[render_pass_type]->getFrameBuffer()->depthAttachment()->texture();
-            return m_render_passes[render_pass_type]->getFrameBuffer()->colorAttachmentAt(0)->texture();
-        }
-        return nullptr;
-    }
+    virtual unsigned int getPickingFBO() { return 0; }
+    virtual RhiTexture* renderGraphTexture(const std::string& resource_name) { return nullptr; }
+    virtual std::vector<std::string> renderGraphResourceNames() const { return {}; }
+    virtual std::string renderGraphDebugDump() const { return {}; }
+    virtual std::string renderGraphExecutionDump() const { return {}; }
 
-    virtual void rebuildFramebuffers(const Vec2& pixel_size) {
-        for (auto& pass : m_render_passes)
-            pass.second->rebuildFramebuffers(pixel_size);
-    }
+    virtual void resizeRenderTargets(const Vec2& pixel_size) {}
 
 protected:
     std::unordered_map<RenderPass::Type, std::unique_ptr<RenderPass>> m_render_passes;

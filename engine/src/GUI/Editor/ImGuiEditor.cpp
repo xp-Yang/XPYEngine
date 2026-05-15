@@ -26,7 +26,6 @@ static const char* XPY_PROJECT_FILE_FILTER = "(*.proj)\0*.proj\0";
 
 ImGuiEditor::ImGuiEditor()
     : m_main_canvas(std::make_unique<MainCanvas>(this))
-    , m_preview_canvas(std::make_unique<PreviewCanvas>(this))
     , m_context_menu(std::make_unique<ImGuiContextMenu>(this))
     , m_scene_hierarchy_window(std::make_unique<ImGuiSceneHierarchy>(this))
     , m_global_console_window(std::make_unique<ImGuiGlobalConsole>(this))
@@ -66,7 +65,6 @@ void ImGuiEditor::onUpdate()
     if (m_show_debug)
         m_debug_window->render(); // render first, the debug window need to be docked
     m_main_canvas->render();
-    m_preview_canvas->render();
     ImGui::PopStyleVar(3);
     m_context_menu->render();
     m_scene_hierarchy_window->render();
@@ -107,13 +105,6 @@ void ImGuiEditor::popUpMenu()
         (g_context.scene->getPickedLight().get() == nullptr ? ContextType::Void : ContextType::Light) :
         ContextType::Object;
     m_context_menu->popUp(context);
-}
-
-bool ImGuiEditor::isInMainCanvas() const
-{
-    if (!m_main_canvas->getImGuiWindow())
-        return true;
-    return !m_main_canvas->getImGuiWindow()->SkipItems;
 }
 
 void ImGuiEditor::setExternalOpenFileHandler(ExternalOpenFileHandler handler)
@@ -244,7 +235,6 @@ void ImGuiEditor::renderEmptyMainDockerSpaceWindow()
         ImGui::DockBuilderDockWindow("Scene Hierarchy", left);
         ImGui::DockBuilderDockWindow("Console", bottom);
         ImGui::DockBuilderDockWindow("MainCanvas", right);
-        ImGui::DockBuilderDockWindow("PreviewCanvas", right);
 
         ImGui::DockBuilderFinish(main_dock_id);
     }

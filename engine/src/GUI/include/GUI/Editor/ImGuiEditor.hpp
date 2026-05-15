@@ -6,7 +6,6 @@
 #include <string>
 
 class MainCanvas;
-class PreviewCanvas;
 class ImGuiContextMenu;
 class ImGuiSceneHierarchy;
 class ImGuiGlobalConsole;
@@ -22,7 +21,6 @@ public:
 	void endFrame();
 	Viewport getMainViewport() const;
 	void popUpMenu();
-	bool isInMainCanvas() const;
 	void setExternalOpenFileHandler(ExternalOpenFileHandler handler);
 
 protected:
@@ -32,7 +30,6 @@ protected:
 
 private:
 	std::unique_ptr<MainCanvas> m_main_canvas;
-	std::unique_ptr<PreviewCanvas> m_preview_canvas;
 	std::unique_ptr<ImGuiContextMenu> m_context_menu;
 	std::unique_ptr<ImGuiSceneHierarchy> m_scene_hierarchy_window;
 	std::unique_ptr<ImGuiGlobalConsole> m_global_console_window;

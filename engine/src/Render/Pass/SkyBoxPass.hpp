@@ -6,7 +6,7 @@
 class SkyBoxPass : public RenderPass {
 public:
     SkyBoxPass();
-    void draw() override;
+    void draw(RenderPassContext& context) override;
 
 protected:
     void init();

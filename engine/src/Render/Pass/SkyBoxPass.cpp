@@ -1,8 +1,9 @@
 #include "SkyBoxPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 SkyBoxPass::SkyBoxPass()
 {
-    m_type = RenderPass::Type::Transparent;
+    m_type = RenderPass::Type::SkyBox;
     init();
 }
 
@@ -10,9 +11,12 @@ void SkyBoxPass::init()
 {
 }
 
-void SkyBoxPass::draw()
+void SkyBoxPass::draw(RenderPassContext& context)
 {
-    m_input_passes[0]->getFrameBuffer()->bind();
+    RhiFrameBuffer* target_framebuffer = context.readWriteFrameBuffer(RGSlot::Target);
+    if (!target_framebuffer)
+        return;
+    target_framebuffer->bind();
 
     m_rhi->setFrontFaceCW(true);
 

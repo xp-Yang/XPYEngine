@@ -76,6 +76,8 @@ protected:
 class RhiTexture
 {
 public:
+    virtual ~RhiTexture() = default;
+
     enum Flag
     {
         RenderTarget = 1 << 0,
@@ -200,6 +202,8 @@ protected:
 class RhiFrameBuffer
 {
 public:
+    virtual ~RhiFrameBuffer() = default;
+
     Vec2 pixelSize() const { return m_pixelSize; }
     void setPixelSize(const Vec2 &sz) { m_pixelSize = sz; }
 

@@ -1,40 +1,9 @@
 #include "MeshForwardLightingPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 MeshForwardLightingPass::MeshForwardLightingPass()
 {
-    init();
-}
-
-void MeshForwardLightingPass::init()
-{
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-}
-
-void MeshForwardLightingPass::rebuildFramebuffer(const Vec2 &pixel_size)
-{
-	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB8, pixel_size, 4);
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH24STENCIL8, pixel_size, 4);
-	color_texture->create();
-	depth_texture->create();
-	RhiAttachment color_attachment = RhiAttachment(color_texture);
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size, 4);
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-}
-
-void MeshForwardLightingPass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
-		return;
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-	rebuildFramebuffer(sz);
+    m_type = RenderPass::Type::Forward;
 }
 
 void MeshForwardLightingPass::enableReflection(bool reflection)
@@ -48,19 +17,22 @@ void MeshForwardLightingPass::enablePBR(bool pbr)
     m_pbr = pbr;
 }
 
-void MeshForwardLightingPass::draw()
+void MeshForwardLightingPass::draw(RenderPassContext& context)
 {
-    m_framebuffer->bind();
-    // m_framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
-    m_framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    if (!framebuffer)
+        return;
+    framebuffer->bind();
+    // framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
+    framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
 
     Mat4 light_ref_matrix = m_render_source_data->render_directional_light_data_list.front().lightProjMatrix *
                             m_render_source_data->render_directional_light_data_list.front().lightViewMatrix;
     Vec3 light_direction = m_render_source_data->render_directional_light_data_list.front().direction;
     Vec4 light_color = m_render_source_data->render_directional_light_data_list.front().color;
 
-    RhiFrameBuffer *shadow_framebuffer = m_input_passes[0]->getFrameBuffer();
-    m_shadow_map = shadow_framebuffer->depthAttachment()->texture()->id();
+    RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
+    m_shadow_map = shadow_texture ? shadow_texture->id() : 0;
 
     static RenderShaderObject *pbr_shader = RenderShaderObject::getShaderObject(ShaderType::PBRShader);
     static RenderShaderObject *blinn_phong_shader = RenderShaderObject::getShaderObject(ShaderType::BlinnPhongShader);

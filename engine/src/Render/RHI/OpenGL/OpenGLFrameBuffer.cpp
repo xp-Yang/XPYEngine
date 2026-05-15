@@ -7,6 +7,11 @@ OpenGLFrameBuffer::OpenGLFrameBuffer(const RhiAttachment &colorAttachment, const
 {
 }
 
+OpenGLFrameBuffer::~OpenGLFrameBuffer()
+{
+    destroyGPU();
+}
+
 void OpenGLFrameBuffer::destroyGPU()
 {
 	if (m_id != 0)
@@ -60,7 +65,12 @@ bool OpenGLFrameBuffer::create()
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureID, 0);
     }
 
-    if (color_attachment_size > 1)
+    if (color_attachment_size == 0)
+    {
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
+    else if (color_attachment_size > 1)
     { // 有2个及以上
         unsigned int *attachments = new unsigned int[color_attachment_size];
         for (unsigned int i = 0; i < color_attachment_size; i++)

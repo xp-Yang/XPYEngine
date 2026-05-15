@@ -6,6 +6,7 @@
 class OpenGLTexture : public RhiTexture {
 public:
     OpenGLTexture(Format format_, const Vec2& pixelSize_, int sampleCount_, Flag flags_, unsigned char* data);
+    ~OpenGLTexture() override;
     bool create() override;
     void destroy() override;
 };

@@ -7,18 +7,11 @@ class BloomPass : public RenderPass
 {
 public:
 	BloomPass();
-	void draw() override;
-	void rebuildFramebuffers(const Vec2& pixel_size) override;
+	void draw(RenderPassContext& context) override;
 
 protected:
-	void init() override;
-	void extractBright();
-	void blur();
-
-private:
-	void rebuildFramebuffer(const Vec2& pixel_size);
-
-	std::unique_ptr<RhiFrameBuffer> m_pingpong_framebuffer;
+	void extractBright(RenderPassContext& context);
+	void blur(RenderPassContext& context);
 };
 
 #endif

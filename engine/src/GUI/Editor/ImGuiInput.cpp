@@ -4,6 +4,7 @@
 #include "Render/RenderSystem.hpp"
 #include "Logical/Framework/World/Scene.hpp"
 #include "GlobalContext.hpp"
+#include <algorithm>
 #include <imgui.h>
 
 GUIInput::GUIInput(std::shared_ptr<ImGuiEditor> editor)
@@ -116,8 +117,6 @@ Vec2 GUIInput::mapToMainCanvasWindow(const Vec2& value)
 	auto main_viewport = ref_editor->getMainViewport();
 	pos.x -= main_viewport.x;
 	pos.y -= main_viewport.y;
-	pos.x *= g_context.window->getWidth() / main_viewport.width;
-	pos.y *= g_context.window->getHeight() / main_viewport.height;
 	return pos;
 }
 
@@ -130,13 +129,19 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 	Vec2 render_size = g_context.render_system->renderParams().renderTargetPixels();
 	const int fb_w = (int)render_size.x;
 	const int fb_h = (int)render_size.y;
+	if (fb_w <= 0 || fb_h <= 0)
+		return;
 	x *= fb_w / (float)main_viewport.width;
 	y *= fb_h / (float)main_viewport.height;
+	x = std::clamp(x, 0, fb_w - 1);
+	y = std::clamp(y, 0, fb_h - 1);
 	// in gl coordinate system, left-bottom is as origin
-	y = fb_h - y;
+	y = fb_h - 1 - y;
 
 	unsigned char data[4] = { 0,0,0,0 };
 	unsigned int frame_buffer_id = g_context.render_system->getPickingFBO();
+	if (frame_buffer_id == 0)
+		return;
 	RenderSourceData::rhi->readPixelRGBA(frame_buffer_id, x, y, data);
 	int picked_id = (int)data[0] + (((int)data[1]) << 8) + (((int)data[2]) << 16);
 	const auto& scene_objects = g_context.scene->getObjects();

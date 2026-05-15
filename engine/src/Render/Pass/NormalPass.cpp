@@ -1,4 +1,5 @@
 #include "NormalPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 NormalPass::NormalPass()
 {
@@ -10,9 +11,12 @@ void NormalPass::init()
 {
 }
 
-void NormalPass::draw()
+void NormalPass::draw(RenderPassContext& context)
 {
-    m_input_passes[0]->getFrameBuffer()->bind();
+    RhiFrameBuffer* target_framebuffer = context.readWriteFrameBuffer(RGSlot::Target);
+    if (!target_framebuffer)
+        return;
+    target_framebuffer->bind();
 
     static RenderShaderObject* normal_shader = RenderShaderObject::getShaderObject(ShaderType::NormalShader);
     normal_shader->start_using();

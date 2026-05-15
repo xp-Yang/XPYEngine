@@ -5,6 +5,11 @@ OpenGLTexture::OpenGLTexture(Format format_, const Vec2 &pixelSize_, int sampleC
 {
 }
 
+OpenGLTexture::~OpenGLTexture()
+{
+    destroy();
+}
+
 void OpenGLTexture::destroy()
 {
 	if (m_id != 0)

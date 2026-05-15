@@ -8,13 +8,6 @@ struct ImGuiWindow;
 
 enum CanvasType : unsigned int {
     Main,
-    Preview,
-    Pick,
-    Shadow,
-    GBuffer,
-    Lighting,
-    Bloom,
-    RayTracing,
 };
 
 class ImGuiEditor;
@@ -44,42 +37,6 @@ public:
 
 protected:
     ImGuiToolbar* m_toolbar{ nullptr };
-};
-
-class PreviewCanvas : public ImGuiCanvas {
-public:
-    PreviewCanvas(ImGuiEditor* parent);
-    void render() override;
-};
-
-class PickingCanvas : public ImGuiCanvas {
-public:
-    PickingCanvas(ImGuiEditor* parent) : ImGuiCanvas(parent) { m_type = CanvasType::Pick; }
-    void render() override;
-};
-
-class ShadowCanvas : public ImGuiCanvas {
-public:
-    ShadowCanvas(ImGuiEditor* parent) : ImGuiCanvas(parent) { m_type = CanvasType::Shadow; }
-    void render() override;
-};
-
-class GBufferCanvas : public ImGuiCanvas {
-public:
-    GBufferCanvas(ImGuiEditor* parent) : ImGuiCanvas(parent) { m_type = CanvasType::GBuffer; }
-    void render() override;
-};
-
-class LightingCanvas : public ImGuiCanvas {
-public:
-    LightingCanvas(ImGuiEditor* parent) : ImGuiCanvas(parent) { m_type = CanvasType::Lighting; }
-    void render() override;
-};
-
-class BloomCanvas : public ImGuiCanvas {
-public:
-    BloomCanvas(ImGuiEditor* parent) : ImGuiCanvas(parent) { m_type = CanvasType::Bloom; }
-    void render() override;
 };
 
 #endif

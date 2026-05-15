@@ -7,7 +7,7 @@ class NormalPass : public RenderPass
 {
 public:
 	NormalPass();
-	void draw() override;
+	void draw(RenderPassContext& context) override;
 
 protected:
 	void init();

@@ -1,48 +1,19 @@
 #include "PickingPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 PickingPass::PickingPass()
 {
     m_type = RenderPass::Type::Picking;
-    init();
 }
 
-void PickingPass::init()
-{
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-}
-
-void PickingPass::rebuildFramebuffer(const Vec2& pixel_size)
-{
-	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, pixel_size);
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
-	color_texture->create();
-	depth_texture->create();
-	RhiAttachment color_attachment = RhiAttachment(color_texture);
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-}
-
-void PickingPass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
-		return;
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-	rebuildFramebuffer(sz);
-}
-
-void PickingPass::draw()
+void PickingPass::draw(RenderPassContext& context)
 {
     // render for picking
-    m_framebuffer->bind();
-    m_framebuffer->clear();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    if (!framebuffer)
+        return;
+    framebuffer->bind();
+    framebuffer->clear();
 
     static RenderShaderObject* picking_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
     picking_shader->start_using();
@@ -72,5 +43,5 @@ void PickingPass::draw()
         m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
     }
 
-    m_framebuffer->unBind();
+    framebuffer->unBind();
 }

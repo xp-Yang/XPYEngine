@@ -1,4 +1,5 @@
 #include "TransparentPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 TransparentPass::TransparentPass()
 {
@@ -10,9 +11,12 @@ void TransparentPass::init()
 {
 }
 
-void TransparentPass::draw()
+void TransparentPass::draw(RenderPassContext& context)
 {
-    m_input_passes[0]->getFrameBuffer()->bind();
+    RhiFrameBuffer* target_framebuffer = context.readWriteFrameBuffer(RGSlot::Target);
+    if (!target_framebuffer)
+        return;
+    target_framebuffer->bind();
 
     m_rhi->setDepthMask(false);
 

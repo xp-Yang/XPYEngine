@@ -11,7 +11,10 @@ public:
     RenderParams& renderParams();
     void onUpdate(std::shared_ptr<Scene> scene);
     unsigned int getPickingFBO();
-    unsigned int renderPassTexture(RenderPass::Type render_pass_type);
+    unsigned int renderGraphTexture(const std::string& resource_name);
+    std::vector<std::string> renderGraphResourceNames() const;
+    std::string renderGraphDebugDump() const;
+    std::string renderGraphExecutionDump() const;
 
     /** Reallocate all offscreen FBOs for current `renderParams().render_resolution`. Call after changing preset. */
     void rebuildRenderTargets();

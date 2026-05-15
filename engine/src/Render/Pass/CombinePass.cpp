@@ -1,55 +1,24 @@
 #include "CombinePass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 CombinePass::CombinePass()
 {
 	m_type = RenderPass::Type::Combined;
-	init();
 }
 
-void CombinePass::init()
+void CombinePass::draw(RenderPassContext& context)
 {
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-}
-
-void CombinePass::rebuildFramebuffer(const Vec2 &pixel_size)
-{
-	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB8, pixel_size);
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
-	color_texture->create();
-	depth_texture->create();
-	RhiAttachment color_attachment = RhiAttachment(color_texture);
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-
-	RhiFrameBuffer *default_fb = m_rhi->newFrameBuffer(RhiAttachment(), pixel_size);
-	m_default_framebuffer = std::unique_ptr<RhiFrameBuffer>(default_fb);
-}
-
-void CombinePass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && m_default_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x &&
-		(int)m_framebuffer->pixelSize().y == (int)sz.y)
+	RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+	RhiFrameBuffer* default_framebuffer = context.defaultFrameBuffer();
+	RhiFrameBuffer* source_framebuffer = context.readFrameBuffer(RGSlot::Source);
+	if (!framebuffer || !default_framebuffer || !source_framebuffer)
 		return;
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-	m_default_framebuffer.reset();
-	rebuildFramebuffer(sz);
-}
 
-void CombinePass::draw()
-{
-	m_framebuffer->bind();
-	m_framebuffer->clear();
+	framebuffer->bind();
+	framebuffer->clear();
 
-	m_input_passes[0]->getFrameBuffer()->blitTo(m_framebuffer.get(), RhiTexture::Format::RGB8); //downSample if msaa
-	m_input_passes[0]->getFrameBuffer()->blitTo(m_framebuffer.get(), RhiTexture::Format::DEPTH);
+	source_framebuffer->blitTo(framebuffer, RhiTexture::Format::RGB8); //downSample if msaa
+	source_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
 
 	m_rhi->setDepthMask(false);
 
@@ -57,10 +26,11 @@ void CombinePass::draw()
 	static RenderShaderObject* combine_shader = RenderShaderObject::getShaderObject(ShaderType::CombineShader);
 	unsigned int default_map = RenderTextureData::defaultTexture().id;
 	combine_shader->start_using();
-	auto lighted_map = m_framebuffer->colorAttachmentAt(0)->texture()->id();
+	auto lighted_map = framebuffer->colorAttachmentAt(0)->texture()->id();
 	combine_shader->setTexture("Texture", 0, lighted_map);
-	if (m_input_passes.size() > 1) {
-		auto blurred_bright_map = m_input_passes[1]->getFrameBuffer()->colorAttachmentAt(0)->texture()->id();
+	RhiTexture* blurred_bright_texture = context.readTexture(RGSlot::Bloom);
+	if (blurred_bright_texture) {
+		auto blurred_bright_map = blurred_bright_texture->id();
 		combine_shader->setTexture("bloomMap", 1, blurred_bright_map);
 	}
 	else
@@ -72,7 +42,7 @@ void CombinePass::draw()
 	if (m_fxaa) {
 		static RenderShaderObject* fxaa_shader = RenderShaderObject::getShaderObject(ShaderType::FXAAShader);
 		fxaa_shader->start_using();
-		auto color_map = m_framebuffer->colorAttachmentAt(0)->texture()->id();
+		auto color_map = framebuffer->colorAttachmentAt(0)->texture()->id();
 		fxaa_shader->setTexture("mainTexture", 0, color_map);
 		m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
 	}
@@ -87,8 +57,8 @@ void CombinePass::draw()
 
 	m_rhi->setDepthMask(true);
 
-	m_default_framebuffer->bind();
-	m_default_framebuffer->clear(Color4(0.45f, 0.55f, 0.60f, 1.00f));
+	default_framebuffer->bind();
+	default_framebuffer->clear(Color4(0.45f, 0.55f, 0.60f, 1.00f));
 }
 
 void CombinePass::enableFXAA(bool enable)

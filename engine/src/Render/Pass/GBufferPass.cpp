@@ -1,59 +1,18 @@
 #include "GBufferPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 GBufferPass::GBufferPass()
 {
     m_type = RenderPass::Type::GBuffer;
-    init();
 }
 
-void GBufferPass::init()
+void GBufferPass::draw(RenderPassContext& context)
 {
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-}
-
-void GBufferPass::rebuildFramebuffer(const Vec2 &pixel_size)
-{
-	RhiTexture *color_texture0 = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *color_texture1 = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *color_texture2 = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *color_texture3 = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *color_texture4 = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *color_texture5 = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
-	color_texture0->create();
-	color_texture1->create();
-	color_texture2->create();
-	color_texture3->create();
-	color_texture4->create();
-	color_texture5->create();
-	depth_texture->create();
-	RhiAttachment color_attachment = RhiAttachment(color_texture0);
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
-	fb->setColorAttachments({ color_texture0, color_texture1, color_texture2, color_texture3, color_texture4,
-							  color_texture5 });
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-}
-
-void GBufferPass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
-		return;
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-	rebuildFramebuffer(sz);
-}
-
-void GBufferPass::draw()
-{
-    m_framebuffer->bind();
-    m_framebuffer->clear();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    if (!framebuffer)
+        return;
+    framebuffer->bind();
+    framebuffer->clear();
 
     static RenderShaderObject* g_pbr_shader = RenderShaderObject::getShaderObject(ShaderType::GBufferShader);
     static RenderShaderObject* g_phong_shader = RenderShaderObject::getShaderObject(ShaderType::GBufferPhongShader);
@@ -100,7 +59,7 @@ void GBufferPass::draw()
     }
     g_shader->stop_using();
 
-    m_framebuffer->unBind();
+    framebuffer->unBind();
 }
 
 void GBufferPass::enablePBR(bool enable)

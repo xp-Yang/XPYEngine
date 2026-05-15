@@ -33,17 +33,32 @@ unsigned int RenderSystem::getPickingFBO()
     return m_curr_path->getPickingFBO();
 }
 
-unsigned int RenderSystem::renderPassTexture(RenderPass::Type render_pass_type)
+unsigned int RenderSystem::renderGraphTexture(const std::string& resource_name)
 {
-    RhiTexture *texture = m_curr_path->renderPassTexture(render_pass_type);
+    RhiTexture* texture = m_curr_path->renderGraphTexture(resource_name);
     return texture ? texture->id() : 0;
+}
+
+std::vector<std::string> RenderSystem::renderGraphResourceNames() const
+{
+    return m_curr_path ? m_curr_path->renderGraphResourceNames() : std::vector<std::string>{};
+}
+
+std::string RenderSystem::renderGraphDebugDump() const
+{
+    return m_curr_path ? m_curr_path->renderGraphDebugDump() : std::string{};
+}
+
+std::string RenderSystem::renderGraphExecutionDump() const
+{
+    return m_curr_path ? m_curr_path->renderGraphExecutionDump() : std::string{};
 }
 
 void RenderSystem::rebuildRenderTargets()
 {
     const Vec2 sz = m_render_params.renderTargetPixels();
-    m_forward_path->rebuildFramebuffers(sz);
-    m_deferred_path->rebuildFramebuffers(sz);
+    m_forward_path->resizeRenderTargets(sz);
+    m_deferred_path->resizeRenderTargets(sz);
 }
 
 void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)

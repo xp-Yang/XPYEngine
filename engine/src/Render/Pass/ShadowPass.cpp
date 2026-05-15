@@ -1,90 +1,25 @@
 #include "ShadowPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 #include <algorithm>
-#include <glad/glad.h>
 
 ShadowPass::ShadowPass()
 {
     m_type = RenderPass::Type::Shadow;
-    init();
 }
 
-void ShadowPass::init()
+void ShadowPass::draw(RenderPassContext& context)
 {
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
+    drawDirectionalLightShadowMap(context);
+    drawPointLightShadowMap(context);
 }
 
-void ShadowPass::rebuildFramebuffer(const Vec2 &pixel_size, size_t cube_map_count)
+void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
 {
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	m_point_shadow_cube_edge = std::clamp(std::min((int)sz.x, (int)sz.y), 256, 4096);
-
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-
-	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGB16F, sz);
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, sz);
-	color_texture->create();
-	depth_texture->create();
-	RhiAttachment color_attachment = RhiAttachment(color_texture);
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, sz);
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-
-	for (unsigned id : m_cube_maps)
-		if (id != 0)
-			glDeleteTextures(1, &id);
-	m_cube_maps.clear();
-
-	if (m_cube_map_fbo == 0)
-	{
-		m_cube_map_fbo = m_rhi->newFramebufferHandle();
-		m_rhi->bindFramebuffer(m_cube_map_fbo);
-		m_rhi->setFramebufferDrawReadNone();
-	}
-
-	reinit_cube_maps(std::max(cube_map_count, size_t(8)));
-}
-
-void ShadowPass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
-		return;
-
-	const size_t cube_reserve = std::max(m_cube_maps.size(), size_t(8));
-	rebuildFramebuffer(sz, cube_reserve);
-}
-
-void ShadowPass::draw()
-{
-    drawDirectionalLightShadowMap();
-    drawPointLightShadowMap();
-}
-
-void ShadowPass::clear()
-{
-    m_framebuffer->bind();
-    m_framebuffer->clear();
-
-    m_rhi->bindFramebuffer(m_cube_map_fbo);
-    for (const auto &cube_map : m_cube_maps)
-        for (int i = 0; i < 6; i++)
-        {
-            m_rhi->attachDepthCubeFace(cube_map, i);
-            m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
-        }
-    m_rhi->bindDefaultFramebuffer();
-}
-
-void ShadowPass::drawDirectionalLightShadowMap()
-{
-    m_framebuffer->bind();
-    m_framebuffer->clear();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    if (!framebuffer)
+        return;
+    framebuffer->bind();
+    framebuffer->clear();
 
     static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
     depth_shader->start_using();
@@ -112,11 +47,8 @@ void ShadowPass::drawDirectionalLightShadowMap()
     }
 }
 
-void ShadowPass::drawPointLightShadowMap()
+void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
 {
-    m_rhi->bindFramebuffer(m_cube_map_fbo);
-    m_rhi->setViewport(0, 0, m_point_shadow_cube_edge, m_point_shadow_cube_edge);
-
     static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::CubeMapShader);
 
     depth_shader->start_using();
@@ -133,16 +65,21 @@ void ShadowPass::drawPointLightShadowMap()
         light_radius.push_back(render_point_light_data.radius);
     }
 
-    if (m_render_source_data->render_point_light_data_list.size() > m_cube_maps.size())
-    {
-        reinit_cube_maps(m_render_source_data->render_point_light_data_list.size());
-    }
+    context.ensureCubeDepthTextureCount(RGTarget::ShadowPointDepth, m_render_source_data->render_point_light_data_list.size());
+    const std::vector<unsigned int>& cube_maps = context.cubeDepthTextures(RGTarget::ShadowPointDepth);
+    const unsigned int cube_framebuffer = context.cubeDepthFrameBuffer(RGTarget::ShadowPointDepth);
+    const int cube_edge = context.cubeDepthEdge(RGTarget::ShadowPointDepth);
+    if (cube_framebuffer == 0 || cube_edge <= 0 || cube_maps.empty())
+        return;
+
+    m_rhi->bindFramebuffer(cube_framebuffer);
+    m_rhi->setViewport(0, 0, cube_edge, cube_edge);
 
     for (int cube_map_id = 0; cube_map_id < m_render_source_data->render_point_light_data_list.size(); cube_map_id++)
     {
         for (int i = 0; i < 6; i++)
         {
-            m_rhi->attachDepthCubeFace(m_cube_maps[cube_map_id], i);
+            m_rhi->attachDepthCubeFace(cube_maps[cube_map_id], i);
             m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
 
             for (const auto &pair : m_render_source_data->render_mesh_nodes)
@@ -168,17 +105,4 @@ void ShadowPass::drawPointLightShadowMap()
             }
         }
     }
-}
-
-void ShadowPass::reinit_cube_maps(size_t count)
-{
-	m_rhi->bindFramebuffer(m_cube_map_fbo);
-
-	for (unsigned id : m_cube_maps)
-		if (id != 0)
-			glDeleteTextures(1, &id);
-
-	m_cube_maps.assign(count, 0);
-	for (size_t i = 0; i < m_cube_maps.size(); i++)
-		m_cube_maps[i] = m_rhi->newDepthCubeMap(m_point_shadow_cube_edge);
 }

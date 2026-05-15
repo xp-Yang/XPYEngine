@@ -14,6 +14,7 @@
 #include "../Pass/OutlinePass.hpp"
 #include "../Pass/CombinePass.hpp"
 
+#include "Render/Graph/RenderGraphDumper.hpp"
 #include "../RenderSystem.hpp"
 
 DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
@@ -35,74 +36,171 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
     ref_render_system = render_system;
 }
 
+void DeferredRenderPath::resizeRenderTargets(const Vec2& pixel_size)
+{
+    m_render_graph.setFrameSize(pixel_size);
+}
+
+unsigned int DeferredRenderPath::getPickingFBO()
+{
+    RhiFrameBuffer* framebuffer = m_render_graph.frameBuffer(RGResource::PickingColor);
+    return framebuffer ? framebuffer->id() : 0;
+}
+
 void DeferredRenderPath::render()
 {
     const auto& render_params = ref_render_system->renderParams();
+    const bool checkerboard_enabled = render_params.effect_params.checkerboard;
+    const bool bloom_used = render_params.post_processing_params.bloom && !checkerboard_enabled;
+    auto pass = [this](RenderPass::Type type) -> RenderPass*
+    {
+        return m_render_passes.at(type).get();
+    };
 
-    //m_z_pre_pass->draw();
+    m_render_graph.reset();
 
-    m_render_passes[RenderPass::Type::Picking]->draw();
+    m_render_graph.addPass("Picking", RenderPass::Type::Picking, pass(RenderPass::Type::Picking))
+        .color(RGResource::PickingColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH);
 
-    std::vector<RenderPass*> combine_input_passes;
-    RenderPass* main_light_pass = nullptr;
+    m_render_graph.addPass("Shadow", RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
+        .setEnabled(render_params.shadow_params.enable)
+        .setDisabledExecution(RenderGraph::DisabledExecution::Clear)
+        .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
+        .cubeDepthTarget(RGTarget::ShadowPointDepth);
 
-    if (render_params.shadow_params.enable) {
-        m_render_passes[RenderPass::Type::Shadow]->draw();
+    auto& gbuffer_node = m_render_graph.addPass("GBuffer", RenderPass::Type::GBuffer, pass(RenderPass::Type::GBuffer))
+        .color(RGResource::GBufferPosition, RhiTexture::Format::RGBA16F, 0)
+        .color(RGResource::GBufferNormal, RhiTexture::Format::RGBA16F, 1)
+        .depth(RGResource::GBufferDepth, RhiTexture::Format::DEPTH)
+        .setSetup([&render_params](RenderPass& render_pass)
+        {
+            static_cast<GBufferPass&>(render_pass).enablePBR(render_params.material_model == MaterialModel::PBR);
+        });
+    if (render_params.material_model == MaterialModel::PBR)
+    {
+        gbuffer_node
+            .color(RGResource::GBufferAlbedo, RhiTexture::Format::RGBA16F, 2)
+            .color(RGResource::GBufferMetallic, RhiTexture::Format::RGBA16F, 3)
+            .color(RGResource::GBufferRoughness, RhiTexture::Format::RGBA16F, 4)
+            .color(RGResource::GBufferAO, RhiTexture::Format::RGBA16F, 5);
     }
     else
-        m_render_passes[RenderPass::Type::Shadow]->clear();
-
-    auto gbuffer_pass = static_cast<GBufferPass*>(m_render_passes[RenderPass::Type::GBuffer].get());
-    gbuffer_pass->enablePBR(render_params.material_model == MaterialModel::PBR);
-    gbuffer_pass->draw();
-
-    auto lighting_pass = static_cast<DeferredLightingPass*>(m_render_passes[RenderPass::Type::DeferredLighting].get());
-    lighting_pass->enablePBR(render_params.material_model == MaterialModel::PBR);
-    lighting_pass->setCubeMaps(static_cast<ShadowPass*>(m_render_passes[RenderPass::Type::Shadow].get())->getCubeMaps());
-    lighting_pass->setInputPasses({ m_render_passes[RenderPass::Type::GBuffer].get(), m_render_passes[RenderPass::Type::Shadow].get() });
-    lighting_pass->draw();
-
-    if (render_params.effect_params.skybox) {
-        auto skybox_pass = static_cast<SkyBoxPass*>(m_render_passes[RenderPass::Type::SkyBox].get());
-        skybox_pass->setInputPasses({ m_render_passes[RenderPass::Type::DeferredLighting].get() }); // draw above the lighting pass framebuffer
-        skybox_pass->draw();
+    {
+        gbuffer_node
+            .color(RGResource::GBufferDiffuse, RhiTexture::Format::RGBA16F, 2)
+            .color(RGResource::GBufferSpecular, RhiTexture::Format::RGBA16F, 3);
     }
 
-    auto transparent_pass = static_cast<TransparentPass*>(m_render_passes[RenderPass::Type::Transparent].get());
-    transparent_pass->setInputPasses({ m_render_passes[RenderPass::Type::DeferredLighting].get() }); // draw above the lighting pass framebuffer
-    transparent_pass->draw();
-
-    if (render_params.post_processing_params.bloom) {
-        m_render_passes[RenderPass::Type::Bloom]->setInputPasses({ m_render_passes[RenderPass::Type::DeferredLighting].get() }); // need extract bright
-        m_render_passes[RenderPass::Type::Bloom]->draw();
+    auto& lighting_node = m_render_graph.addPass("DeferredLighting", RenderPass::Type::DeferredLighting, pass(RenderPass::Type::DeferredLighting))
+        .readAs(RGSlot::GBuffer, RGResource::GBufferPosition)
+        .read(RGResource::GBufferNormal)
+        .read(RGResource::ShadowDirectionalDepth)
+        .color(RGResource::SceneColor, RhiTexture::Format::RGBA16F)
+        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH)
+        .setSetup([this, &render_params](RenderPass& render_pass)
+        {
+            auto& lighting_pass = static_cast<DeferredLightingPass&>(render_pass);
+            lighting_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
+            lighting_pass.setCubeMaps(m_render_graph.cubeDepthTextures(RenderPass::Type::Shadow, RGTarget::ShadowPointDepth));
+        });
+    if (render_params.material_model == MaterialModel::PBR)
+    {
+        lighting_node
+            .read(RGResource::GBufferAlbedo)
+            .read(RGResource::GBufferMetallic)
+            .read(RGResource::GBufferRoughness)
+            .read(RGResource::GBufferAO);
     }
-    else {
-        m_render_passes[RenderPass::Type::Bloom]->clear();
-    }
-
-    combine_input_passes = { m_render_passes[RenderPass::Type::DeferredLighting].get(), m_render_passes[RenderPass::Type::Bloom].get() };
-    main_light_pass = m_render_passes[RenderPass::Type::DeferredLighting].get();
-
-
-    if (render_params.effect_params.checkerboard) {
-        m_render_passes[RenderPass::Type::CheckerBoard]->draw();
-        combine_input_passes = { m_render_passes[RenderPass::Type::CheckerBoard].get() };
-        main_light_pass = m_render_passes[RenderPass::Type::CheckerBoard].get();
-    }
-    if (render_params.effect_params.show_normal) {
-        m_render_passes[RenderPass::Type::Normal]->setInputPasses({ main_light_pass }); // draw above the main light pass framebuffer
-        m_render_passes[RenderPass::Type::Normal]->draw();
-    }
-    if (render_params.effect_params.wireframe) {
-        m_render_passes[RenderPass::Type::WireFrame]->setInputPasses({ main_light_pass }); // draw above the main light pass framebuffer
-        m_render_passes[RenderPass::Type::WireFrame]->draw();
+    else
+    {
+        lighting_node
+            .read(RGResource::GBufferDiffuse)
+            .read(RGResource::GBufferSpecular);
     }
 
-    m_render_passes[RenderPass::Type::Outline]->setInputPasses({ main_light_pass }); // draw above the main light pass framebuffer
-    m_render_passes[RenderPass::Type::Outline]->draw();
+    m_render_graph.addPass("SkyBox", RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
+        .setEnabled(render_params.effect_params.skybox)
+        .readWriteAs(RGSlot::Target, RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth);
 
-    auto combine_pass = static_cast<CombinePass*>(m_render_passes[RenderPass::Type::Combined].get());
-    combine_pass->setInputPasses(combine_input_passes);
-    combine_pass->enableFXAA(render_params.post_processing_params.fxaa);
-    combine_pass->draw();
+    m_render_graph.addPass("Transparent", RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
+        .readWriteAs(RGSlot::Target, RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth);
+
+    m_render_graph.addPass("Bloom", RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
+        .setEnabled(bloom_used)
+        .setDisabledExecution(RenderGraph::DisabledExecution::Clear)
+        .readAs(RGSlot::Source, RGResource::SceneColor)
+        .color(RGResource::BloomColor, RhiTexture::Format::RGB16F)
+        .target(RGTarget::BloomPingPong)
+        .color(RGResource::BloomPingPongColor, RhiTexture::Format::RGB16F);
+
+    m_render_graph.addPass("CheckerBoard", RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
+        .setEnabled(checkerboard_enabled)
+        .color(RGResource::CheckerBoardColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::CheckerBoardDepth, RhiTexture::Format::DEPTH);
+
+    const std::string main_color = checkerboard_enabled ? RGResource::CheckerBoardColor : RGResource::SceneColor;
+    const std::string main_depth = checkerboard_enabled ? RGResource::CheckerBoardDepth : RGResource::SceneDepth;
+
+    m_render_graph.addPass("Normal", RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
+        .setEnabled(render_params.effect_params.show_normal)
+        .readWriteAs(RGSlot::Target, main_color)
+        .readWrite(main_depth);
+
+    m_render_graph.addPass("WireFrame", RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
+        .setEnabled(render_params.effect_params.wireframe)
+        .readWriteAs(RGSlot::Target, main_color)
+        .readWrite(main_depth);
+
+    m_render_graph.addPass("Outline", RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
+        .readWriteAs(RGSlot::Target, main_color)
+        .readWrite(main_depth)
+        .target(RGTarget::OutlineMask)
+        .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
+
+    auto& combine_node = m_render_graph.addPass("Combined", RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
+        .readAs(RGSlot::Source, main_color)
+        .read(main_depth)
+        .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
+        .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
+        .backbuffer(RGTarget::Backbuffer)
+        .setSetup([&render_params](RenderPass& render_pass)
+        {
+            static_cast<CombinePass&>(render_pass).enableFXAA(render_params.post_processing_params.fxaa);
+        });
+
+    if (bloom_used)
+        combine_node.readAs(RGSlot::Bloom, RGResource::BloomColor);
+
+    m_render_graph.markOutput(RGResource::PickingColor);
+    if (!bloom_used)
+        m_render_graph.markOutput(RGResource::BloomColor);
+    m_render_graph.markOutput(RGResource::FinalColor);
+
+    m_render_graph.compile();
+    m_render_graph.execute();
+}
+
+RhiTexture* DeferredRenderPath::renderGraphTexture(const std::string& resource_name)
+{
+    return m_render_graph.texture(resource_name);
+}
+
+std::vector<std::string> DeferredRenderPath::renderGraphResourceNames() const
+{
+    return RenderGraphDumper(m_render_graph).resourceNames();
+}
+
+std::string DeferredRenderPath::renderGraphDebugDump() const
+{
+    return RenderGraphDumper(m_render_graph).graph();
+}
+
+std::string DeferredRenderPath::renderGraphExecutionDump() const
+{
+    return RenderGraphDumper(m_render_graph).executionOrder();
 }

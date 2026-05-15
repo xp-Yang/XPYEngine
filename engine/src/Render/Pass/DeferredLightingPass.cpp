@@ -1,54 +1,25 @@
 #include "DeferredLightingPass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 DeferredLightingPass::DeferredLightingPass()
 {
 	m_type = RenderPass::Type::DeferredLighting;
-	init();
 }
 
-void DeferredLightingPass::init()
+void DeferredLightingPass::draw(RenderPassContext& context)
 {
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-}
-
-void DeferredLightingPass::rebuildFramebuffer(const Vec2 &pixel_size)
-{
-	RhiTexture *color_texture = m_rhi->newTexture(RhiTexture::Format::RGBA16F, pixel_size);
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
-	color_texture->create();
-	depth_texture->create();
-	RhiAttachment color_attachment = RhiAttachment(color_texture);
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(color_attachment, pixel_size);
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-}
-
-void DeferredLightingPass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
+	RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+	RhiFrameBuffer* gbuffer_framebuffer = context.readFrameBuffer(RGSlot::GBuffer);
+	if (!framebuffer || !gbuffer_framebuffer)
 		return;
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-	rebuildFramebuffer(sz);
-}
-
-void DeferredLightingPass::draw()
-{
-	m_framebuffer->bind();
-	//m_framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
-	m_framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
+	framebuffer->bind();
+	//framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
+	framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
 
 	// deferred lighting
 	static RenderShaderObject* lighting_pbr_shader = RenderShaderObject::getShaderObject(ShaderType::DeferredLightingShader);
 	static RenderShaderObject* lighting_phong_shader = RenderShaderObject::getShaderObject(ShaderType::DeferredLightingPhongShader);
 	RenderShaderObject* lighting_shader = m_pbr ? lighting_pbr_shader : lighting_phong_shader;
-	RhiFrameBuffer* gbuffer_framebuffer = m_input_passes[0]->getFrameBuffer();
 	lighting_shader->start_using();
 	unsigned int g_position_map = gbuffer_framebuffer->colorAttachmentAt(0)->texture()->id();
 	unsigned int g_normal_map = gbuffer_framebuffer->colorAttachmentAt(1)->texture()->id();
@@ -71,8 +42,8 @@ void DeferredLightingPass::draw()
 		lighting_shader->setTexture("gSpecular", 3, g_specular_map);
 	}
 
-	RhiFrameBuffer* shadow_framebuffer = m_input_passes[1]->getFrameBuffer();
-	m_dir_light_shadow_map = shadow_framebuffer->depthAttachment()->texture()->id();
+	RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
+	m_dir_light_shadow_map = shadow_texture ? shadow_texture->id() : 0;
 	lighting_shader->setFloat3("cameraPos", m_render_source_data->camera_position);
 	for (const auto& render_directional_light_data : m_render_source_data->render_directional_light_data_list) {
 		lighting_shader->setFloat3("directionalLight.direction", render_directional_light_data.direction);
@@ -99,7 +70,7 @@ void DeferredLightingPass::draw()
 	lighting_shader->stop_using();
 
 
-	gbuffer_framebuffer->blitTo(m_framebuffer.get(), RhiTexture::Format::DEPTH);
+	gbuffer_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
 
 	// lights
 	//static RenderShaderObject* point_light_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
@@ -129,7 +100,7 @@ void DeferredLightingPass::draw()
         point_light_instancing_shader->stop_using();
     }
 
-	m_framebuffer->unBind();
+	framebuffer->unBind();
 }
 
 void DeferredLightingPass::enablePBR(bool enable)

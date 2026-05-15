@@ -1,44 +1,18 @@
 #include "ZPrePass.hpp"
+#include "Render/Graph/RenderPassContext.hpp"
 
 ZPrePass::ZPrePass()
 {
     m_type = RenderPass::Type::ZPre;
-    init();
 }
 
-void ZPrePass::init()
+void ZPrePass::draw(RenderPassContext& context)
 {
-	rebuildFramebuffer(Vec2(DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y));
-}
-
-void ZPrePass::rebuildFramebuffer(const Vec2 &pixel_size)
-{
-	RhiTexture *depth_texture = m_rhi->newTexture(RhiTexture::Format::DEPTH, pixel_size);
-	depth_texture->create();
-	RhiAttachment depth_ttachment = RhiAttachment(depth_texture);
-	RhiFrameBuffer *fb = m_rhi->newFrameBuffer(RhiAttachment(), pixel_size);
-	fb->setDepthAttachment(depth_ttachment);
-	fb->create();
-	m_framebuffer = std::unique_ptr<RhiFrameBuffer>(fb);
-}
-
-void ZPrePass::rebuildFramebuffers(const Vec2 &pixel_size)
-{
-	Vec2 sz = clampFramebufferPixelSize(pixel_size);
-	if (m_framebuffer && (int)m_framebuffer->pixelSize().x == (int)sz.x && (int)m_framebuffer->pixelSize().y == (int)sz.y)
-		return;
-	if (m_framebuffer)
-	{
-		m_framebuffer->destroyGPU();
-		m_framebuffer.reset();
-	}
-	rebuildFramebuffer(sz);
-}
-
-void ZPrePass::draw()
-{
-    m_framebuffer->bind();
-    m_framebuffer->clear();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    if (!framebuffer)
+        return;
+    framebuffer->bind();
+    framebuffer->clear();
 
     static RenderShaderObject* depth_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
     depth_shader->start_using();
