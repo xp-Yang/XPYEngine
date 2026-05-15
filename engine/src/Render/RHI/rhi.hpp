@@ -190,6 +190,12 @@ protected:
 class RhiAttachment
 {
 public:
+    enum Type {
+        Color,
+        Depth,
+        DepthStencil,
+    };
+
     RhiAttachment() = default;
     RhiAttachment(RhiTexture *texture);
     RhiTexture *texture() const { return m_texture; }
@@ -197,6 +203,60 @@ public:
 
 protected:
     RhiTexture *m_texture{nullptr};
+};
+
+// 完整 attachment 描述：绑定位置信息、纹理格式、采样数和生命周期描述。
+struct RhiAttachmentDesc {
+    RhiAttachment::Type attachment_type{ RhiAttachment::Type::Color };
+    int color_attachment_index{ 0 };
+
+    RhiTexture::Format format{ RhiTexture::Format::UnknownFormat };
+    int sample_count{ 1 };
+    bool transient{ true };
+
+    bool isSameWith(const RhiAttachmentDesc& desc) const {
+        return attachment_type == desc.attachment_type &&
+            color_attachment_index == desc.color_attachment_index &&
+            format == desc.format &&
+            sample_count == desc.sample_count &&
+            transient == desc.transient;
+    }
+};
+
+// framebuffer 创建所需的 RhiAttachmentDesc 集合。
+struct FrameBufferDesc {
+    Vec2 size;
+    std::array<bool, 8> has_color{};
+    std::array<RhiAttachmentDesc, 8> colors{};
+    bool has_depth{ false };
+    RhiAttachmentDesc depth;
+    bool has_depth_stencil{ false };
+    RhiAttachmentDesc depth_stencil;
+
+    bool isEmpty() const {
+        if (has_depth || has_depth_stencil)
+            return false;
+        return std::none_of(has_color.begin(), has_color.end(), [](bool has_color) { return has_color; });
+    }
+
+    bool isSameWith(const FrameBufferDesc& desc) const {
+        if (size != desc.size ||
+            has_color != desc.has_color ||
+            has_depth != desc.has_depth ||
+            has_depth_stencil != desc.has_depth_stencil)
+            return false;
+
+        for (size_t i = 0; i < colors.size(); ++i)
+        {
+            if (has_color[i] && !colors[i].isSameWith(desc.colors[i]))
+                return false;
+        }
+        if (has_depth && !depth.isSameWith(desc.depth))
+            return false;
+        if (has_depth_stencil && !depth_stencil.isSameWith(desc.depth_stencil))
+            return false;
+        return true;
+    }
 };
 
 class RhiFrameBuffer

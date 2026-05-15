@@ -1,33 +1,27 @@
 #include "RenderGraph.hpp"
 #include "RenderPassContext.hpp"
+// TODO
+#include <glad/glad.h> 
 
-#include <algorithm>
-#include <cassert>
-#include <glad/glad.h>
-#include <stdexcept>
-
-namespace {
-
-bool samePixelSize(const Vec2& lhs, const Vec2& rhs)
+static bool samePixelSize(const Vec2& lhs, const Vec2& rhs)
 {
     return (int)lhs.x == (int)rhs.x && (int)lhs.y == (int)rhs.y;
 }
 
-} // namespace
-
 RenderGraph::~RenderGraph()
 {
-    for (auto& target : m_targets)
-        destroyCubeDepthTarget(target.second);
+    // TODO 移除gl依赖
+    for (auto& pair : m_render_targets)
+        destroyCubeDepthTarget(pair.second);
 }
 
 void RenderGraph::reset()
 {
     m_nodes.clear();
-    m_node_indices.clear();
-    m_resource_outputs.clear();
+    m_ordered_nodes.clear();
+    m_outputs.clear();
     m_resources.clear();
-    m_compiled_order.clear();
+    // TODO m_targets释放
 }
 
 void RenderGraph::setFrameSize(const Vec2& pixel_size)
@@ -35,62 +29,84 @@ void RenderGraph::setFrameSize(const Vec2& pixel_size)
     m_frame_size = pixel_size;
 }
 
-RenderGraph::PassNode& RenderGraph::addPass(const std::string& name, RenderPass::Type type, RenderPass* pass)
+RenderGraphPassNode& RenderGraph::addPass(RenderPass::Type type, RenderPass* pass)
 {
     assert(pass);
-    assert(m_node_indices.find(type) == m_node_indices.end());
 
     const size_t index = m_nodes.size();
-    m_nodes.emplace_back(name, type, pass);
-    m_node_indices[type] = index;
+    m_nodes.emplace_back(type, pass);
     return m_nodes.back();
 }
 
-void RenderGraph::markOutput(const std::string& resource_name)
+void RenderGraph::markOutput(const RGResourceName& resource_name)
 {
-    if (std::find(m_resource_outputs.begin(), m_resource_outputs.end(), resource_name) == m_resource_outputs.end())
-        m_resource_outputs.push_back(resource_name);
+    if (std::find(m_outputs.begin(), m_outputs.end(), resource_name) == m_outputs.end())
+        m_outputs.push_back(resource_name);
+}
+
+void RenderGraph::visit(RenderPass::Type type, std::unordered_set<RenderPass::Type>& visiting, std::unordered_set<RenderPass::Type>& visited)
+{
+    if (visited.find(type) != visited.end())
+        return;
+    if (visiting.find(type) != visiting.end())
+        throw std::runtime_error("RenderGraph contains a cycle");
+
+    auto it = std::find_if(m_nodes.begin(), m_nodes.end(), [type](const auto& node) { return node.m_type == type; });
+    if (it == m_nodes.end())
+        return;
+
+    RenderGraphPassNode* node = &(*it);
+
+    visiting.insert(type);
+    if (node->m_enabled)
+    {
+        for (RenderPass::Type dependency : node->m_resolved_dependencies)
+            visit(dependency, visiting, visited);
+    }
+    visiting.erase(type);
+
+    visited.insert(type);
+    m_ordered_nodes.push_back(node);
 }
 
 void RenderGraph::compile()
 {
-    m_compiled_order.clear();
+    m_ordered_nodes.clear();
     resolveResourceDependencies();
-    ensureTargets();
+    ensureRenderTargets();
 
     std::unordered_set<RenderPass::Type> visiting;
     std::unordered_set<RenderPass::Type> visited;
 
-    if (!m_resource_outputs.empty())
+    // 如果没有标记 output，它会尝试编译所有 pass。
+    // 如果标记了 output，它只从 output 反向找依赖，所以没被最终输出用到的 pass 会被裁剪掉。
+    if (!m_outputs.empty())
     {
-        for (const std::string& resource_name : m_resource_outputs)
+        for (const RGResourceName& resource_name : m_outputs)
         {
             auto it = m_resources.find(resource_name);
             if (it == m_resources.end())
                 throw std::runtime_error("RenderGraph output resource is not written: " + resource_name);
-            visit(it->second.last_modifier, visiting, visited);
+            visit(it->second.last_modifier_pass, visiting, visited);
         }
     }
-
-    if (m_resource_outputs.empty())
+    else
     {
         for (const auto& node : m_nodes)
             visit(node.m_type, visiting, visited);
-        return;
     }
 }
 
 void RenderGraph::execute(RenderSourceData& render_source_data)
 {
-    for (RenderPass::Type type : m_compiled_order)
+    for (RenderGraphPassNode* node : m_ordered_nodes)
     {
-        PassNode* node = findNode(type);
         if (!node || !node->m_pass)
             continue;
 
         if (!node->m_enabled)
         {
-            if (node->m_disabled_execution == DisabledExecution::Clear)
+            if (node->m_disabled_execution == RGDisabledExecution::Clear)
                 clearPassTargets(*node);
             continue;
         }
@@ -103,269 +119,217 @@ void RenderGraph::execute(RenderSourceData& render_source_data)
     }
 }
 
-bool RenderGraph::sameResourceDesc(const ResourceDesc& lhs, const ResourceDesc& rhs)
+const RenderGraphRenderTarget* RenderGraph::findRenderTarget(RenderPass::Type type, const RGTargetName& target_name) const
 {
-    return lhs.format == rhs.format &&
-           lhs.sample_count == rhs.sample_count &&
-           lhs.transient == rhs.transient;
+    auto it = m_render_targets.find(TargetKey{ type, target_name });
+    return it == m_render_targets.end() ? nullptr : &it->second;
 }
 
-bool RenderGraph::sameFrameBufferDesc(const FrameBufferDesc& lhs, const FrameBufferDesc& rhs)
+RenderGraphRenderTarget* RenderGraph::findRenderTarget(RenderPass::Type type, const RGTargetName& target_name)
 {
-    if (lhs.has_color != rhs.has_color ||
-        lhs.has_depth != rhs.has_depth ||
-        lhs.has_depth_stencil != rhs.has_depth_stencil)
-        return false;
-
-    for (size_t i = 0; i < lhs.colors.size(); ++i)
-    {
-        if (lhs.has_color[i] && !sameResourceDesc(lhs.colors[i], rhs.colors[i]))
-            return false;
-    }
-
-    if (lhs.has_depth && !sameResourceDesc(lhs.depth, rhs.depth))
-        return false;
-    if (lhs.has_depth_stencil && !sameResourceDesc(lhs.depth_stencil, rhs.depth_stencil))
-        return false;
-    return true;
+    auto it = m_render_targets.find(TargetKey{ type, target_name });
+    return it == m_render_targets.end() ? nullptr : &it->second;
 }
 
-bool RenderGraph::isFrameBufferDescEmpty(const FrameBufferDesc& desc)
-{
-    if (desc.has_depth || desc.has_depth_stencil)
-        return false;
-    return std::none_of(desc.has_color.begin(), desc.has_color.end(), [](bool has_color) { return has_color; });
-}
-
-const RenderGraph::RenderTargetState* RenderGraph::targetState(RenderPass::Type type, const std::string& target_name) const
-{
-    auto it = m_targets.find(TargetKey{ type, target_name });
-    return it == m_targets.end() ? nullptr : &it->second;
-}
-
-RenderGraph::RenderTargetState* RenderGraph::targetState(RenderPass::Type type, const std::string& target_name)
-{
-    auto it = m_targets.find(TargetKey{ type, target_name });
-    return it == m_targets.end() ? nullptr : &it->second;
-}
-
-RhiFrameBuffer* RenderGraph::targetFrameBuffer(RenderPass::Type type, const std::string& target_name) const
-{
-    const RenderTargetState* state = targetState(type, target_name);
-    return state ? state->framebuffer.get() : nullptr;
-}
-
-const std::vector<unsigned int>& RenderGraph::cubeDepthTextures(RenderPass::Type type, const std::string& target_name) const
+const std::vector<unsigned int>& RenderGraph::cubeDepthTextures(RenderPass::Type type) const
 {
     static const std::vector<unsigned int> empty;
-    const RenderTargetState* state = targetState(type, target_name);
-    if (!state || state->kind != RenderTargetKind::CubeDepth)
-        return empty;
-    return state->cube_maps;
+    const RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
+    return target ? target->cube_maps : empty;
 }
 
-void RenderGraph::ensureTargets()
+void RenderGraph::ensureRenderTargets()
 {
-    for (PassNode& node : m_nodes)
+    for (RenderGraphPassNode& node : m_nodes)
     {
-        for (const PassNode::TargetDeclaration& target : node.m_targets)
+        for (const RenderTargetDeclaration& target_decl : node.m_targets)
         {
-            TargetKey key{ node.m_type, target.name };
-            RenderTargetState& state = m_targets[key];
-            if (state.kind != target.kind)
-            {
-                if (state.framebuffer)
-                    state.framebuffer->destroyGPU();
-                state.framebuffer.reset();
-                destroyCubeDepthTarget(state);
+            RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
+            target.owner_pass = node.m_type;
+
+            if (target.target_decl.render_target_type != target_decl.render_target_type) {
+                if (target.framebuffer)
+                    target.framebuffer->destroyGPU();
+                target.framebuffer.reset();
+                destroyCubeDepthTarget(target);
             }
-            state.kind = target.kind;
-            state.initial_cube_map_count = std::max(state.initial_cube_map_count, target.initial_cube_map_count);
+            target.target_decl = target_decl;
         }
     }
 
-    for (PassNode& node : m_nodes)
+    for (RenderGraphPassNode& node : m_nodes)
     {
-        for (const PassNode::TargetDeclaration& target : node.m_targets)
+        for (const RenderTargetDeclaration& target_decl : node.m_targets)
         {
-            TargetKey key{ node.m_type, target.name };
-            RenderTargetState& target_state = m_targets[key];
-            FrameBufferDesc desc;
+            RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
 
-            if (target.kind == RenderTargetKind::Texture)
+            FrameBufferDesc framebuffer_desc;
+            framebuffer_desc.size = m_frame_size;
+
+            if (target_decl.render_target_type == RenderTargetType::FrameBuffer)
             {
-                for (const auto& resource : m_resources)
-                {
-                    const ResourceState& state = resource.second;
-                    if (state.owner_pass != node.m_type || state.target != target.name)
+                for (const auto& write_resource : node.m_writes) {
+                    if (write_resource.owner_target_name != target_decl.name)
                         continue;
-
-                    switch (state.binding.attachment)
-                    {
-                    case ResourceAttachment::Color:
-                    {
-                        const int index = state.binding.color_attachment;
-                        if (index < 0 || index >= (int)desc.has_color.size())
-                            throw std::runtime_error("RenderGraph color attachment index is out of range: " + resource.first);
-                        if (desc.has_color[index])
-                            throw std::runtime_error("RenderGraph has multiple resources bound to color attachment " + std::to_string(index) + " on target " + target.name);
-                        desc.has_color[index] = true;
-                        desc.colors[index] = state.desc;
-                        break;
-                    }
-                    case ResourceAttachment::Depth:
-                        if (desc.has_depth)
-                            throw std::runtime_error("RenderGraph has multiple depth resources bound to target " + target.name);
-                        desc.has_depth = true;
-                        desc.depth = state.desc;
-                        break;
-                    case ResourceAttachment::DepthStencil:
-                        if (desc.has_depth_stencil)
-                            throw std::runtime_error("RenderGraph has multiple depth-stencil resources bound to target " + target.name);
-                        desc.has_depth_stencil = true;
-                        desc.depth_stencil = state.desc;
-                        break;
-                    default:
-                        break;
+                    else {
+                        switch (write_resource.attachment_desc.attachment_type)
+                        {
+                        case RhiAttachment::Type::Color:
+                        {
+                            const int index = write_resource.attachment_desc.color_attachment_index;
+                            if (index < 0 || index >= (int)framebuffer_desc.has_color.size())
+                                throw std::runtime_error("RenderGraph color attachment index is out of range: " + target_decl.name);
+                            if (framebuffer_desc.has_color[index])
+                                throw std::runtime_error("RenderGraph has multiple resources bound to color attachment " + std::to_string(index) + " on target " + target_decl.name);
+                            framebuffer_desc.has_color[index] = true;
+                            framebuffer_desc.colors[index] = write_resource.attachment_desc;
+                            break;
+                        }
+                        case RhiAttachment::Type::Depth:
+                            if (framebuffer_desc.has_depth)
+                                throw std::runtime_error("RenderGraph has multiple depth resources bound to target " + target_decl.name);
+                            framebuffer_desc.has_depth = true;
+                            framebuffer_desc.depth = write_resource.attachment_desc;
+                            break;
+                        case RhiAttachment::Type::DepthStencil:
+                            if (framebuffer_desc.has_depth_stencil)
+                                throw std::runtime_error("RenderGraph has multiple depth-stencil resources bound to target " + target_decl.name);
+                            framebuffer_desc.has_depth_stencil = true;
+                            framebuffer_desc.depth_stencil = write_resource.attachment_desc;
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 }
 
-                if (isFrameBufferDescEmpty(desc))
+                if (framebuffer_desc.isEmpty())
                     continue;
 
-                const bool recreate = !target_state.framebuffer ||
-                                      !samePixelSize(target_state.size, m_frame_size) ||
-                                      !sameFrameBufferDesc(target_state.desc, desc);
+                const bool recreate = !target.framebuffer ||
+                                      !framebuffer_desc.isSameWith(target.framebuffer_desc);
                 if (recreate)
                 {
-                    if (target_state.framebuffer)
-                        target_state.framebuffer->destroyGPU();
-                    target_state.size = m_frame_size;
-                    target_state.desc = desc;
-                    target_state.framebuffer = createFrameBuffer(desc);
+                    if (target.framebuffer)
+                        target.framebuffer->destroyGPU();
+                    target.framebuffer_desc = framebuffer_desc;
+                    target.framebuffer = createFrameBuffer(framebuffer_desc);
                 }
                 continue;
             }
-
-            if (target.kind == RenderTargetKind::Backbuffer)
+            else if (target_decl.render_target_type == RenderTargetType::Backbuffer)
             {
-                const bool recreate = !target_state.framebuffer ||
-                                      !samePixelSize(target_state.size, m_frame_size);
+                const bool recreate = !target.framebuffer ||
+                                      !samePixelSize(target.framebuffer_desc.size, m_frame_size);
                 if (recreate)
                 {
-                    target_state.size = m_frame_size;
-                    target_state.desc = {};
-                    target_state.framebuffer = createBackbufferFrameBuffer();
+                    target.framebuffer_desc = {};
+                    target.framebuffer_desc.size = m_frame_size;
+                    target.framebuffer = createBackbufferFrameBuffer();
                 }
                 continue;
             }
-
-            if (target.kind == RenderTargetKind::CubeDepth)
+            else if (target_decl.render_target_type == RenderTargetType::CubeDepth)
             {
-                target_state.size = m_frame_size;
-                ensureCubeDepthTarget(target_state);
+                target.framebuffer_desc.size = m_frame_size;
+                ensureCubeDepthTarget(target);
             }
         }
     }
 }
 
-void RenderGraph::destroyCubeDepthTarget(RenderTargetState& state)
+void RenderGraph::destroyCubeDepthTarget(RenderGraphRenderTarget& target)
 {
-    for (unsigned id : state.cube_maps)
+    for (unsigned id : target.cube_maps)
     {
         if (id != 0)
             glDeleteTextures(1, &id);
     }
-    state.cube_maps.clear();
+    target.cube_maps.clear();
 
-    if (state.cube_framebuffer != 0)
+    if (target.cube_framebuffer != 0)
     {
-        glDeleteFramebuffers(1, &state.cube_framebuffer);
-        state.cube_framebuffer = 0;
+        glDeleteFramebuffers(1, &target.cube_framebuffer);
+        target.cube_framebuffer = 0;
     }
-    state.cube_edge = 0;
+    target.cube_edge = 0;
 }
 
-void RenderGraph::ensureCubeDepthTarget(RenderTargetState& state)
+void RenderGraph::ensureCubeDepthTarget(RenderGraphRenderTarget& target)
 {
     const int cube_edge = std::clamp(std::min((int)m_frame_size.x, (int)m_frame_size.y), 256, 4096);
 
-    if (state.cube_framebuffer == 0)
+    if (target.cube_framebuffer == 0)
     {
-        state.cube_framebuffer = m_rhi->newFramebufferHandle();
-        m_rhi->bindFramebuffer(state.cube_framebuffer);
+        target.cube_framebuffer = m_rhi->newFramebufferHandle();
+        m_rhi->bindFramebuffer(target.cube_framebuffer);
         m_rhi->setFramebufferDrawReadNone();
     }
 
-    if (!state.cube_maps.empty() && state.cube_edge == cube_edge && state.cube_maps.size() >= (size_t)state.initial_cube_map_count)
+    if (!target.cube_maps.empty() && target.cube_edge == cube_edge && target.cube_maps.size() >= (size_t)target.target_decl.initial_cube_map_count)
         return;
 
-    for (unsigned id : state.cube_maps)
+    for (unsigned id : target.cube_maps)
     {
         if (id != 0)
             glDeleteTextures(1, &id);
     }
 
-    state.cube_edge = cube_edge;
-    const size_t count = std::max<size_t>(state.initial_cube_map_count, state.cube_maps.size());
-    state.cube_maps.assign(count, 0);
-    for (size_t i = 0; i < state.cube_maps.size(); ++i)
-        state.cube_maps[i] = m_rhi->newDepthCubeMap(state.cube_edge);
+    target.cube_edge = cube_edge;
+    const size_t count = std::max<size_t>(target.target_decl.initial_cube_map_count, target.cube_maps.size());
+    target.cube_maps.assign(count, 0);
+    for (size_t i = 0; i < target.cube_maps.size(); ++i)
+        target.cube_maps[i] = m_rhi->newDepthCubeMap(target.cube_edge);
 }
 
-void RenderGraph::ensureCubeDepthTargetCapacity(RenderPass::Type type, const std::string& target_name, size_t count)
+void RenderGraph::ensureCubeDepthTargetCapacity(RenderPass::Type type, size_t count)
 {
-    RenderTargetState* state = targetState(type, target_name);
-    if (!state || state->kind != RenderTargetKind::CubeDepth)
+    RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
+    if (!target)
         return;
-    ensureCubeDepthTarget(*state);
-    if (state->cube_maps.size() >= count)
+    ensureCubeDepthTarget(*target);
+    if (target->cube_maps.size() >= count)
         return;
 
-    m_rhi->bindFramebuffer(state->cube_framebuffer);
-    const size_t old_size = state->cube_maps.size();
-    state->cube_maps.resize(count, 0);
-    for (size_t i = old_size; i < state->cube_maps.size(); ++i)
-        state->cube_maps[i] = m_rhi->newDepthCubeMap(state->cube_edge);
+    m_rhi->bindFramebuffer(target->cube_framebuffer);
+    const size_t old_size = target->cube_maps.size();
+    target->cube_maps.resize(count, 0);
+    for (size_t i = old_size; i < target->cube_maps.size(); ++i)
+        target->cube_maps[i] = m_rhi->newDepthCubeMap(target->cube_edge);
 }
 
-void RenderGraph::clearPassTargets(const PassNode& node)
+void RenderGraph::clearPassTargets(const RenderGraphPassNode& node)
 {
-    for (const PassNode::TargetDeclaration& target : node.m_targets)
+    for (const RenderTargetDeclaration& decalred_target : node.m_targets)
     {
-        TargetKey key{ node.m_type, target.name };
-        RenderTargetState* state = targetState(key.pass, key.name);
-        if (state)
-            clearTarget(key, *state);
-    }
-}
-
-void RenderGraph::clearTarget(const TargetKey&, RenderTargetState& state)
-{
-    if (state.kind == RenderTargetKind::Texture || state.kind == RenderTargetKind::Backbuffer)
-    {
-        if (state.framebuffer)
-        {
-            state.framebuffer->bind();
-            state.framebuffer->clear();
-        }
-        return;
-    }
-
-    if (state.kind == RenderTargetKind::CubeDepth)
-    {
-        if (state.cube_framebuffer == 0)
-            return;
-        m_rhi->bindFramebuffer(state.cube_framebuffer);
-        for (const unsigned cube_map : state.cube_maps)
-        {
-            for (int face = 0; face < 6; ++face)
+        TargetKey key{ node.m_type, decalred_target.name };
+        RenderGraphRenderTarget* target = findRenderTarget(key.pass, key.name);
+        if (target) {
+            if (decalred_target.render_target_type == RenderTargetType::FrameBuffer || decalred_target.render_target_type == RenderTargetType::Backbuffer)
             {
-                m_rhi->attachDepthCubeFace(cube_map, face);
-                m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
+                if (target->framebuffer)
+                {
+                    target->framebuffer->bind();
+                    target->framebuffer->clear();
+                }
+            }
+
+            else if (decalred_target.render_target_type == RenderTargetType::CubeDepth)
+            {
+                if (target->cube_framebuffer == 0)
+                    return;
+                m_rhi->bindFramebuffer(target->cube_framebuffer);
+                for (const unsigned cube_map : target->cube_maps)
+                {
+                    for (int face = 0; face < 6; ++face)
+                    {
+                        m_rhi->attachDepthCubeFace(cube_map, face);
+                        m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
+                }
+                m_rhi->bindDefaultFramebuffer();
             }
         }
-        m_rhi->bindDefaultFramebuffer();
     }
 }
 
@@ -375,7 +339,7 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const FrameBuffer
         throw std::runtime_error("RenderGraph framebuffer cannot have both depth and depth-stencil attachments");
 
     int sample_count = 0;
-    auto updateSampleCount = [&sample_count](const ResourceDesc& resource_desc)
+    auto updateSampleCount = [&sample_count](const RhiAttachmentDesc& resource_desc)
     {
         if (resource_desc.format == RhiTexture::Format::UnknownFormat)
             throw std::runtime_error("RenderGraph resource has unknown texture format");
@@ -400,7 +364,7 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const FrameBuffer
     if (sample_count == 0)
         sample_count = 1;
 
-    auto makeAttachment = [this](const ResourceDesc& resource_desc)
+    auto makeAttachment = [this](const RhiAttachmentDesc& resource_desc)
     {
         RhiTexture* texture = m_rhi->newTexture(resource_desc.format, m_frame_size, resource_desc.sample_count);
         texture->create();
@@ -433,26 +397,27 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createBackbufferFrameBuffer() const
     return std::unique_ptr<RhiFrameBuffer>(m_rhi->newFrameBuffer(RhiAttachment(), m_frame_size));
 }
 
-RhiTexture* RenderGraph::texture(const std::string& resource_name) const
+RhiTexture* RenderGraph::textureOf(const RGResourceName& resource_name) const
 {
     auto it = m_resources.find(resource_name);
     if (it == m_resources.end())
         return nullptr;
 
-    RhiFrameBuffer* framebuffer = frameBuffer(resource_name);
+    RhiFrameBuffer* framebuffer = frameBufferOf(resource_name);
     if (!framebuffer)
         return nullptr;
 
     const RhiAttachment* attachment = nullptr;
-    switch (it->second.binding.attachment)
+    auto& resource = it->second;
+    switch (resource.resource_decl.attachment_desc.attachment_type)
     {
-    case ResourceAttachment::Color:
-        attachment = framebuffer->colorAttachmentAt(it->second.binding.color_attachment);
+    case RhiAttachment::Type::Color:
+        attachment = framebuffer->colorAttachmentAt(resource.resource_decl.attachment_desc.color_attachment_index);
         break;
-    case ResourceAttachment::Depth:
+    case RhiAttachment::Type::Depth:
         attachment = framebuffer->depthAttachment();
         break;
-    case ResourceAttachment::DepthStencil:
+    case RhiAttachment::Type::DepthStencil:
         attachment = framebuffer->depthStencilAttachment();
         break;
     default:
@@ -462,17 +427,19 @@ RhiTexture* RenderGraph::texture(const std::string& resource_name) const
     return attachment ? attachment->texture() : nullptr;
 }
 
-RhiFrameBuffer* RenderGraph::frameBuffer(const std::string& resource_name) const
+RhiFrameBuffer* RenderGraph::frameBufferOf(const RGResourceName& resource_name) const
 {
     auto it = m_resources.find(resource_name);
     if (it == m_resources.end())
         return nullptr;
-    return targetFrameBuffer(it->second.owner_pass, it->second.target);
+    auto& resource = it->second;
+    const RenderGraphRenderTarget* target = findRenderTarget(resource.owner_pass, resource.resource_decl.owner_target_name);
+    return target ? target->framebuffer.get() : nullptr;
 }
 
-bool RenderGraph::readPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) const
+bool RenderGraph::readPixelRGBAOf(const RGResourceName& resource_name, int x, int y, unsigned char out_rgba[4]) const
 {
-    RhiFrameBuffer* framebuffer = frameBuffer(resource_name);
+    RhiFrameBuffer* framebuffer = frameBufferOf(resource_name);
     if (!framebuffer)
         return false;
 
@@ -480,94 +447,52 @@ bool RenderGraph::readPixelRGBA(const std::string& resource_name, int x, int y, 
     return true;
 }
 
-RenderGraph::PassNode* RenderGraph::findNode(RenderPass::Type type)
+void RenderGraph::resolveRead(RenderGraphPassNode& node, const RGResourceName& resource_name)
 {
-    auto it = m_node_indices.find(type);
-    return it == m_node_indices.end() ? nullptr : &m_nodes[it->second];
+    auto it = m_resources.find(resource_name);
+    // TODO 要求了addPass顺序，必须先让producer pass resolveWrite
+    if (it == m_resources.end())
+        throw std::runtime_error("RenderGraph resource is read before it is written: " + resource_name);
+
+    node.addResolvedDependency(it->second.last_modifier_pass);
 }
 
-const RenderGraph::PassNode* RenderGraph::findNode(RenderPass::Type type) const
+void RenderGraph::resolveReadWrite(RenderGraphPassNode& node, const RGResourceName& resource_name)
 {
-    auto it = m_node_indices.find(type);
-    return it == m_node_indices.end() ? nullptr : &m_nodes[it->second];
+    auto it = m_resources.find(resource_name);
+    if (it == m_resources.end())
+        throw std::runtime_error("RenderGraph resource is read/written before it is written: " + resource_name);
+
+    node.addResolvedDependency(it->second.last_modifier_pass);
+    it->second.last_modifier_pass = node.m_type;
+}
+
+void RenderGraph::resolveWrite(RenderGraphPassNode& node, const ResourceDeclaration& write)
+{
+    m_resources[write.name] = RenderGraphResource{ node.m_type, node.m_type, write };
 }
 
 void RenderGraph::resolveResourceDependencies()
 {
     m_resources.clear();
 
-    for (PassNode& node : m_nodes)
+    for (RenderGraphPassNode& node : m_nodes)
     {
         node.m_resolved_dependencies.clear();
 
-        const bool clear_writes = !node.m_enabled && node.m_disabled_execution == DisabledExecution::Clear;
         if (node.m_enabled)
         {
-            for (const std::string& resource_name : node.m_reads)
+            for (const RGResourceName& resource_name : node.m_reads)
                 resolveRead(node, resource_name);
-            for (const std::string& resource_name : node.m_read_writes)
+            for (const RGResourceName& resource_name : node.m_read_writes)
                 resolveReadWrite(node, resource_name);
         }
 
+        bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
         if (node.m_enabled || clear_writes)
         {
             for (const auto& write : node.m_writes)
                 resolveWrite(node, write);
         }
     }
-}
-
-void RenderGraph::addResolvedDependency(PassNode& node, RenderPass::Type type)
-{
-    if (type == node.m_type)
-        return;
-    if (std::find(node.m_resolved_dependencies.begin(), node.m_resolved_dependencies.end(), type) == node.m_resolved_dependencies.end())
-        node.m_resolved_dependencies.push_back(type);
-}
-
-void RenderGraph::resolveRead(PassNode& node, const std::string& resource_name)
-{
-    auto it = m_resources.find(resource_name);
-    if (it == m_resources.end())
-        throw std::runtime_error("RenderGraph resource is read before it is written: " + resource_name);
-
-    addResolvedDependency(node, it->second.last_modifier);
-}
-
-void RenderGraph::resolveReadWrite(PassNode& node, const std::string& resource_name)
-{
-    auto it = m_resources.find(resource_name);
-    if (it == m_resources.end())
-        throw std::runtime_error("RenderGraph resource is read/written before it is written: " + resource_name);
-
-    addResolvedDependency(node, it->second.last_modifier);
-    it->second.last_modifier = node.m_type;
-}
-
-void RenderGraph::resolveWrite(PassNode& node, const PassNode::ResourceWrite& write)
-{
-    m_resources[write.name] = ResourceState{ node.m_type, node.m_type, write.target, write.binding, write.desc };
-}
-
-void RenderGraph::visit(RenderPass::Type type, std::unordered_set<RenderPass::Type>& visiting, std::unordered_set<RenderPass::Type>& visited)
-{
-    if (visited.find(type) != visited.end())
-        return;
-    if (visiting.find(type) != visiting.end())
-        throw std::runtime_error("RenderGraph contains a cycle");
-
-    PassNode* node = findNode(type);
-    if (!node)
-        return;
-
-    visiting.insert(type);
-    if (node->m_enabled)
-    {
-        for (RenderPass::Type dependency : node->m_resolved_dependencies)
-            visit(dependency, visiting, visited);
-    }
-    visiting.erase(type);
-
-    visited.insert(type);
-    m_compiled_order.push_back(type);
 }

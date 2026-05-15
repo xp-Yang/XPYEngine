@@ -8,8 +8,6 @@
 #include "RenderShaderObject.hpp"
 #include "Render/RHI/rhi.hpp"
 
-#include <cstdint>
-
 using GL_RESOURCE_HANLE = unsigned int;
 
 struct RenderTextureData {
@@ -150,6 +148,7 @@ struct RenderCameraData {
 struct RenderSourceData {
     static inline std::shared_ptr<Rhi> rhi;
     static void initRHI() {
+        // TODO 写成单例？
         rhi = std::shared_ptr<Rhi>(Rhi::create());
     }
 

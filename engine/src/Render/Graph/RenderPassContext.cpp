@@ -1,6 +1,6 @@
 #include "RenderPassContext.hpp"
 
-RenderPassContext::RenderPassContext(RenderGraph& graph, const RenderGraph::PassNode& node, RenderSourceData& render_source_data)
+RenderPassContext::RenderPassContext(RenderGraph& graph, const RenderGraphPassNode& node, RenderSourceData& render_source_data)
     : m_graph(&graph)
     , m_node(&node)
     , m_render_source_data(&render_source_data)
@@ -14,44 +14,46 @@ RenderSourceData& RenderPassContext::renderSourceData() const
 
 RhiTexture* RenderPassContext::texture(const std::string& resource_name) const
 {
-    return m_graph ? m_graph->texture(resource_name) : nullptr;
+    return m_graph ? m_graph->textureOf(resource_name) : nullptr;
 }
 
 RhiFrameBuffer* RenderPassContext::frameBuffer(const std::string& resource_name) const
 {
-    return m_graph ? m_graph->frameBuffer(resource_name) : nullptr;
+    return m_graph ? m_graph->frameBufferOf(resource_name) : nullptr;
 }
 
 RhiFrameBuffer* RenderPassContext::targetFrameBuffer(const std::string& target_name) const
 {
-    return m_graph && m_node ? m_graph->targetFrameBuffer(m_node->m_type, target_name) : nullptr;
+    const RenderGraphRenderTarget* target = m_graph->findRenderTarget(m_node->m_type, target_name);
+    return target ? target->framebuffer.get() : nullptr;
 }
 
 RhiFrameBuffer* RenderPassContext::defaultFrameBuffer() const
 {
-    return targetFrameBuffer(RGTarget::Backbuffer);
+    const RenderGraphRenderTarget* target = m_graph->findRenderTarget(m_node->m_type, RGTarget::Backbuffer);
+    return target ? target->framebuffer.get() : nullptr;
 }
 
 const std::vector<unsigned int>& RenderPassContext::cubeDepthTextures(const std::string& target_name) const
 {
     static const std::vector<unsigned int> empty;
-    return m_graph && m_node ? m_graph->cubeDepthTextures(m_node->m_type, target_name) : empty;
+    return m_graph && m_node ? m_graph->cubeDepthTextures(m_node->m_type) : empty;
 }
 
 unsigned int RenderPassContext::cubeDepthFrameBuffer(const std::string& target_name) const
 {
-    const RenderGraph::RenderTargetState* state = m_graph && m_node ? m_graph->targetState(m_node->m_type, target_name) : nullptr;
-    return state && state->kind == RenderGraph::RenderTargetKind::CubeDepth ? state->cube_framebuffer : 0;
+    const RenderGraphRenderTarget* state = m_graph && m_node ? m_graph->findRenderTarget(m_node->m_type, target_name) : nullptr;
+    return state ? state->cube_framebuffer : 0;
 }
 
 int RenderPassContext::cubeDepthEdge(const std::string& target_name) const
 {
-    const RenderGraph::RenderTargetState* state = m_graph && m_node ? m_graph->targetState(m_node->m_type, target_name) : nullptr;
-    return state && state->kind == RenderGraph::RenderTargetKind::CubeDepth ? state->cube_edge : 0;
+    const RenderGraphRenderTarget* state = m_graph && m_node ? m_graph->findRenderTarget(m_node->m_type, target_name) : nullptr;
+    return state ? state->cube_edge : 0;
 }
 
 void RenderPassContext::ensureCubeDepthTextureCount(const std::string& target_name, size_t count)
 {
     if (m_graph && m_node)
-        m_graph->ensureCubeDepthTargetCapacity(m_node->m_type, target_name, count);
+        m_graph->ensureCubeDepthTargetCapacity(m_node->m_type, count);
 }

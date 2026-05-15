@@ -10,8 +10,10 @@ public:
     RenderSystem();
     RenderParams& renderParams();
     void onUpdate(std::shared_ptr<Scene> scene);
-    unsigned int renderGraphTexture(const std::string& resource_name);
-    bool readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]);
+
+    unsigned int renderGraphTextureOf(const std::string& resource_name);
+    bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]);
+
     std::vector<std::string> renderGraphResourceNames() const;
     std::string renderGraphDebugDump() const;
     std::string renderGraphExecutionDump() const;

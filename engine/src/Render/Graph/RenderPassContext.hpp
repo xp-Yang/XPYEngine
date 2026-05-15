@@ -9,7 +9,7 @@
 // Pass 执行上下文：RenderGraph 在执行时注入，用于 pass 按资源名访问纹理和 FBO。
 class RenderPassContext {
 public:
-    RenderPassContext(RenderGraph& graph, const RenderGraph::PassNode& node, RenderSourceData& render_source_data);
+    RenderPassContext(RenderGraph& graph, const RenderGraphPassNode& node, RenderSourceData& render_source_data);
 
     RenderSourceData& renderSourceData() const;
     RhiTexture* texture(const std::string& resource_name) const;
@@ -23,7 +23,7 @@ public:
 
 private:
     RenderGraph* m_graph{ nullptr };
-    const RenderGraph::PassNode* m_node{ nullptr };
+    const RenderGraphPassNode* m_node{ nullptr };
     RenderSourceData* m_render_source_data{ nullptr };
 };
 

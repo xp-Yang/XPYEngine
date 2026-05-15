@@ -57,7 +57,7 @@ void renderRenderGraphResources(RenderSystem* render_system)
             ImGui::PushID(resource_name.c_str());
             ImGui::TextUnformatted(resource_name.c_str());
 
-            const unsigned int texture_id = render_system->renderGraphTexture(resource_name);
+            const unsigned int texture_id = render_system->renderGraphTextureOf(resource_name);
             const float image_width = std::max(1.0f, ImGui::GetContentRegionAvail().x);
             const float image_height = std::clamp(image_width * 0.5625f, 96.0f, 280.0f);
             if (texture_id != 0)

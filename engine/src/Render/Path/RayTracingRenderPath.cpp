@@ -13,16 +13,18 @@ void RayTracingRenderPath::render(RenderSourceData& render_source_data)
 {
     m_render_graph.reset();
 
-    m_render_graph.addPass("RayTracing", RenderPass::Type::RayTracing, m_ray_tracing_pass.get())
+    m_render_graph.addPass(RenderPass::Type::RayTracing, m_ray_tracing_pass.get())
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
 
-    m_render_graph.addPass("Combined", RenderPass::Type::Combined, m_combine_pass.get())
+    m_render_graph.addPass(RenderPass::Type::Combined, m_combine_pass.get())
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .read(RGResource::SceneColor)
         .read(RGResource::SceneDepth)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .backbuffer(RGTarget::Backbuffer);
+        .target(RGTarget::Backbuffer, RenderTargetType::Backbuffer);
 
     m_render_graph.markOutput(RGResource::FinalColor);
     m_render_graph.compile();
@@ -34,7 +36,7 @@ void RayTracingRenderPath::resizeRenderTargets(const Vec2 &pixel_size)
     m_render_graph.setFrameSize(pixel_size);
 }
 
-bool RayTracingRenderPath::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+bool RayTracingRenderPath::readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
 {
-    return m_render_graph.readPixelRGBA(resource_name, x, y, out_rgba);
+    return m_render_graph.readPixelRGBAOf(resource_name, x, y, out_rgba);
 }

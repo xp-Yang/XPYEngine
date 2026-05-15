@@ -29,15 +29,15 @@ RenderParams &RenderSystem::renderParams()
     return m_render_params;
 }
 
-unsigned int RenderSystem::renderGraphTexture(const std::string& resource_name)
+unsigned int RenderSystem::renderGraphTextureOf(const std::string& resource_name)
 {
-    RhiTexture* texture = m_curr_path->renderGraphTexture(resource_name);
+    RhiTexture* texture = m_curr_path->renderGraphTextureOf(resource_name);
     return texture ? texture->id() : 0;
 }
 
-bool RenderSystem::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+bool RenderSystem::readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
 {
-    return m_curr_path && m_curr_path->readRenderGraphPixelRGBA(resource_name, x, y, out_rgba);
+    return m_curr_path && m_curr_path->readRenderGraphPixelRGBAOf(resource_name, x, y, out_rgba);
 }
 
 std::vector<std::string> RenderSystem::renderGraphResourceNames() const

@@ -3,12 +3,16 @@
 
 #include <vector>
 #include <string>
-#include <regex>
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <unordered_set>
+#include <tuple>
+#include <functional>
+#include <regex>
 #include <type_traits>
 #include <utility>
+#include <assert.h>
 
 namespace Meta {
 

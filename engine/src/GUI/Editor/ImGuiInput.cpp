@@ -139,7 +139,7 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 	y = fb_h - 1 - y;
 
 	unsigned char data[4] = { 0,0,0,0 };
-	if (!g_context.render_system->readRenderGraphPixelRGBA(RGResource::PickingColor, x, y, data))
+	if (!g_context.render_system->readRenderGraphPixelRGBAOf(RGResource::PickingColor, x, y, data))
 		return;
 	int picked_id = (int)data[0] + (((int)data[1]) << 8) + (((int)data[2]) << 16);
 	const auto& scene_objects = g_context.scene->getObjects();

@@ -1,14 +1,6 @@
 #ifndef Meta_hpp
 #define Meta_hpp
 
-#include <functional>
-#include <unordered_map>
-#include <vector>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <memory>
-#include <assert.h>
 #include "traits.hpp"
 
 namespace Meta {

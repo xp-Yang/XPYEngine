@@ -11,8 +11,10 @@
 class RenderPath {
 public:
     virtual void render(RenderSourceData& render_source_data) = 0;
-    virtual RhiTexture* renderGraphTexture(const std::string& resource_name) { return nullptr; }
-    virtual bool readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) { return false; }
+
+    virtual RhiTexture* renderGraphTextureOf(const std::string& resource_name) { return nullptr; }
+    virtual bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) { return false; }
+
     virtual std::vector<std::string> renderGraphResourceNames() const { return {}; }
     virtual std::string renderGraphDebugDump() const { return {}; }
     virtual std::string renderGraphExecutionDump() const { return {}; }

@@ -2,7 +2,6 @@
 #define RenderPass_hpp
 
 #include "Render/RenderSourceData.hpp"
-#include <algorithm>
 
 class RenderPassContext;
 

@@ -9,7 +9,7 @@ public:
     RayTracingRenderPath();
     void render(RenderSourceData& render_source_data) override;
     void resizeRenderTargets(const Vec2& pixel_size) override;
-    bool readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) override;
+    bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) override;
 
 protected:
     std::unique_ptr<RenderPass> m_ray_tracing_pass;

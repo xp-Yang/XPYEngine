@@ -41,18 +41,21 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
 
     m_render_graph.reset();
 
-    m_render_graph.addPass("Picking", RenderPass::Type::Picking, pass(RenderPass::Type::Picking))
+    m_render_graph.addPass(RenderPass::Type::Picking, pass(RenderPass::Type::Picking))
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::PickingColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH);
 
-    m_render_graph.addPass("Shadow", RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
+    m_render_graph.addPass(RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .setEnabled(render_params.shadow_params.enable)
-        .setDisabledExecution(RenderGraph::DisabledExecution::Clear)
+        .setDisabledExecution(RGDisabledExecution::Clear)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
-        .cubeDepthTarget(RGTarget::ShadowPointDepth);
+        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth, 8);
 
-    m_render_graph.addPass("ForwardLighting", RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
+    m_render_graph.addPass(RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .read(RGResource::ShadowDirectionalDepth)
         .color(RGResource::SceneColor, RhiTexture::Format::RGB8, 0, 4)
         .depthStencil(RGResource::SceneDepth, RhiTexture::Format::DEPTH24STENCIL8, 4)
@@ -61,27 +64,30 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
             auto& main_pass = static_cast<MeshForwardLightingPass&>(render_pass);
             main_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             main_pass.enableReflection(render_params.effect_params.reflection);
-            main_pass.setCubeMaps(m_render_graph.cubeDepthTextures(RenderPass::Type::Shadow, RGTarget::ShadowPointDepth));
+            main_pass.setCubeMaps(m_render_graph.cubeDepthTextures(RenderPass::Type::Shadow));
         });
 
-    m_render_graph.addPass("SkyBox", RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
+    m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .setEnabled(render_params.effect_params.skybox)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
-    m_render_graph.addPass("Outline", RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
+    m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth)
-        .target(RGTarget::OutlineMask)
+        .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
 
-    m_render_graph.addPass("Combined", RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
+    m_render_graph.addPass(RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .read(RGResource::SceneColor)
         .read(RGResource::SceneDepth)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .backbuffer(RGTarget::Backbuffer)
+        .target(RGTarget::Backbuffer, RenderTargetType::Backbuffer)
         .setSetup([&render_params](RenderPass& render_pass)
         {
             static_cast<CombinePass&>(render_pass).enableFXAA(render_params.post_processing_params.fxaa);
@@ -94,14 +100,14 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
     m_render_graph.execute(render_source_data);
 }
 
-RhiTexture* ForwardRenderPath::renderGraphTexture(const std::string& resource_name)
+RhiTexture* ForwardRenderPath::renderGraphTextureOf(const std::string& resource_name)
 {
-    return m_render_graph.texture(resource_name);
+    return m_render_graph.textureOf(resource_name);
 }
 
-bool ForwardRenderPath::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+bool ForwardRenderPath::readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
 {
-    return m_render_graph.readPixelRGBA(resource_name, x, y, out_rgba);
+    return m_render_graph.readPixelRGBAOf(resource_name, x, y, out_rgba);
 }
 
 std::vector<std::string> ForwardRenderPath::renderGraphResourceNames() const

@@ -45,42 +45,42 @@ const char* passTypeName(RenderPass::Type type)
     }
 }
 
-const char* attachmentName(RenderGraph::ResourceAttachment attachment)
+const char* attachmentName(RhiAttachment::Type attachment)
 {
     switch (attachment)
     {
-    case RenderGraph::ResourceAttachment::Color:
+    case RhiAttachment::Type::Color:
         return "color";
-    case RenderGraph::ResourceAttachment::Depth:
+    case RhiAttachment::Type::Depth:
         return "depth";
-    case RenderGraph::ResourceAttachment::DepthStencil:
+    case RhiAttachment::Type::DepthStencil:
         return "depth-stencil";
     default:
         return "unknown";
     }
 }
 
-const char* targetKindName(RenderGraph::RenderTargetKind kind)
+const char* targetKindName(RenderTargetType kind)
 {
     switch (kind)
     {
-    case RenderGraph::RenderTargetKind::Texture:
+    case RenderTargetType::FrameBuffer:
         return "texture";
-    case RenderGraph::RenderTargetKind::Backbuffer:
+    case RenderTargetType::Backbuffer:
         return "backbuffer";
-    case RenderGraph::RenderTargetKind::CubeDepth:
+    case RenderTargetType::CubeDepth:
         return "cube-depth";
     default:
         return "unknown";
     }
 }
 
-std::string bindingName(const RenderGraph::ResourceBinding& binding)
+std::string bindingName(const RhiAttachmentDesc& desc)
 {
     std::ostringstream stream;
-    stream << attachmentName(binding.attachment);
-    if (binding.attachment == RenderGraph::ResourceAttachment::Color)
-        stream << binding.color_attachment;
+    stream << attachmentName(desc.attachment_type);
+    if (desc.attachment_type == RhiAttachment::Type::Color)
+        stream << desc.color_attachment_index;
     return stream.str();
 }
 
@@ -109,7 +109,7 @@ const char* formatName(RhiTexture::Format format)
     }
 }
 
-std::string descName(const RenderGraph::ResourceDesc& desc)
+std::string descName(const RhiAttachmentDesc& desc)
 {
     std::ostringstream stream;
     stream << formatName(desc.format) << " x" << desc.sample_count;
@@ -142,27 +142,27 @@ std::string joinStrings(const std::vector<std::string>& values)
     return stream.str();
 }
 
-std::string joinTargets(const std::vector<RenderGraph::PassNode::TargetDeclaration>& values)
+std::string joinTargets(const std::vector<RenderTargetDeclaration>& values)
 {
     std::ostringstream stream;
     for (size_t i = 0; i < values.size(); ++i)
     {
         if (i > 0)
             stream << ", ";
-        stream << values[i].name << " (" << targetKindName(values[i].kind) << ")";
+        stream << values[i].name << " (" << targetKindName(values[i].render_target_type) << ")";
     }
     return stream.str();
 }
 
-std::string joinWrites(const std::vector<RenderGraph::PassNode::ResourceWrite>& values)
+std::string joinWrites(const std::vector<ResourceDeclaration>& values)
 {
     std::ostringstream stream;
     for (size_t i = 0; i < values.size(); ++i)
     {
         if (i > 0)
             stream << ", ";
-        stream << values[i].name << " -> " << values[i].target
-               << " (" << bindingName(values[i].binding) << ", " << descName(values[i].desc) << ")";
+        stream << values[i].name << " -> " << values[i].owner_target_name
+               << " (" << bindingName(values[i].attachment_desc) << ", " << descName(values[i].attachment_desc) << ")";
     }
     return stream.str();
 }
@@ -177,18 +177,18 @@ RenderGraphDumper::RenderGraphDumper(const RenderGraph& graph)
 std::vector<std::string> RenderGraphDumper::resourceNames() const
 {
     std::unordered_set<RenderPass::Type> compiled_passes;
-    compiled_passes.reserve(m_graph.m_compiled_order.size());
-    for (RenderPass::Type type : m_graph.m_compiled_order)
-        compiled_passes.insert(type);
+    compiled_passes.reserve(m_graph.m_ordered_nodes.size());
+    for (RenderGraphPassNode* node : m_graph.m_ordered_nodes)
+        compiled_passes.insert(node->m_type);
 
     std::vector<std::string> names;
     names.reserve(m_graph.m_resources.size());
-    for (const auto& resource : m_graph.m_resources)
+    for (const auto& resource_pair : m_graph.m_resources)
     {
-        const RenderGraph::ResourceState& state = resource.second;
-        if (compiled_passes.find(state.owner_pass) != compiled_passes.end() ||
-            compiled_passes.find(state.last_modifier) != compiled_passes.end())
-            names.push_back(resource.first);
+        const RenderGraphResource& resource = resource_pair.second;
+        if (compiled_passes.find(resource.owner_pass) != compiled_passes.end() ||
+            compiled_passes.find(resource.last_modifier_pass) != compiled_passes.end())
+            names.push_back(resource_pair.first);
     }
     std::sort(names.begin(), names.end());
     return names;
@@ -200,9 +200,9 @@ std::string RenderGraphDumper::graph() const
     stream << "RenderGraph\n";
     stream << "Passes:\n";
 
-    for (const RenderGraph::PassNode& node : m_graph.m_nodes)
+    for (const RenderGraphPassNode& node : m_graph.m_nodes)
     {
-        stream << "- " << node.m_name << " [" << passTypeName(node.m_type) << "] "
+        stream << "- " << " [" << passTypeName(node.m_type) << "] "
                << (node.m_enabled ? "enabled" : "disabled") << "\n";
         if (!node.m_reads.empty())
             stream << "  reads: " << joinStrings(node.m_reads) << "\n";
@@ -222,18 +222,18 @@ std::string RenderGraphDumper::graph() const
         stream << "Resources:\n";
         for (const std::string& resource_name : names)
         {
-            const RenderGraph::ResourceState& state = m_graph.m_resources.at(resource_name);
+            const RenderGraphResource& resource = m_graph.m_resources.at(resource_name);
             stream << "- " << resource_name
-                   << " owner=" << passTypeName(state.owner_pass)
-                   << " last_modifier=" << passTypeName(state.last_modifier)
-                   << " target=" << state.target
-                   << " binding=" << bindingName(state.binding)
-                   << " desc=" << descName(state.desc) << "\n";
+                   << " owner=" << passTypeName(resource.owner_pass)
+                   << " last_modifier_pass=" << passTypeName(resource.last_modifier_pass)
+                   << " target=" << resource.resource_decl.owner_target_name
+                   << " binding=" << bindingName(resource.resource_decl.attachment_desc)
+                   << " desc=" << descName(resource.resource_decl.attachment_desc) << "\n";
         }
     }
 
-    if (!m_graph.m_resource_outputs.empty())
-        stream << "Resource outputs: " << joinStrings(m_graph.m_resource_outputs) << "\n";
+    if (!m_graph.m_outputs.empty())
+        stream << "Resource outputs: " << joinStrings(m_graph.m_outputs) << "\n";
 
     return stream.str();
 }
@@ -241,20 +241,20 @@ std::string RenderGraphDumper::graph() const
 std::string RenderGraphDumper::executionOrder() const
 {
     std::ostringstream stream;
-    if (m_graph.m_compiled_order.empty())
+    if (m_graph.m_ordered_nodes.empty())
     {
         stream << "<empty>\n";
         return stream.str();
     }
 
-    for (size_t i = 0; i < m_graph.m_compiled_order.size(); ++i)
+    for (size_t i = 0; i < m_graph.m_ordered_nodes.size(); ++i)
     {
-        const RenderGraph::PassNode* node = m_graph.findNode(m_graph.m_compiled_order[i]);
+        const RenderGraphPassNode* node = m_graph.m_ordered_nodes[i];
         stream << i << ": ";
         if (node)
-            stream << node->m_name << " [" << passTypeName(node->m_type) << "]";
+            stream << " [" << passTypeName(node->m_type) << "]";
         else
-            stream << passTypeName(m_graph.m_compiled_order[i]);
+            stream << passTypeName(m_graph.m_ordered_nodes[i]->m_type);
         stream << "\n";
     }
     return stream.str();
