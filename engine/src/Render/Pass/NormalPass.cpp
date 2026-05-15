@@ -20,10 +20,10 @@ void NormalPass::draw(RenderPassContext& context)
 
     static RenderShaderObject* normal_shader = RenderShaderObject::getShaderObject(ShaderType::NormalShader);
     normal_shader->start_using();
-    normal_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-    normal_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
-    normal_shader->setMatrix("projectionView", 1, m_render_source_data->proj_matrix * m_render_source_data->view_matrix);
-    for (const auto& pair : m_render_source_data->render_mesh_nodes) {
+    normal_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+    normal_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+    normal_shader->setMatrix("projectionView", 1, context.renderSourceData().proj_matrix * context.renderSourceData().view_matrix);
+    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
         normal_shader->setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty())

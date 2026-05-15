@@ -16,9 +16,9 @@ void ZPrePass::draw(RenderPassContext& context)
 
     static RenderShaderObject* depth_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
     depth_shader->start_using();
-    Mat4 light_view = m_render_source_data->render_directional_light_data_list.front().lightViewMatrix;
-    Mat4 light_proj = m_render_source_data->render_directional_light_data_list.front().lightProjMatrix;
-    for (const auto& pair : m_render_source_data->render_mesh_nodes) {
+    Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
+    Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
+    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
         if (render_node->material.alpha != 1.0f)
             continue;

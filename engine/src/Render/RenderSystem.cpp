@@ -20,6 +20,7 @@ RenderSystem::RenderSystem()
     m_deferred_path = std::make_shared<DeferredRenderPath>(this);
 
     m_curr_path = m_forward_path;
+
     rebuildRenderTargets();
 }
 
@@ -28,15 +29,15 @@ RenderParams &RenderSystem::renderParams()
     return m_render_params;
 }
 
-unsigned int RenderSystem::getPickingFBO()
-{
-    return m_curr_path->getPickingFBO();
-}
-
 unsigned int RenderSystem::renderGraphTexture(const std::string& resource_name)
 {
     RhiTexture* texture = m_curr_path->renderGraphTexture(resource_name);
     return texture ? texture->id() : 0;
+}
+
+bool RenderSystem::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+{
+    return m_curr_path && m_curr_path->readRenderGraphPixelRGBA(resource_name, x, y, out_rgba);
 }
 
 std::vector<std::string> RenderSystem::renderGraphResourceNames() const
@@ -76,8 +77,7 @@ void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)
     }
 
     updateRenderSourceData(scene);
-    m_curr_path->prepareRenderSourceData(m_render_source_data);
-    m_curr_path->render();
+    m_curr_path->render(*m_render_source_data);
 }
 
 void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)

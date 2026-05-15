@@ -41,13 +41,7 @@ void DeferredRenderPath::resizeRenderTargets(const Vec2& pixel_size)
     m_render_graph.setFrameSize(pixel_size);
 }
 
-unsigned int DeferredRenderPath::getPickingFBO()
-{
-    RhiFrameBuffer* framebuffer = m_render_graph.frameBuffer(RGResource::PickingColor);
-    return framebuffer ? framebuffer->id() : 0;
-}
-
-void DeferredRenderPath::render()
+void DeferredRenderPath::render(RenderSourceData& render_source_data)
 {
     const auto& render_params = ref_render_system->renderParams();
     const bool checkerboard_enabled = render_params.effect_params.checkerboard;
@@ -182,12 +176,17 @@ void DeferredRenderPath::render()
     m_render_graph.markOutput(RGResource::FinalColor);
 
     m_render_graph.compile();
-    m_render_graph.execute();
+    m_render_graph.execute(render_source_data);
 }
 
 RhiTexture* DeferredRenderPath::renderGraphTexture(const std::string& resource_name)
 {
     return m_render_graph.texture(resource_name);
+}
+
+bool DeferredRenderPath::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+{
+    return m_render_graph.readPixelRGBA(resource_name, x, y, out_rgba);
 }
 
 std::vector<std::string> DeferredRenderPath::renderGraphResourceNames() const

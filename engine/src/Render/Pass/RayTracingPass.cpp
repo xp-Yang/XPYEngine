@@ -15,7 +15,7 @@ void RayTracingPass::draw(RenderPassContext& context)
 	framebuffer->clear();
 
 	static RenderShaderObject *rt_shader = RenderShaderObject::getShaderObject(ShaderType::RayTracingShader);
-	auto camera = m_render_source_data->render_camera;
+	auto camera = context.renderSourceData().render_camera;
 
 	{
 		rt_shader->start_using();
@@ -38,7 +38,7 @@ void RayTracingPass::draw(RenderPassContext& context)
 		// random
 		rt_shader->setFloat("randOrigin", 674764.0f * (Math::randomUnit() + 1.0f));
 		// render to framebuffer
-		m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+		m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 	}
 
 	framebuffer->unBind();

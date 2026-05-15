@@ -1,6 +1,7 @@
 #include "ImGuiInput.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "GUI/Window.hpp"
+#include "Render/Graph/RenderGraphPassNode.hpp"
 #include "Render/RenderSystem.hpp"
 #include "Logical/Framework/World/Scene.hpp"
 #include "GlobalContext.hpp"
@@ -139,10 +140,8 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 	y = fb_h - 1 - y;
 
 	unsigned char data[4] = { 0,0,0,0 };
-	unsigned int frame_buffer_id = g_context.render_system->getPickingFBO();
-	if (frame_buffer_id == 0)
+	if (!g_context.render_system->readRenderGraphPixelRGBA(RGResource::PickingColor, x, y, data))
 		return;
-	RenderSourceData::rhi->readPixelRGBA(frame_buffer_id, x, y, data);
 	int picked_id = (int)data[0] + (((int)data[1]) << 8) + (((int)data[2]) << 16);
 	const auto& scene_objects = g_context.scene->getObjects();
 	auto it = std::find_if(scene_objects.begin(), scene_objects.end(), [picked_id](const std::shared_ptr<GObject>& obj) {

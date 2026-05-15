@@ -14,22 +14,22 @@ void OutlinePass::draw(RenderPassContext& context)
     mask_framebuffer->bind();
     mask_framebuffer->clear();
 
-    if (m_render_source_data->picked_ids.empty()) {
+    if (context.renderSourceData().picked_ids.empty()) {
         return;
     }
-    for (auto picked_id : m_render_source_data->picked_ids) {
+    for (auto picked_id : context.renderSourceData().picked_ids) {
         // render the picked one
         static RenderShaderObject* one_color_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
         one_color_shader->start_using();
-        one_color_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-        one_color_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
+        one_color_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+        one_color_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
 
-        auto it = std::find_if(m_render_source_data->render_mesh_nodes.begin(), m_render_source_data->render_mesh_nodes.end(),
+        auto it = std::find_if(context.renderSourceData().render_mesh_nodes.begin(), context.renderSourceData().render_mesh_nodes.end(),
             [picked_id](const std::pair<const RenderMeshNodeID, std::shared_ptr<RenderMeshNode>>& pair) {
                 return pair.second->node_id.object_id == picked_id;
             }
         );
-        if (it != m_render_source_data->render_mesh_nodes.end()) {
+        if (it != context.renderSourceData().render_mesh_nodes.end()) {
             const auto& render_node = it->second;
             one_color_shader->setBool("useSkinning", render_node->use_skinning);
             if (render_node->use_skinning && !render_node->bone_matrices.empty()) {
@@ -62,5 +62,5 @@ void OutlinePass::draw(RenderPassContext& context)
     outline_shader->start_using();
     outline_shader->setTexture("objMap", 0, source_map);
     outline_shader->setTexture("objDepthMap", 1, obj_depth_map);
-    m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+    m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 }

@@ -23,9 +23,9 @@ void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
 
     static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
     depth_shader->start_using();
-    Mat4 light_view = m_render_source_data->render_directional_light_data_list.front().lightViewMatrix;
-    Mat4 light_proj = m_render_source_data->render_directional_light_data_list.front().lightProjMatrix;
-    for (const auto &pair : m_render_source_data->render_mesh_nodes)
+    Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
+    Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
+    for (const auto &pair : context.renderSourceData().render_mesh_nodes)
     {
         const auto &render_node = pair.second;
         depth_shader->setBool("useSkinning", render_node->use_skinning);
@@ -57,7 +57,7 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
     std::vector<Mat4> light_proj;
     std::vector<Vec3> light_pos;
     std::vector<float> light_radius;
-    for (const auto &render_point_light_data : m_render_source_data->render_point_light_data_list)
+    for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
     {
         light_view.push_back(render_point_light_data.lightViewMatrix);
         light_proj.push_back(render_point_light_data.lightProjMatrix);
@@ -65,7 +65,7 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
         light_radius.push_back(render_point_light_data.radius);
     }
 
-    context.ensureCubeDepthTextureCount(RGTarget::ShadowPointDepth, m_render_source_data->render_point_light_data_list.size());
+    context.ensureCubeDepthTextureCount(RGTarget::ShadowPointDepth, context.renderSourceData().render_point_light_data_list.size());
     const std::vector<unsigned int>& cube_maps = context.cubeDepthTextures(RGTarget::ShadowPointDepth);
     const unsigned int cube_framebuffer = context.cubeDepthFrameBuffer(RGTarget::ShadowPointDepth);
     const int cube_edge = context.cubeDepthEdge(RGTarget::ShadowPointDepth);
@@ -75,14 +75,14 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
     m_rhi->bindFramebuffer(cube_framebuffer);
     m_rhi->setViewport(0, 0, cube_edge, cube_edge);
 
-    for (int cube_map_id = 0; cube_map_id < m_render_source_data->render_point_light_data_list.size(); cube_map_id++)
+    for (int cube_map_id = 0; cube_map_id < context.renderSourceData().render_point_light_data_list.size(); cube_map_id++)
     {
         for (int i = 0; i < 6; i++)
         {
             m_rhi->attachDepthCubeFace(cube_maps[cube_map_id], i);
             m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
 
-            for (const auto &pair : m_render_source_data->render_mesh_nodes)
+            for (const auto &pair : context.renderSourceData().render_mesh_nodes)
             {
                 const auto &render_node = pair.second;
                 depth_shader->setBool("useSkinning", render_node->use_skinning);

@@ -80,7 +80,7 @@ void RenderGraph::compile()
     }
 }
 
-void RenderGraph::execute()
+void RenderGraph::execute(RenderSourceData& render_source_data)
 {
     for (RenderPass::Type type : m_compiled_order)
     {
@@ -98,7 +98,7 @@ void RenderGraph::execute()
         if (node->m_setup)
             node->m_setup(*node->m_pass);
 
-        RenderPassContext context(*this, *node);
+        RenderPassContext context(*this, *node, render_source_data);
         node->m_pass->draw(context);
     }
 }
@@ -468,6 +468,16 @@ RhiFrameBuffer* RenderGraph::frameBuffer(const std::string& resource_name) const
     if (it == m_resources.end())
         return nullptr;
     return targetFrameBuffer(it->second.owner_pass, it->second.target);
+}
+
+bool RenderGraph::readPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) const
+{
+    RhiFrameBuffer* framebuffer = frameBuffer(resource_name);
+    if (!framebuffer)
+        return false;
+
+    m_rhi->readPixelRGBA(framebuffer->id(), x, y, out_rgba);
+    return true;
 }
 
 RenderGraph::PassNode* RenderGraph::findNode(RenderPass::Type type)

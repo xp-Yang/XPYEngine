@@ -9,13 +9,7 @@ RayTracingRenderPath::RayTracingRenderPath()
     m_combine_pass = std::make_unique<CombinePass>();
 }
 
-void RayTracingRenderPath::prepareRenderSourceData(const std::shared_ptr<RenderSourceData>& render_source_data)
-{
-    m_ray_tracing_pass->prepareRenderSourceData(render_source_data);
-    m_combine_pass->prepareRenderSourceData(render_source_data);
-}
-
-void RayTracingRenderPath::render()
+void RayTracingRenderPath::render(RenderSourceData& render_source_data)
 {
     m_render_graph.reset();
 
@@ -32,10 +26,15 @@ void RayTracingRenderPath::render()
 
     m_render_graph.markOutput(RGResource::FinalColor);
     m_render_graph.compile();
-    m_render_graph.execute();
+    m_render_graph.execute(render_source_data);
 }
 
 void RayTracingRenderPath::resizeRenderTargets(const Vec2 &pixel_size)
 {
     m_render_graph.setFrameSize(pixel_size);
+}
+
+bool RayTracingRenderPath::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+{
+    return m_render_graph.readPixelRGBA(resource_name, x, y, out_rgba);
 }

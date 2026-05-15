@@ -25,7 +25,7 @@ void BloomPass::extractBright(RenderPassContext& context)
     static RenderShaderObject* extract_bright_shader = RenderShaderObject::getShaderObject(ShaderType::ExtractBrightShader);
     extract_bright_shader->start_using();
     extract_bright_shader->setTexture("Texture", 0, lighted_map);
-    m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+    m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
     extract_bright_shader->stop_using();
 }
 
@@ -50,7 +50,7 @@ void BloomPass::blur(RenderPassContext& context)
     {
         blur_shader->setTexture("image", 0, (i == 0) ? bright_map : map);
         blur_shader->setInt("horizontal", horizontal);
-        m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+        m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
         horizontal = !horizontal;
     }
     blur_shader->stop_using();

@@ -26,10 +26,10 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     // framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
     framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
 
-    Mat4 light_ref_matrix = m_render_source_data->render_directional_light_data_list.front().lightProjMatrix *
-                            m_render_source_data->render_directional_light_data_list.front().lightViewMatrix;
-    Vec3 light_direction = m_render_source_data->render_directional_light_data_list.front().direction;
-    Vec4 light_color = m_render_source_data->render_directional_light_data_list.front().color;
+    Mat4 light_ref_matrix = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix *
+                            context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
+    Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
+    Vec4 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
 
     RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
     m_shadow_map = shadow_texture ? shadow_texture->id() : 0;
@@ -39,7 +39,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     RenderShaderObject *shader = m_pbr ? pbr_shader : blinn_phong_shader;
     shader->start_using();
     int k = 0;
-    for (const auto &render_point_light_data : m_render_source_data->render_point_light_data_list)
+    for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
     {
         std::string light_id = std::string("pointLights[") + std::to_string(k) + "]";
         shader->setFloat3(light_id + ".position", render_point_light_data.position);
@@ -48,7 +48,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         k++;
     }
     shader->setInt("point_lights_size", k);
-    for (const auto &pair : m_render_source_data->render_mesh_nodes)
+    for (const auto &pair : context.renderSourceData().render_mesh_nodes)
     {
         const auto &render_node = pair.second;
         auto &material = render_node->material;
@@ -86,9 +86,9 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         }
 
         shader->setMatrix("model", 1, render_node->model_matrix);
-        shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-        shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
-        shader->setFloat3("cameraPos", m_render_source_data->camera_position);
+        shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+        shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+        shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
 
         shader->setFloat3("directionalLight.direction", light_direction);
         shader->setFloat4("directionalLight.color", light_color);

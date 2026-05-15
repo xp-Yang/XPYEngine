@@ -18,9 +18,9 @@ void GBufferPass::draw(RenderPassContext& context)
     static RenderShaderObject* g_phong_shader = RenderShaderObject::getShaderObject(ShaderType::GBufferPhongShader);
     RenderShaderObject* g_shader = m_pbr ? g_pbr_shader : g_phong_shader;
     g_shader->start_using();
-    g_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-    g_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
-    for (const auto& pair : m_render_source_data->render_mesh_nodes) {
+    g_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+    g_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
         if (render_node->material.alpha != 1.0f)
             continue;

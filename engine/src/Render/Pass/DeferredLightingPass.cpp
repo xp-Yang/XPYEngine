@@ -44,8 +44,8 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 
 	RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
 	m_dir_light_shadow_map = shadow_texture ? shadow_texture->id() : 0;
-	lighting_shader->setFloat3("cameraPos", m_render_source_data->camera_position);
-	for (const auto& render_directional_light_data : m_render_source_data->render_directional_light_data_list) {
+	lighting_shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
+	for (const auto& render_directional_light_data : context.renderSourceData().render_directional_light_data_list) {
 		lighting_shader->setFloat3("directionalLight.direction", render_directional_light_data.direction);
 		lighting_shader->setFloat4("directionalLight.color", render_directional_light_data.color);
 		if (m_dir_light_shadow_map != 0) {
@@ -58,15 +58,15 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		lighting_shader->setCubeTexture(cube_map_id, 9 + i, m_cube_maps[i]);
 	}
 	int point_light_idx = 0;
-	for (const auto& render_point_light_data : m_render_source_data->render_point_light_data_list) {
+	for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
 		std::string light_id = std::string("pointLights[") + std::to_string(point_light_idx) + "]";
 		lighting_shader->setFloat3(light_id + ".position", render_point_light_data.position);
 		lighting_shader->setFloat4(light_id + ".color", render_point_light_data.color);
 		lighting_shader->setFloat(light_id + ".radius", render_point_light_data.radius);
 		point_light_idx++;
 	}
-	lighting_shader->setInt("point_lights_size", m_render_source_data->render_point_light_data_list.size());
-	m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+	lighting_shader->setInt("point_lights_size", context.renderSourceData().render_point_light_data_list.size());
+	m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 	lighting_shader->stop_using();
 
 
@@ -74,29 +74,29 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 
 	// lights
 	//static RenderShaderObject* point_light_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
-	//for (const auto& render_point_light_data : m_render_source_data->render_point_light_data_list) {
+	//for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
 	//	const auto& render_point_light_sub_mesh_data = render_point_light_data.render_sub_mesh_data;
 	//	point_light_shader->start_using();
 	//	point_light_shader->setFloat4("color", render_point_light_data.color);
 	//	point_light_shader->setMatrix("model", 1, render_point_light_sub_mesh_data->transform());
-	//	point_light_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-	//	point_light_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
+	//	point_light_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+	//	point_light_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
 	//	m_rhi->drawIndexed(render_point_light_sub_mesh_data->getVAO(), render_point_light_sub_mesh_data->indicesCount());
 	//	point_light_shader->stop_using();
 	//}
 
 	// instancing lights
-    if (m_render_source_data->render_point_light_inst_mesh && m_render_source_data->point_light_inst_amount > 0)
+    if (context.renderSourceData().render_point_light_inst_mesh && context.renderSourceData().point_light_inst_amount > 0)
     {
         static RenderShaderObject* point_light_instancing_shader = RenderShaderObject::getShaderObject(ShaderType::InstancingShader);
         point_light_instancing_shader->start_using();
-        point_light_instancing_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-        point_light_instancing_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
+        point_light_instancing_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+        point_light_instancing_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
         m_rhi->drawIndexed(
-            m_render_source_data->render_point_light_inst_mesh->getVAO(),
-            m_render_source_data->render_point_light_inst_mesh->indicesCount(),
+            context.renderSourceData().render_point_light_inst_mesh->getVAO(),
+            context.renderSourceData().render_point_light_inst_mesh->indicesCount(),
             0,
-            m_render_source_data->point_light_inst_amount);
+            context.renderSourceData().point_light_inst_amount);
         point_light_instancing_shader->stop_using();
     }
 

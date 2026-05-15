@@ -27,13 +27,7 @@ void ForwardRenderPath::resizeRenderTargets(const Vec2& pixel_size)
     m_render_graph.setFrameSize(pixel_size);
 }
 
-unsigned int ForwardRenderPath::getPickingFBO()
-{
-    RhiFrameBuffer* framebuffer = m_render_graph.frameBuffer(RGResource::PickingColor);
-    return framebuffer ? framebuffer->id() : 0;
-}
-
-void ForwardRenderPath::render()
+void ForwardRenderPath::render(RenderSourceData& render_source_data)
 {
     const auto& render_params = ref_render_system->renderParams();
     auto pass = [this](RenderPass::Type type) -> RenderPass*
@@ -97,12 +91,17 @@ void ForwardRenderPath::render()
     m_render_graph.markOutput(RGResource::FinalColor);
 
     m_render_graph.compile();
-    m_render_graph.execute();
+    m_render_graph.execute(render_source_data);
 }
 
 RhiTexture* ForwardRenderPath::renderGraphTexture(const std::string& resource_name)
 {
     return m_render_graph.texture(resource_name);
+}
+
+bool ForwardRenderPath::readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+{
+    return m_render_graph.readPixelRGBA(resource_name, x, y, out_rgba);
 }
 
 std::vector<std::string> ForwardRenderPath::renderGraphResourceNames() const

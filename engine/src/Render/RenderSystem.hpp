@@ -10,8 +10,8 @@ public:
     RenderSystem();
     RenderParams& renderParams();
     void onUpdate(std::shared_ptr<Scene> scene);
-    unsigned int getPickingFBO();
     unsigned int renderGraphTexture(const std::string& resource_name);
+    bool readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]);
     std::vector<std::string> renderGraphResourceNames() const;
     std::string renderGraphDebugDump() const;
     std::string renderGraphExecutionDump() const;

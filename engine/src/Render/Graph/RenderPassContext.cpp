@@ -1,9 +1,15 @@
 #include "RenderPassContext.hpp"
 
-RenderPassContext::RenderPassContext(RenderGraph& graph, const RenderGraph::PassNode& node)
+RenderPassContext::RenderPassContext(RenderGraph& graph, const RenderGraph::PassNode& node, RenderSourceData& render_source_data)
     : m_graph(&graph)
     , m_node(&node)
+    , m_render_source_data(&render_source_data)
 {
+}
+
+RenderSourceData& RenderPassContext::renderSourceData() const
+{
+    return *m_render_source_data;
 }
 
 RhiTexture* RenderPassContext::texture(const std::string& resource_name) const

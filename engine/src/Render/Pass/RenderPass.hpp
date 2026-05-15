@@ -47,13 +47,9 @@ public:
 	RenderPass& operator=(const RenderPass&) = delete;
 	virtual ~RenderPass() = default;
 	virtual void draw(RenderPassContext& context) = 0;
-	void prepareRenderSourceData(const std::shared_ptr<RenderSourceData>& render_source_data) { 
-		m_render_source_data = render_source_data;
-	}
 
 protected:
 	std::shared_ptr<Rhi> m_rhi;
-	std::shared_ptr<RenderSourceData> m_render_source_data;
 
 	Type m_type;
 };

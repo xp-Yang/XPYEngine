@@ -35,7 +35,7 @@ void CombinePass::draw(RenderPassContext& context)
 	}
 	else
 		combine_shader->setTexture("bloomMap", 1, default_map);
-	m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+	m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 
 	
 	// fxaa
@@ -44,15 +44,15 @@ void CombinePass::draw(RenderPassContext& context)
 		fxaa_shader->start_using();
 		auto color_map = framebuffer->colorAttachmentAt(0)->texture()->id();
 		fxaa_shader->setTexture("mainTexture", 0, color_map);
-		m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+		m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 	}
 
 	// pristine grid
 	static RenderShaderObject* grid_shader = RenderShaderObject::getShaderObject(ShaderType::PristineGridShader);
 	grid_shader->start_using();
-	grid_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-	grid_shader->setMatrix("proj", 1, m_render_source_data->proj_matrix);
-	m_rhi->drawIndexed(m_render_source_data->screen_quad->getVAO(), m_render_source_data->screen_quad->indicesCount());
+	grid_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+	grid_shader->setMatrix("proj", 1, context.renderSourceData().proj_matrix);
+	m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 	grid_shader->stop_using();
 
 	m_rhi->setDepthMask(true);

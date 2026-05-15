@@ -18,11 +18,11 @@ void PickingPass::draw(RenderPassContext& context)
     static RenderShaderObject* picking_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
     picking_shader->start_using();
 
-    picking_shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-    picking_shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
+    picking_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+    picking_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
 
     // TODO Unpickable
-    for (const auto& pair : m_render_source_data->render_mesh_nodes) {
+    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
         picking_shader->setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty()) {

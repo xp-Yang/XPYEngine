@@ -10,8 +10,9 @@
 // Pass 执行上下文：RenderGraph 在执行时注入，用于 pass 按资源名或语义 slot 访问纹理和 FBO。
 class RenderPassContext {
 public:
-    RenderPassContext(RenderGraph& graph, const RenderGraph::PassNode& node);
+    RenderPassContext(RenderGraph& graph, const RenderGraph::PassNode& node, RenderSourceData& render_source_data);
 
+    RenderSourceData& renderSourceData() const;
     RhiTexture* texture(const std::string& resource_name) const;
     RhiFrameBuffer* frameBuffer(const std::string& resource_name) const;
     RhiFrameBuffer* targetFrameBuffer(const std::string& target_name = RGTarget::Main) const;
@@ -30,6 +31,7 @@ private:
 
     RenderGraph* m_graph{ nullptr };
     const RenderGraph::PassNode* m_node{ nullptr };
+    RenderSourceData* m_render_source_data{ nullptr };
 };
 
 #endif // !RenderPassContext_hpp

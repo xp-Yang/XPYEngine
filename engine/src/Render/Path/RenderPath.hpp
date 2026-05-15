@@ -10,14 +10,9 @@
 // Interface class
 class RenderPath {
 public:
-    virtual void render() = 0;
-    virtual void prepareRenderSourceData(const std::shared_ptr<RenderSourceData>& render_source_data) {
-        for (auto& pass : m_render_passes) {
-            pass.second->prepareRenderSourceData(render_source_data);
-        }
-    }
-    virtual unsigned int getPickingFBO() { return 0; }
+    virtual void render(RenderSourceData& render_source_data) = 0;
     virtual RhiTexture* renderGraphTexture(const std::string& resource_name) { return nullptr; }
+    virtual bool readRenderGraphPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) { return false; }
     virtual std::vector<std::string> renderGraphResourceNames() const { return {}; }
     virtual std::string renderGraphDebugDump() const { return {}; }
     virtual std::string renderGraphExecutionDump() const { return {}; }

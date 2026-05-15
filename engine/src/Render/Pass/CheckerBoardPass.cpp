@@ -16,9 +16,9 @@ void CheckerBoardPass::draw(RenderPassContext& context)
 
     static RenderShaderObject* shader = RenderShaderObject::getShaderObject(ShaderType::CheckerboardShader);
     shader->start_using();
-    shader->setMatrix("view", 1, m_render_source_data->view_matrix);
-    shader->setMatrix("projection", 1, m_render_source_data->proj_matrix);
-    for (const auto& pair : m_render_source_data->render_mesh_nodes) {
+    shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
+    shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
         Mat4 modelScale;
         Mat4 modelRotation;

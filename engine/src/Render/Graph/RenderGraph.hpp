@@ -32,10 +32,11 @@ public:
     PassNode& addPass(const std::string& name, RenderPass::Type type, RenderPass* pass);
     void markOutput(const std::string& resource_name);
     void compile();
-    void execute();
+    void execute(RenderSourceData& render_source_data);
 
     RhiTexture* texture(const std::string& resource_name) const;
     RhiFrameBuffer* frameBuffer(const std::string& resource_name) const;
+    bool readPixelRGBA(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) const;
     RhiFrameBuffer* targetFrameBuffer(RenderPass::Type type, const std::string& target_name = RGTarget::Main) const;
     const std::vector<unsigned int>& cubeDepthTextures(RenderPass::Type type, const std::string& target_name = RGTarget::ShadowPointDepth) const;
 
