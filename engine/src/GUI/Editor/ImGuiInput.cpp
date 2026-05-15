@@ -65,13 +65,12 @@ bool GUIInput::refreshState()
 	m_last_mouse_x = m_mouse_x;
 	m_last_mouse_y = m_mouse_y;
 	m_mouse_wheel = io.MouseWheel;
-	m_frame_time = 1.0f / io.Framerate;
 	memcpy(KeysDown, io.KeysDown, sizeof(KeysDown));
 	//Logger::debug("delta_x: {}, delta_y: {}", m_delta_mouse_x, m_delta_mouse_y);
 	return true;
 }
 
-bool GUIInput::onUpdate()
+bool GUIInput::onUpdate(float delta_time)
 {
 	m_camera_manipulator->syncContext(ref_editor->getMainViewport());
 	m_camera_manipulator->onUpdate();
@@ -95,16 +94,16 @@ bool GUIInput::onUpdate()
 		m_camera_manipulator->onMouseWheelUpdate(m_mouse_wheel, m_mouse_x, m_mouse_y);
 
 	if (KeysDown['W']) {
-		m_camera_manipulator->onKeyUpdate('W', m_frame_time);
+		m_camera_manipulator->onKeyUpdate('W', delta_time);
 	}
 	if (KeysDown['A']) {
-		m_camera_manipulator->onKeyUpdate('A', m_frame_time);
+		m_camera_manipulator->onKeyUpdate('A', delta_time);
 	}
 	if (KeysDown['S']) {
-		m_camera_manipulator->onKeyUpdate('S', m_frame_time);
+		m_camera_manipulator->onKeyUpdate('S', delta_time);
 	}
 	if (KeysDown['D']) {
-		m_camera_manipulator->onKeyUpdate('D', m_frame_time);
+		m_camera_manipulator->onKeyUpdate('D', delta_time);
 	}
 
 	m_last_mouse_state = m_mouse_state;

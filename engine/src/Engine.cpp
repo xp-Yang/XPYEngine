@@ -19,17 +19,17 @@ Engine& Engine::get()
 }
 
 void Engine::run() {
-	//Timer fps_timer;
-	//fps_timer.start();
+	Timer fps_timer;
+	fps_timer.start();
 	while (!g_context.window->shouldClose()) {
-		//double duration = fps_timer.duration();
-		//if (duration >= MILLISECONDS_PER_FRAME) {
-			//fps_timer.restart();
+		double duration = fps_timer.duration();
+		if (duration >= MILLISECONDS_PER_FRAME) {
+			fps_timer.restart();
 			g_context.gui_editor->beginFrame();
 			{
 				// logical
-				g_context.gui_input->onUpdate();
-				g_context.animation_system->onUpdate(g_context.scene);
+				g_context.gui_input->onUpdate(duration / 1000.0f);
+                g_context.animation_system->onUpdate(g_context.scene, duration / 1000.0f);
 				// render
 				g_context.render_system->onUpdate(g_context.scene);
 				// gui
@@ -39,9 +39,9 @@ void Engine::run() {
 			}
 			g_context.gui_editor->endFrame();
 			g_context.window->swapBuffer();
-		//}
+		}
 	}
-	//fps_timer.stop();
+	fps_timer.stop();
 }
 
 void Engine::init()

@@ -12,7 +12,7 @@ class AnimationSystem
 public:
     AnimationSystem() = default;
 
-    void onUpdate(std::shared_ptr<Scene> scene, float delta_time = 1.0f / 60.0f)
+    void onUpdate(std::shared_ptr<Scene> scene, float delta_time)
     {
         if (!scene)
             return;

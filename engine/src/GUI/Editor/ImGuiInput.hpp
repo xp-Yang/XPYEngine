@@ -11,7 +11,7 @@ class PickSolver;
 class GUIInput {
 public:
 	GUIInput(std::shared_ptr<ImGuiEditor> editor);
-	bool onUpdate();
+	bool onUpdate(float delta_time);
 
 protected:
 	bool refreshState();
@@ -29,8 +29,6 @@ protected:
 	float m_mouse_wheel;
 
 	bool KeysDown[Key_COUNT];
-
-	float m_frame_time;
 
 	std::shared_ptr<CameraManipulator> m_camera_manipulator;
 	std::unique_ptr<PickSolver> m_pick_solver;
