@@ -38,6 +38,19 @@ inline void allMetaRegister()
 		registerProperty(&Vec4::z, "z").
 		registerProperty(&Vec4::w, "w");
 
+    //// Color3
+    //registerClass<Color3>("Color3").
+    //    registerProperty(&Color3::x, "x").
+    //    registerProperty(&Color3::y, "y").
+    //    registerProperty(&Color3::z, "z");
+
+    //// Color4
+	//registerClass<Color4>("Color4").
+	//	registerProperty(&Color4::x, "x").
+	//	registerProperty(&Color4::y, "y").
+	//	registerProperty(&Color4::z, "z").
+	//	registerProperty(&Color4::w, "w");
+
 	// Mat3
 	registerClass<Mat3>("Mat3");
 

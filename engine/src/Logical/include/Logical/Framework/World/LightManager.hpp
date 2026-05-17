@@ -14,7 +14,7 @@ class Light
 {
 public:
 	Light(const std::string &name) : m_name(name) {}
-	Color4 luminousColor = {1.0f, 1.0f, 1.0f, 1.0f};
+    Color3 luminousColor = { 1.0f, 1.0f, 1.0f };
 	LightID ID() const { return m_id; }
 	std::string name() const { return m_name; }
 	virtual Mat4 lightProjMatrix() const = 0;

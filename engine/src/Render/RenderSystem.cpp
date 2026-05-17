@@ -133,7 +133,7 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
     struct PointLightInstData
     {
         Mat4 inst_matrix;
-        Color4 inst_color;
+        Color3 inst_color;
     };
     m_render_source_data->point_light_inst_amount = point_lights.size();
     if (m_render_source_data->render_point_light_inst_mesh && !point_lights.empty())

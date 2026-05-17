@@ -25,7 +25,7 @@ void TransparentPass::draw(RenderPassContext& context)
     Mat4 light_ref_matrix = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix *
         context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
     Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
-    Vec4 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
+    Vec3 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
 
     shader->start_using();
     shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
@@ -61,7 +61,7 @@ void TransparentPass::draw(RenderPassContext& context)
         shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
 
         shader->setFloat3("directionalLight.direction", light_direction);
-        shader->setFloat4("directionalLight.color", light_color);
+        shader->setFloat3("directionalLight.color", light_color);
 
         shader->setFloat("alpha", material.alpha);
 

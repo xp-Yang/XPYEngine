@@ -1,13 +1,13 @@
 struct DirectionalLight
 {
     vec3 direction;
-    vec4 color;
+    vec3 color;
 };
 
 struct PointLight
 {
     vec3 position;
-    vec4 color;
+    vec3 color;
     float radius;
 };
 

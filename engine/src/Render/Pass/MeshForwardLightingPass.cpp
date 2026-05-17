@@ -29,7 +29,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     Mat4 light_ref_matrix = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix *
                             context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
     Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
-    Vec4 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
+    Vec3 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
 
     RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
     m_shadow_map = shadow_texture ? shadow_texture->id() : 0;
@@ -43,7 +43,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     {
         std::string light_id = std::string("pointLights[") + std::to_string(k) + "]";
         shader->setFloat3(light_id + ".position", render_point_light_data.position);
-        shader->setFloat4(light_id + ".color", render_point_light_data.color);
+        shader->setFloat3(light_id + ".color", render_point_light_data.color);
         shader->setFloat(light_id + ".radius", render_point_light_data.radius);
         k++;
     }
@@ -92,7 +92,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
 
         shader->setFloat3("directionalLight.direction", light_direction);
-        shader->setFloat4("directionalLight.color", light_color);
+        shader->setFloat3("directionalLight.color", light_color);
 
         if (m_shadow_map != 0)
         {

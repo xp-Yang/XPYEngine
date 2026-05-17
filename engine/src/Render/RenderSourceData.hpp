@@ -70,7 +70,7 @@ class RenderMeshInstanceData {
 };
 
 struct RenderDirectionalLightData {
-    Color4 color;
+    Color3 color;
     Vec3 direction;
     Mat4 lightViewMatrix;
     Mat4 lightProjMatrix;
@@ -78,7 +78,7 @@ struct RenderDirectionalLightData {
 
 struct RenderPointLightData {
     int id;
-    Color4 color;
+    Color3 color;
     Vec3 position;
     float radius;
     std::array<Mat4, 6> lightViewMatrix;

@@ -47,7 +47,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	lighting_shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
 	for (const auto& render_directional_light_data : context.renderSourceData().render_directional_light_data_list) {
 		lighting_shader->setFloat3("directionalLight.direction", render_directional_light_data.direction);
-		lighting_shader->setFloat4("directionalLight.color", render_directional_light_data.color);
+		lighting_shader->setFloat3("directionalLight.color", render_directional_light_data.color);
 		if (m_dir_light_shadow_map != 0) {
 			lighting_shader->setMatrix("lightSpaceMatrix", 1, render_directional_light_data.lightProjMatrix * render_directional_light_data.lightViewMatrix);
 			lighting_shader->setTexture("shadow_map", 8, m_dir_light_shadow_map);
@@ -61,7 +61,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
 		std::string light_id = std::string("pointLights[") + std::to_string(point_light_idx) + "]";
 		lighting_shader->setFloat3(light_id + ".position", render_point_light_data.position);
-		lighting_shader->setFloat4(light_id + ".color", render_point_light_data.color);
+		lighting_shader->setFloat3(light_id + ".color", render_point_light_data.color);
 		lighting_shader->setFloat(light_id + ".radius", render_point_light_data.radius);
 		point_light_idx++;
 	}
