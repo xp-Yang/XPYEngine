@@ -17,7 +17,6 @@ RhiOpenGL::RhiOpenGL()
 	glDepthMask(GL_TRUE);
 	glDepthFunc(GL_LEQUAL);
 
-	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glEnable(GL_CULL_FACE);
@@ -37,6 +36,14 @@ void RhiOpenGL::drawTriangles(unsigned int vao_id, size_t array_count)
 void RhiOpenGL::setViewport(int x, int y, int width, int height)
 {
 	glViewport(x, y, width, height);
+}
+
+void RhiOpenGL::setBlend(bool enable)
+{
+    if (enable)
+        glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
 }
 
 void RhiOpenGL::setDepthMask(bool enable)

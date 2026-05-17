@@ -658,6 +658,7 @@ public:
     void drawTriangles(unsigned int vao_id, size_t array_count);
     // context 全局状态
     void setViewport(int x, int y, int width, int height);
+    void setBlend(bool enable);
     void setDepthMask(bool enable);
     void setFrontFaceCW(bool cw);
     void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]);

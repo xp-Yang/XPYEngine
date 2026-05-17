@@ -23,7 +23,7 @@ void ImGuiGlobalConsole::render() {
     ImGui::Dummy(dummy);
     ImGui::PushItemWidth(150.0f);
     int path_type_option = (int)render_params.render_path_type;
-    std::array<std::string, 3> combo_strs = { "Forward", "Deferred", "RayTracing" };
+    std::array<std::string, 2> combo_strs = { "Forward", "Deferred"/*, "RayTracing"*/ };
     ImGui::Text("Choose Render Path:");
     if (ImGui::BeginCombo("##Render Path", combo_strs[path_type_option].c_str())) {
         for (int i = 0; i < combo_strs.size(); i++) {

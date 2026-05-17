@@ -13,6 +13,7 @@ public:
     virtual void drawTriangles(unsigned int vao_id, size_t array_count) = 0;
     // context 全局状态
     virtual void setViewport(int x, int y, int width, int height) = 0;
+    virtual void setBlend(bool enable) = 0;
     virtual void setDepthMask(bool enable) = 0;
     virtual void setFrontFaceCW(bool cw) = 0;
     virtual void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]) = 0;

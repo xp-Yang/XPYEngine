@@ -15,6 +15,7 @@ void FinalPass::draw(RenderPassContext& context)
     //source_framebuffer->blitTo(framebuffer, RhiTexture::Format::RGB8); 
     //source_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
 
+    m_rhi->setBlend(true);
     m_rhi->setDepthMask(false);
 
     // pristine grid
@@ -25,7 +26,9 @@ void FinalPass::draw(RenderPassContext& context)
     m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
     grid_shader->stop_using();
 
+    m_rhi->setBlend(false);
     m_rhi->setDepthMask(true);
+
 
     RhiFrameBuffer* default_framebuffer = context.defaultFrameBuffer();
     default_framebuffer->bind();

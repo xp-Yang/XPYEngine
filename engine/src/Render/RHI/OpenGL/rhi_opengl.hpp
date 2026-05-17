@@ -18,6 +18,7 @@ public:
     void drawTriangles(unsigned int vao_id, size_t array_count) override;
     // context 全局状态
     void setViewport(int x, int y, int width, int height) override;
+    void setBlend(bool enable) override;
     void setDepthMask(bool enable) override;
     void setFrontFaceCW(bool cw) override;
     void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]) override;

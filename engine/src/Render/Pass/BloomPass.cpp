@@ -71,6 +71,8 @@ void BloomPass::writeToScene(RenderPassContext& context)
     RhiFrameBuffer* scene_framebuffer = context.frameBuffer(RGResource::SceneColor);
     scene_framebuffer->bind();
 
+    m_rhi->setDepthMask(false);
+
     static RenderShaderObject* bloom_shader = RenderShaderObject::getShaderObject(ShaderType::BloomShader);
     bloom_shader->start_using();
     RhiTexture* lighted_texture = context.texture(RGResource::SceneColor);
@@ -79,4 +81,6 @@ void BloomPass::writeToScene(RenderPassContext& context)
     RhiTexture* blurred_bright_texture = context.texture(RGResource::BloomPingPong1Color);
     bloom_shader->setTexture("bloomMap", 1, blurred_bright_texture->id());
     m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
+
+    m_rhi->setDepthMask(true);
 }

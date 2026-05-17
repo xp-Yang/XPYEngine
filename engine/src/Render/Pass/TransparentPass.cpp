@@ -14,10 +14,9 @@ void TransparentPass::init()
 void TransparentPass::draw(RenderPassContext& context)
 {
     RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
-    if (!target_framebuffer)
-        return;
     target_framebuffer->bind();
 
+    m_rhi->setBlend(true);
     m_rhi->setDepthMask(false);
 
     static auto shader_ = Shader{ std::string(RESOURCE_DIR) + "/shader/mesh.vs", std::string(RESOURCE_DIR) + "/shader/transparent.fs"};
@@ -70,5 +69,6 @@ void TransparentPass::draw(RenderPassContext& context)
     }
     shader->stop_using();
 
+    m_rhi->setBlend(false);
     m_rhi->setDepthMask(true);
 }

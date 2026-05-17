@@ -63,6 +63,11 @@ void Rhi::setViewport(int x, int y, int width, int height)
 	m_impl->setViewport(x, y, width, height);
 }
 
+void Rhi::setBlend(bool enable)
+{
+	m_impl->setBlend(enable);
+}
+
 void Rhi::setDepthMask(bool enable)
 {
 	m_impl->setDepthMask(enable);
