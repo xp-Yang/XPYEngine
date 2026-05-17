@@ -453,7 +453,6 @@ bool RenderGraph::readPixelRGBAOf(const RGResourceName& resource_name, int x, in
 void RenderGraph::resolveRead(RenderGraphPassNode& node, const RGResourceName& resource_name)
 {
     auto it = m_resources.find(resource_name);
-    // TODO 要求了addPass顺序，必须先让producer pass resolveWrite
     if (it == m_resources.end())
         throw std::runtime_error("RenderGraph resource is read before it is written: " + resource_name);
 
@@ -477,12 +476,40 @@ void RenderGraph::resolveWrite(RenderGraphPassNode& node, const ResourceDeclarat
 
 void RenderGraph::resolveResourceDependencies()
 {
+    struct ResourceProducer {
+        RenderGraphPassNode* node{ nullptr };
+        ResourceDeclaration resource_decl;
+    };
+
+    std::unordered_map<RGResourceName, std::vector<ResourceProducer>> resource_producers;
     m_resources.clear();
 
     for (RenderGraphPassNode& node : m_nodes)
     {
         node.m_resolved_dependencies.clear();
 
+        const bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
+        if (node.m_enabled || clear_writes)
+        {
+            for (const ResourceDeclaration& write : node.m_writes)
+                resource_producers[write.name].push_back(ResourceProducer{ &node, write });
+        }
+    }
+
+    // 只有一个 producer 的资源先注册，read 可以出现在 producer pass 之前。
+    for (const auto& resource_producer_pair : resource_producers)
+    {
+        const std::vector<ResourceProducer>& producers = resource_producer_pair.second;
+        if (producers.size() != 1)
+            continue;
+
+        const ResourceProducer& producer = producers.front();
+        resolveWrite(*producer.node, producer.resource_decl);
+    }
+
+    // 多 producer 资源保留 RenderPath 声明顺序，用于表达替代/覆盖关系。
+    for (RenderGraphPassNode& node : m_nodes)
+    {
         if (node.m_enabled)
         {
             for (const RGResourceName& resource_name : node.m_reads)
@@ -491,11 +518,15 @@ void RenderGraph::resolveResourceDependencies()
                 resolveReadWrite(node, resource_name);
         }
 
-        bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
+        const bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
         if (node.m_enabled || clear_writes)
         {
-            for (const auto& write : node.m_writes)
-                resolveWrite(node, write);
+            for (const ResourceDeclaration& write : node.m_writes)
+            {
+                const auto producer_it = resource_producers.find(write.name);
+                if (producer_it != resource_producers.end() && producer_it->second.size() > 1)
+                    resolveWrite(node, write);
+            }
         }
     }
 }
