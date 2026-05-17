@@ -15,7 +15,7 @@ void ShadowPass::draw(RenderPassContext& context)
 
 void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
     framebuffer->bind();
@@ -65,10 +65,10 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
         light_radius.push_back(render_point_light_data.radius);
     }
 
-    context.ensureCubeDepthTextureCount(RGTarget::ShadowPointDepth, context.renderSourceData().render_point_light_data_list.size());
-    const std::vector<unsigned int>& cube_maps = context.cubeDepthTextures(RGTarget::ShadowPointDepth);
-    const unsigned int cube_framebuffer = context.cubeDepthFrameBuffer(RGTarget::ShadowPointDepth);
-    const int cube_edge = context.cubeDepthEdge(RGTarget::ShadowPointDepth);
+    context.ensureCubeDepthTextureCount(context.renderSourceData().render_point_light_data_list.size());
+    const std::vector<unsigned int>& cube_maps = context.cubeDepthTextures();
+    const unsigned int cube_framebuffer = context.cubeDepthFrameBuffer();
+    const int cube_edge = context.cubeDepthEdge();
     if (cube_framebuffer == 0 || cube_edge <= 0 || cube_maps.empty())
         return;
 

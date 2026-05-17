@@ -8,12 +8,17 @@ FinalPass::FinalPass()
 
 void FinalPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* source_framebuffer = context.frameBuffer(RGResource::SceneColor);
-    source_framebuffer->bind();
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
 
+    framebuffer->bind();
+
+    RhiFrameBuffer* source_framebuffer = nullptr;
+    source_framebuffer = context.frameBuffer(RGResource::CheckerBoardColor);
+        if (!source_framebuffer)
+            source_framebuffer = context.frameBuffer(RGResource::SceneColor);
     // TODO //downSample if msaa?
-    //source_framebuffer->blitTo(framebuffer, RhiTexture::Format::RGB8); 
-    //source_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
+    source_framebuffer->blitTo(framebuffer, RhiTexture::Format::RGB16F);
+    source_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
 
     m_rhi->setBlend(true);
     m_rhi->setDepthMask(false);

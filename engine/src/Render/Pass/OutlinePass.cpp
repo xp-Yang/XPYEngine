@@ -8,7 +8,7 @@ OutlinePass::OutlinePass()
 
 void OutlinePass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* mask_framebuffer = context.targetFrameBuffer(RGTarget::OutlineMask);
+    RhiFrameBuffer* mask_framebuffer = context.frameBufferOfTarget(RGTarget::OutlineMask);
     if (!mask_framebuffer)
         return;
     mask_framebuffer->bind();

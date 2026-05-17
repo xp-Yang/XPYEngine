@@ -8,7 +8,7 @@ ZPrePass::ZPrePass()
 
 void ZPrePass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
     framebuffer->bind();

@@ -250,9 +250,9 @@ std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() con
     {
         if (!node)
             continue;
-        for (const RGResourceName& resource_name : node->m_read_writes)
+        for (const RGResourceName& resource_name : node->m_modifies)
             appendResourceIfCurrent(resource_name, node->m_type);
-        for (const ResourceDeclaration& write : node->m_writes)
+        for (const ResourceDeclaration& write : node->m_resources)
             appendResourceIfCurrent(write.name, node->m_type);
     }
 
@@ -286,11 +286,11 @@ std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() con
         {
             for (const RGResourceName& resource_name : node->m_reads)
                 appendPasses(input_contributors, contributors[resource_name]);
-            for (const RGResourceName& resource_name : node->m_read_writes)
+            for (const RGResourceName& resource_name : node->m_modifies)
                 appendPasses(input_contributors, contributors[resource_name]);
         }
 
-        for (const ResourceDeclaration& write : node->m_writes)
+        for (const ResourceDeclaration& write : node->m_resources)
         {
             direct_history[write.name].clear();
             contributors[write.name].clear();
@@ -302,7 +302,7 @@ std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() con
         if (!node->m_enabled)
             continue;
 
-        for (const RGResourceName& resource_name : node->m_read_writes)
+        for (const RGResourceName& resource_name : node->m_modifies)
         {
             appendUnique(direct_history[resource_name], node->m_type);
             appendPasses(contributors[resource_name], input_contributors);
@@ -372,12 +372,12 @@ std::string RenderGraphDumper::graph() const
                << (node.m_enabled ? "enabled" : "disabled") << "\n";
         if (!node.m_reads.empty())
             stream << "  reads: " << joinStrings(node.m_reads) << "\n";
-        if (!node.m_read_writes.empty())
-            stream << "  read-writes: " << joinStrings(node.m_read_writes) << "\n";
+        if (!node.m_modifies.empty())
+            stream << "  read-writes: " << joinStrings(node.m_modifies) << "\n";
         if (!node.m_targets.empty())
             stream << "  targets: " << joinTargets(node.m_targets) << "\n";
-        if (!node.m_writes.empty())
-            stream << "  writes: " << joinWrites(node.m_writes) << "\n";
+        if (!node.m_resources.empty())
+            stream << "  writes: " << joinWrites(node.m_resources) << "\n";
         if (!node.m_resolved_dependencies.empty())
             stream << "  resolved dependencies: " << joinPassTypes(node.m_resolved_dependencies) << "\n";
     }

@@ -185,6 +185,7 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         render_point_lights.end());
 
     // 更新objects对象状态
+    m_render_source_data->has_transparent = false;
     std::unordered_set<int> alive_object_ids;
     alive_object_ids.reserve(objects.size());
     auto &render_mesh_nodes = m_render_source_data->render_mesh_nodes;
@@ -217,6 +218,8 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         alive_sub_mesh_ids.reserve(sub_meshes.size());
         for (const auto &sub_mesh : sub_meshes)
         {
+            if (sub_mesh->material->alpha != 1.0f)
+                m_render_source_data->has_transparent = true;
             alive_sub_mesh_ids.insert(sub_mesh->sub_mesh_idx);
             Mat4 sub_mesh_transform = Math::composeMatrix(sub_mesh->scale, sub_mesh->rotation, sub_mesh->translation);
             auto render_mesh_mode_id = RenderMeshNodeID(object->ID(), sub_mesh->sub_mesh_idx);

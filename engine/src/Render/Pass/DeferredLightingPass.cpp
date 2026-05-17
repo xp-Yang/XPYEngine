@@ -8,7 +8,7 @@ DeferredLightingPass::DeferredLightingPass()
 
 void DeferredLightingPass::draw(RenderPassContext& context)
 {
-	RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
+	RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
 	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferPosition);
 	if (!framebuffer || !gbuffer_framebuffer)
 		return;

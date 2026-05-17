@@ -33,9 +33,12 @@ static inline RGResourceName BloomPingPong2Color = "Bloom.PingPong2Color";
               
 static inline RGResourceName OutlineMaskColor = "Outline.MaskColor";
 static inline RGResourceName OutlineMaskDepth = "Outline.MaskDepth";
+
+static inline RGResourceName CheckerBoardColor = "CheckerBoard.Color";
+static inline RGResourceName CheckerBoardDepth = "CheckerBoard.Depth";
               
-//static inline RGResourceName FinalColor = "Final.Color";
-//static inline RGResourceName FinalDepth = "Final.Depth";
+static inline RGResourceName FinalColor = "Final.Color";
+static inline RGResourceName FinalDepth = "Final.Depth";
 }
 
 // 渲染目标名，描述这些纹理资源挂载到哪个framebuffer上
@@ -89,17 +92,21 @@ class RenderGraphPassNode {
 public:
     RenderGraphPassNode(RenderPass::Type type, RenderPass* pass);
 
-    // 声明所需资源 read/readWrite
-    RenderGraphPassNode& read(const RGResourceName& resource_name);
-    RenderGraphPassNode& readWrite(const RGResourceName& resource_name);
+    // 声明renderTarget，可能是多个
+    RenderGraphPassNode& target(const RGTargetName& target_name, RenderTargetType type, int initial_cube_map_count = 0);
 
-    // 声明写出资源 ResourceDeclaration
+    // 声明所需的资源，表明pass将从该resource采样
+    RenderGraphPassNode& read(const RGResourceName& resource_name);
+
+    // 声明续写的资源，表明pass将续写这个resource
+    // 建立在旧图像内容的基础之上，如果不是，就write新resource
+    // 但不能同时采样这个resource，否则会导致UB: feedback loop
+    RenderGraphPassNode& modify(const RGResourceName& resource_name);
+
+    // 声明produce的资源，一个资源只能有一个producer pass、只属于一个target，表明pass写出这个resource
     RenderGraphPassNode& color(const RGResourceName& resource_name, RhiTexture::Format format, int attachment_index = 0, int sample_count = 1, bool transient = true);
     RenderGraphPassNode& depth(const RGResourceName& resource_name, RhiTexture::Format format = RhiTexture::Format::DEPTH, int sample_count = 1, bool transient = true);
     RenderGraphPassNode& depthStencil(const RGResourceName& resource_name, RhiTexture::Format format = RhiTexture::Format::DEPTH24STENCIL8, int sample_count = 1, bool transient = true);
-
-    // 声明renderTarget，可能是多个
-    RenderGraphPassNode& target(const RGTargetName& target_name, RenderTargetType type, int initial_cube_map_count = 0);
 
     // 注入回调
     RenderGraphPassNode& setEnabled(bool enabled);
@@ -109,7 +116,7 @@ public:
 protected:
     void addResolvedDependency(RenderPass::Type type);
 
-    RenderGraphPassNode& writeTo(const RGResourceName& resource_name, const RhiAttachmentDesc& desc);
+    RenderGraphPassNode& produce(const RGResourceName& resource_name, const RhiAttachmentDesc& desc);
 
 private:
     friend class RenderGraph;
@@ -121,11 +128,11 @@ private:
 
     std::vector<RenderPass::Type> m_resolved_dependencies;
 
-    std::vector<std::string> m_reads;
-    std::vector<std::string> m_read_writes;
+    std::vector<RGResourceName> m_reads;
+    std::vector<RGResourceName> m_modifies;
     // 记录声明的写出的resource的targetName和Attachment信息
     // RenderGraph
-    std::vector<ResourceDeclaration> m_writes;
+    std::vector<ResourceDeclaration> m_resources;
     // 记录声明的RGTargetName和RenderTargetType信息，
     // RenderGraph的RenderGraphRenderTarget使用这些信息，
     // 用于创建framebuffer并记录framebuffer和targetName RenderPass的对应关系

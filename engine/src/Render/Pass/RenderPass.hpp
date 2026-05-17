@@ -23,26 +23,28 @@ static inline int PickingColorIDFactor = 256 * 256 * 256 / 500;
 class RenderPass {
 public:
 	enum class Type {
-		ZPre,
-		Picking,
-		Outline,
-		SkyBox,
-		Shadow,
-		Forward,
-		GBuffer,
-		DeferredLighting,
-		Transparent,
-
+        Unknown,
+        
+        ZPre,
+        Picking,
+        Outline,
+        SkyBox,
+        Shadow,
+        Forward,
+        GBuffer,
+        DeferredLighting,
+        Transparent,
+        
         WireFrame,
         CheckerBoard,
         Normal,
         RayTracing,
-
-		// post process
-		Bloom,
-		FXAA,
-		ColorGrading,
-
+        
+        // post process
+        Bloom,
+        FXAA,
+        ColorGrading,
+        
         Final,
 	};
 

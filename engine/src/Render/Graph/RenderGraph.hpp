@@ -81,9 +81,9 @@ private:
     std::unique_ptr<RhiFrameBuffer> createFrameBuffer(const FrameBufferDesc& desc) const;
     std::unique_ptr<RhiFrameBuffer> createDefaultFrameBuffer() const;
     void resolveResourceDependencies();
-    void resolveRead(RenderGraphPassNode& node, const RGResourceName& resource_name);
-    void resolveReadWrite(RenderGraphPassNode& node, const RGResourceName& resource_name);
-    void resolveWrite(RenderGraphPassNode& node, const ResourceDeclaration& write);
+    void resolveReads(RenderGraphPassNode& node);
+    void resolveModifies(RenderGraphPassNode& node);
+    void resolveResources(RenderGraphPassNode& node);
     void visit(RenderPass::Type type, std::unordered_set<RenderPass::Type>& visiting, std::unordered_set<RenderPass::Type>& visited);
 
     std::shared_ptr<Rhi> m_rhi{ RenderSourceData::rhi };

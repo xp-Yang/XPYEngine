@@ -14,12 +14,12 @@ public:
     RenderSourceData& renderSourceData() const;
     RhiTexture* texture(const std::string& resource_name) const;
     RhiFrameBuffer* frameBuffer(const std::string& resource_name) const;
-    RhiFrameBuffer* targetFrameBuffer(const std::string& target_name) const;
+    RhiFrameBuffer* frameBufferOfTarget(const std::string& target_name) const;
     RhiFrameBuffer* defaultFrameBuffer() const;
-    const std::vector<unsigned int>& cubeDepthTextures(const std::string& target_name = RGTarget::ShadowPointDepth) const;
-    unsigned int cubeDepthFrameBuffer(const std::string& target_name = RGTarget::ShadowPointDepth) const;
-    int cubeDepthEdge(const std::string& target_name = RGTarget::ShadowPointDepth) const;
-    void ensureCubeDepthTextureCount(const std::string& target_name, size_t count);
+    const std::vector<unsigned int>& cubeDepthTextures() const;
+    unsigned int cubeDepthFrameBuffer() const;
+    int cubeDepthEdge() const;
+    void ensureCubeDepthTextureCount(size_t count);
 
 private:
     RenderGraph* m_graph{ nullptr };

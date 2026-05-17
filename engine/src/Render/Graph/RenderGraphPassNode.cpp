@@ -13,10 +13,10 @@ RenderGraphPassNode& RenderGraphPassNode::read(const RGResourceName& resource_na
     return *this;
 }
 
-RenderGraphPassNode& RenderGraphPassNode::readWrite(const RGResourceName& resource_name)
+RenderGraphPassNode& RenderGraphPassNode::modify(const RGResourceName& resource_name)
 {
-    if (std::find(m_read_writes.begin(), m_read_writes.end(), resource_name) == m_read_writes.end())
-        m_read_writes.push_back(resource_name);
+    if (std::find(m_modifies.begin(), m_modifies.end(), resource_name) == m_modifies.end())
+        m_modifies.push_back(resource_name);
     return *this;
 }
 
@@ -45,17 +45,17 @@ RenderGraphPassNode& RenderGraphPassNode::target(const RGTargetName& target_name
 
 RenderGraphPassNode& RenderGraphPassNode::color(const RGResourceName& resource_name, RhiTexture::Format format, int attachment_index, int sample_count, bool transient)
 {
-    return writeTo(resource_name, RhiAttachmentDesc{ RhiAttachment::Type::Color, attachment_index, format, sample_count, transient });
+    return produce(resource_name, RhiAttachmentDesc{ RhiAttachment::Type::Color, attachment_index, format, sample_count, transient });
 }
 
 RenderGraphPassNode& RenderGraphPassNode::depth(const RGResourceName& resource_name, RhiTexture::Format format, int sample_count, bool transient)
 {
-    return writeTo(resource_name, RhiAttachmentDesc{ RhiAttachment::Type::Depth, 0, format, sample_count, transient });
+    return produce(resource_name, RhiAttachmentDesc{ RhiAttachment::Type::Depth, 0, format, sample_count, transient });
 }
 
 RenderGraphPassNode& RenderGraphPassNode::depthStencil(const RGResourceName& resource_name, RhiTexture::Format format, int sample_count, bool transient)
 {
-    return writeTo(resource_name, RhiAttachmentDesc{ RhiAttachment::Type::DepthStencil, 0, format, sample_count, transient });
+    return produce(resource_name, RhiAttachmentDesc{ RhiAttachment::Type::DepthStencil, 0, format, sample_count, transient });
 }
 
 RenderGraphPassNode& RenderGraphPassNode::setEnabled(bool enabled)
@@ -76,19 +76,18 @@ RenderGraphPassNode& RenderGraphPassNode::setSetup(std::function<void(RenderPass
     return *this;
 }
 
-RenderGraphPassNode& RenderGraphPassNode::writeTo(const RGResourceName& resource_name, const RhiAttachmentDesc& desc)
+RenderGraphPassNode& RenderGraphPassNode::produce(const RGResourceName& resource_name, const RhiAttachmentDesc& desc)
 {
-    auto it = std::find_if(m_writes.begin(), m_writes.end(),
-        [&resource_name](const ResourceDeclaration& write)
+    auto it_resource = std::find_if(m_resources.begin(), m_resources.end(),
+        [&resource_name](const ResourceDeclaration& resource)
         {
-            return write.name == resource_name;
+            return resource.name == resource_name;
         });
-    if (it == m_writes.end())
-        m_writes.push_back(ResourceDeclaration{ resource_name, m_active_target, desc });
+    if (it_resource == m_resources.end())
+        m_resources.push_back(ResourceDeclaration{ resource_name, m_active_target, desc });
     else
     {
-        it->owner_target_name = m_active_target;
-        it->attachment_desc = desc;
+        throw std::runtime_error("RenderGraph resource is declared multiple times by one pass: " + resource_name);
     }
     return *this;
 }

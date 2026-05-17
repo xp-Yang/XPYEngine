@@ -153,6 +153,7 @@ struct RenderSourceData {
     }
 
     std::unordered_map<RenderMeshNodeID, std::shared_ptr<RenderMeshNode>, RenderMeshNodeIDHasher> render_mesh_nodes;
+    bool has_transparent{ false };
     std::vector<RenderDirectionalLightData> render_directional_light_data_list;
     std::vector<RenderPointLightData> render_point_light_data_list;
     std::shared_ptr<RenderMeshData> render_point_light_inst_mesh;

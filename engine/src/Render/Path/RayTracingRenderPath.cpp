@@ -20,8 +20,8 @@ void RayTracingRenderPath::render(RenderSourceData& render_source_data)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
 
     m_render_graph.addPass(RenderPass::Type::Final, m_final_pass.get())
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth)
+        .modify(RGResource::SceneColor)
+        .modify(RGResource::SceneDepth)
         .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
 
     m_render_graph.markOutput(RGResource::SceneColor);

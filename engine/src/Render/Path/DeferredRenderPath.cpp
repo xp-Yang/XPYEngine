@@ -122,25 +122,42 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
 
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
         .setEnabled(render_params.effect_params.skybox)
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth);
+        .modify(RGResource::SceneColor)
+        .modify(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth);
+        .setEnabled(render_source_data.has_transparent)
+        .modify(RGResource::SceneColor)
+        .modify(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth)
+        .setEnabled(!render_source_data.picked_ids.empty())
+        .modify(RGResource::SceneColor)
+        .modify(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH)
-        .setEnabled(!render_source_data.picked_ids.empty());
+        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
+
+    m_render_graph.addPass(RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
+        .setEnabled(checkerboard_enabled)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+        .color(RGResource::CheckerBoardColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::CheckerBoardDepth, RhiTexture::Format::DEPTH);
+
+    m_render_graph.addPass(RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
+        .setEnabled(render_params.effect_params.wireframe)
+        .modify(RGResource::SceneColor)
+        .modify(RGResource::SceneDepth);
+
+    m_render_graph.addPass(RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
+        .setEnabled(render_params.effect_params.show_normal)
+        .modify(RGResource::SceneColor)
+        .modify(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
         .setEnabled(bloom_used)
         .setDisabledExecution(RGDisabledExecution::Clear)
-        .readWrite(RGResource::SceneColor)
+        .modify(RGResource::SceneColor)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::BloomBrightColor, RhiTexture::Format::RGB16F)
         .target(RGTarget::BloomPingPong1, RenderTargetType::FrameBuffer)
@@ -148,34 +165,24 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
         .target(RGTarget::BloomPingPong2, RenderTargetType::FrameBuffer)
         .color(RGResource::BloomPingPong2Color, RhiTexture::Format::RGB16F);
 
-    m_render_graph.addPass(RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
-        .setEnabled(checkerboard_enabled)
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
-
-    m_render_graph.addPass(RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
-        .setEnabled(render_params.effect_params.wireframe)
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth);
-
-    m_render_graph.addPass(RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
-        .setEnabled(render_params.effect_params.show_normal)
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth);
-
     m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
         .setEnabled(render_params.post_processing_params.fxaa)
-        .readWrite(RGResource::SceneColor);
+        .modify(RGResource::SceneColor);
 
+    RGResourceName beforeFinalColor = checkerboard_enabled ? RGResource::CheckerBoardColor : RGResource::SceneColor;
+    RGResourceName beforeFinalDepth = checkerboard_enabled ? RGResource::CheckerBoardDepth : RGResource::SceneDepth;
     m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth)
+        .read(beforeFinalColor)
+        .read(beforeFinalDepth)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+        .color(RGResource::FinalColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
         .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
 
     m_render_graph.markOutput(RGResource::PickingColor);
-    m_render_graph.markOutput(RGResource::SceneColor);
+    m_render_graph.markOutput(RGResource::FinalColor);
 
+    // TODO 不必每帧都重新compile?
     m_render_graph.compile();
     m_render_graph.execute(render_source_data);
 }

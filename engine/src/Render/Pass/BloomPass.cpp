@@ -15,7 +15,7 @@ void BloomPass::draw(RenderPassContext& context)
 
 void BloomPass::extractBright(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
     framebuffer->bind();
@@ -32,9 +32,9 @@ void BloomPass::extractBright(RenderPassContext& context)
 
 void BloomPass::blur(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
-    RhiFrameBuffer* pingpong1_framebuffer = context.targetFrameBuffer(RGTarget::BloomPingPong1);
-    RhiFrameBuffer* pingpong2_framebuffer = context.targetFrameBuffer(RGTarget::BloomPingPong2);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
+    RhiFrameBuffer* pingpong1_framebuffer = context.frameBufferOfTarget(RGTarget::BloomPingPong1);
+    RhiFrameBuffer* pingpong2_framebuffer = context.frameBufferOfTarget(RGTarget::BloomPingPong2);
     if (!framebuffer || !pingpong1_framebuffer || !pingpong2_framebuffer)
         return;
 

@@ -171,34 +171,34 @@ void RenderGraph::ensureRenderTargets()
 
             if (target_decl.render_target_type == RenderTargetType::FrameBuffer)
             {
-                for (const auto& write_resource : node.m_writes) {
-                    if (write_resource.owner_target_name != target_decl.name)
+                for (const auto& resource_decl : node.m_resources) {
+                    if (resource_decl.owner_target_name != target_decl.name)
                         continue;
                     else {
-                        switch (write_resource.attachment_desc.attachment_type)
+                        switch (resource_decl.attachment_desc.attachment_type)
                         {
                         case RhiAttachment::Type::Color:
                         {
-                            const int index = write_resource.attachment_desc.color_attachment_index;
+                            const int index = resource_decl.attachment_desc.color_attachment_index;
                             if (index < 0 || index >= (int)framebuffer_desc.has_color.size())
                                 throw std::runtime_error("RenderGraph color attachment index is out of range: " + target_decl.name);
                             if (framebuffer_desc.has_color[index])
                                 throw std::runtime_error("RenderGraph has multiple resources bound to color attachment " + std::to_string(index) + " on target " + target_decl.name);
                             framebuffer_desc.has_color[index] = true;
-                            framebuffer_desc.colors[index] = write_resource.attachment_desc;
+                            framebuffer_desc.colors[index] = resource_decl.attachment_desc;
                             break;
                         }
                         case RhiAttachment::Type::Depth:
                             if (framebuffer_desc.has_depth)
                                 throw std::runtime_error("RenderGraph has multiple depth resources bound to target " + target_decl.name);
                             framebuffer_desc.has_depth = true;
-                            framebuffer_desc.depth = write_resource.attachment_desc;
+                            framebuffer_desc.depth = resource_decl.attachment_desc;
                             break;
                         case RhiAttachment::Type::DepthStencil:
                             if (framebuffer_desc.has_depth_stencil)
                                 throw std::runtime_error("RenderGraph has multiple depth-stencil resources bound to target " + target_decl.name);
                             framebuffer_desc.has_depth_stencil = true;
-                            framebuffer_desc.depth_stencil = write_resource.attachment_desc;
+                            framebuffer_desc.depth_stencil = resource_decl.attachment_desc;
                             break;
                         default:
                             break;
@@ -450,83 +450,58 @@ bool RenderGraph::readPixelRGBAOf(const RGResourceName& resource_name, int x, in
     return true;
 }
 
-void RenderGraph::resolveRead(RenderGraphPassNode& node, const RGResourceName& resource_name)
+void RenderGraph::resolveReads(RenderGraphPassNode& node)
 {
-    auto it = m_resources.find(resource_name);
-    if (it == m_resources.end())
-        throw std::runtime_error("RenderGraph resource is read before it is written: " + resource_name);
+    for (const RGResourceName& read : node.m_reads)
+    {
+        auto it = m_resources.find(read);
+        if (it == m_resources.end())
+            throw std::runtime_error("RenderGraph resource is read before it is produced: " + read);
 
-    node.addResolvedDependency(it->second.last_modifier_pass);
+        node.addResolvedDependency(it->second.last_modifier_pass);
+    }
 }
 
-void RenderGraph::resolveReadWrite(RenderGraphPassNode& node, const RGResourceName& resource_name)
+void RenderGraph::resolveModifies(RenderGraphPassNode& node)
 {
-    auto it = m_resources.find(resource_name);
-    if (it == m_resources.end())
-        throw std::runtime_error("RenderGraph resource is read/written before it is written: " + resource_name);
+    for (const RGResourceName& modify : node.m_modifies)
+    { 
+        auto it = m_resources.find(modify);
+        if (it == m_resources.end())
+            throw std::runtime_error("RenderGraph resource is modified before it is produced: " + modify);
 
-    node.addResolvedDependency(it->second.last_modifier_pass);
-    it->second.last_modifier_pass = node.m_type;
+        node.addResolvedDependency(it->second.last_modifier_pass);
+        it->second.last_modifier_pass = node.m_type;
+    }
 }
 
-void RenderGraph::resolveWrite(RenderGraphPassNode& node, const ResourceDeclaration& write)
+void RenderGraph::resolveResources(RenderGraphPassNode& node)
 {
-    m_resources[write.name] = RenderGraphResource{ node.m_type, node.m_type, write };
+    for (const auto& resource_decl : node.m_resources)
+    {
+        if (m_resources.find(resource_decl.name) != m_resources.end())
+            throw std::runtime_error("RenderGraph resource is produced by multiple passes: " + resource_decl.name);
+        m_resources[resource_decl.name] = RenderGraphResource{ node.m_type, node.m_type, resource_decl };
+    }
 }
 
 void RenderGraph::resolveResourceDependencies()
 {
-    struct ResourceProducer {
-        RenderGraphPassNode* node{ nullptr };
-        ResourceDeclaration resource_decl;
-    };
-
-    std::unordered_map<RGResourceName, std::vector<ResourceProducer>> resource_producers;
     m_resources.clear();
 
     for (RenderGraphPassNode& node : m_nodes)
     {
         node.m_resolved_dependencies.clear();
 
-        const bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
+        bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
         if (node.m_enabled || clear_writes)
-        {
-            for (const ResourceDeclaration& write : node.m_writes)
-                resource_producers[write.name].push_back(ResourceProducer{ &node, write });
-        }
+            resolveResources(node);
     }
 
-    // 只有一个 producer 的资源先注册，read 可以出现在 producer pass 之前。
-    for (const auto& resource_producer_pair : resource_producers)
-    {
-        const std::vector<ResourceProducer>& producers = resource_producer_pair.second;
-        if (producers.size() != 1)
-            continue;
-
-        const ResourceProducer& producer = producers.front();
-        resolveWrite(*producer.node, producer.resource_decl);
-    }
-
-    // 多 producer 资源保留 RenderPath 声明顺序，用于表达替代/覆盖关系。
-    for (RenderGraphPassNode& node : m_nodes)
-    {
-        if (node.m_enabled)
-        {
-            for (const RGResourceName& resource_name : node.m_reads)
-                resolveRead(node, resource_name);
-            for (const RGResourceName& resource_name : node.m_read_writes)
-                resolveReadWrite(node, resource_name);
-        }
-
-        const bool clear_writes = !node.m_enabled && node.m_disabled_execution == RGDisabledExecution::Clear;
-        if (node.m_enabled || clear_writes)
-        {
-            for (const ResourceDeclaration& write : node.m_writes)
-            {
-                const auto producer_it = resource_producers.find(write.name);
-                if (producer_it != resource_producers.end() && producer_it->second.size() > 1)
-                    resolveWrite(node, write);
-            }
+    for (RenderGraphPassNode& node : m_nodes) {
+        if (node.m_enabled) {
+            resolveReads(node);
+            resolveModifies(node);
         }
     }
 }
