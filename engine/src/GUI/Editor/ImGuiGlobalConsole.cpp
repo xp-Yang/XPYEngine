@@ -65,39 +65,40 @@ void ImGuiGlobalConsole::render() {
 
     separator();
 
-    ImGui::Text("MSAA:");
-    if (render_params.render_path_type == RenderPathType::Forward) {
-        ImGui::PushItemWidth(50.0f);
-        static unsigned int curr_item = 1;
-        if (ImGui::BeginCombo("MSAA", (std::to_string((int)std::pow(4, curr_item)) + "x").c_str())) {
-            for (int i = 0; i < 3; i++) {
-                bool selected = curr_item == i;
-                std::string label = std::to_string((int)std::pow(4, i)) + "x";
-                if (ImGui::Selectable(label.c_str(), selected)) {
-                    curr_item = i;
-                    render_params.msaa_params.sample_count = (int)std::pow(4, i);
-                }
-            }
-            ImGui::EndCombo();
-        }
-        ImGui::SameLine();
-        static unsigned int shadow_curr_item = 0;
-        if (ImGui::BeginCombo("Shadow Map Resolution", (std::to_string((int)std::pow(4, shadow_curr_item)) + "x").c_str())) {
-            for (int i = 0; i < 3; i++) {
-                bool selected = shadow_curr_item == i;
-                std::string label = std::to_string((int)std::pow(4, i)) + "x";
-                if (ImGui::Selectable(label.c_str(), selected)) {
-                    shadow_curr_item = i;
-                    render_params.shadow_params.sample_count = (int)std::pow(4, i);
-                }
-            }
-            ImGui::EndCombo();
-        }
-        ImGui::PopItemWidth();
-        ImGui::SameLine();
-    }
-
-    separator();
+    // TODO
+    //ImGui::Text("MSAA:");
+    //if (render_params.render_path_type == RenderPathType::Forward) {
+    //    ImGui::PushItemWidth(50.0f);
+    //    static unsigned int curr_item = 1;
+    //    if (ImGui::BeginCombo("MSAA", (std::to_string((int)std::pow(4, curr_item)) + "x").c_str())) {
+    //        for (int i = 0; i < 3; i++) {
+    //            bool selected = curr_item == i;
+    //            std::string label = std::to_string((int)std::pow(4, i)) + "x";
+    //            if (ImGui::Selectable(label.c_str(), selected)) {
+    //                curr_item = i;
+    //                render_params.msaa_params.sample_count = (int)std::pow(4, i);
+    //            }
+    //        }
+    //        ImGui::EndCombo();
+    //    }
+    //    ImGui::SameLine();
+    //    static unsigned int shadow_curr_item = 0;
+    //    if (ImGui::BeginCombo("Shadow Map Resolution", (std::to_string((int)std::pow(4, shadow_curr_item)) + "x").c_str())) {
+    //        for (int i = 0; i < 3; i++) {
+    //            bool selected = shadow_curr_item == i;
+    //            std::string label = std::to_string((int)std::pow(4, i)) + "x";
+    //            if (ImGui::Selectable(label.c_str(), selected)) {
+    //                shadow_curr_item = i;
+    //                render_params.shadow_params.sample_count = (int)std::pow(4, i);
+    //            }
+    //        }
+    //        ImGui::EndCombo();
+    //    }
+    //    ImGui::PopItemWidth();
+    //    ImGui::SameLine();
+    //}
+    // 
+    //separator();
 
     ImGui::Text("Effect:");
     ImGui::Checkbox("skybox", &render_params.effect_params.skybox); ImGui::SameLine();

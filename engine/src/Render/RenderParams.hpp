@@ -23,7 +23,7 @@ struct ShadowParams {
 };
 
 struct PostProcessingParams {
-    bool bloom = false;
+    bool bloom = true;
     bool hdr = true;
     bool gamma = true;
     bool fxaa = true;
