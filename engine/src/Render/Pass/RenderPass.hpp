@@ -7,6 +7,8 @@ class RenderPassContext;
 
 static inline constexpr float DEFAULT_RENDER_RESOLUTION_X = 1920.0f;
 static inline constexpr float DEFAULT_RENDER_RESOLUTION_Y = 1080.0f;
+// for debug visualization
+static inline int PickingColorIDFactor = 256 * 256 * 256 / 500;
 
 // Interface class
 // A RenderPass describes draw work; RenderGraph owns the render targets it writes to.
@@ -23,6 +25,7 @@ public:
 	enum class Type {
 		ZPre,
 		Picking,
+		Outline,
 		SkyBox,
 		Shadow,
 		Forward,
@@ -30,15 +33,17 @@ public:
 		DeferredLighting,
 		Transparent,
 
+        WireFrame,
+        CheckerBoard,
+        Normal,
+        RayTracing,
+
 		// post process
 		Bloom,
-		Outline,
-		Combined,
+		FXAA,
+		ColorGrading,
 
-		WireFrame,
-		CheckerBoard,
-		Normal,
-		RayTracing,
+        Final,
 	};
 
 	RenderPass() : m_rhi(RenderSourceData::rhi) {}

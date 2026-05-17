@@ -14,7 +14,7 @@ public:
     RenderSourceData& renderSourceData() const;
     RhiTexture* texture(const std::string& resource_name) const;
     RhiFrameBuffer* frameBuffer(const std::string& resource_name) const;
-    RhiFrameBuffer* targetFrameBuffer(const std::string& target_name = RGTarget::Main) const;
+    RhiFrameBuffer* targetFrameBuffer(const std::string& target_name) const;
     RhiFrameBuffer* defaultFrameBuffer() const;
     const std::vector<unsigned int>& cubeDepthTextures(const std::string& target_name = RGTarget::ShadowPointDepth) const;
     unsigned int cubeDepthFrameBuffer(const std::string& target_name = RGTarget::ShadowPointDepth) const;

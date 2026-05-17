@@ -30,8 +30,6 @@ const char* passTypeName(RenderPass::Type type)
         return "Bloom";
     case RenderPass::Type::Outline:
         return "Outline";
-    case RenderPass::Type::Combined:
-        return "Combined";
     case RenderPass::Type::WireFrame:
         return "WireFrame";
     case RenderPass::Type::CheckerBoard:
@@ -40,6 +38,8 @@ const char* passTypeName(RenderPass::Type type)
         return "Normal";
     case RenderPass::Type::RayTracing:
         return "RayTracing";
+    case RenderPass::Type::Final:
+        return "Final";
     default:
         return "Unknown";
     }
@@ -65,9 +65,9 @@ const char* targetKindName(RenderTargetType kind)
     switch (kind)
     {
     case RenderTargetType::FrameBuffer:
-        return "texture";
-    case RenderTargetType::Backbuffer:
-        return "backbuffer";
+        return "framebuffer";
+    case RenderTargetType::ScreenFrameBuffer:
+        return "screen-framebuffer";
     case RenderTargetType::CubeDepth:
         return "cube-depth";
     default:

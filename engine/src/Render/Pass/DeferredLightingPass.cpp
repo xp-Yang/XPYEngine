@@ -8,7 +8,7 @@ DeferredLightingPass::DeferredLightingPass()
 
 void DeferredLightingPass::draw(RenderPassContext& context)
 {
-	RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+	RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
 	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferPosition);
 	if (!framebuffer || !gbuffer_framebuffer)
 		return;
@@ -73,7 +73,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	gbuffer_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
 
 	// lights
-	//static RenderShaderObject* point_light_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
+	//static RenderShaderObject* point_light_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
 	//for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
 	//	const auto& render_point_light_sub_mesh_data = render_point_light_data.render_sub_mesh_data;
 	//	point_light_shader->start_using();

@@ -50,7 +50,7 @@ void MainCanvas::render()
         ImVec2 content_size = ImGui::GetContentRegionAvail();
         ImVec2 content_pos = ImVec2(ImGui::GetWindowContentRegionMin().x + window_pos.x, ImGui::GetWindowContentRegionMin().y + window_pos.y);
         sync_camera_projection_to_content(content_size);
-        ImTextureID scene_tex_id = to_imgui_texture_id(render_system->renderGraphTextureOf(RGResource::FinalColor));
+        ImTextureID scene_tex_id = to_imgui_texture_id(render_system->renderGraphTextureOf(RGResource::SceneColor));
         ImGui::SetCursorScreenPos(content_pos);
         ImGui::Image(scene_tex_id, content_size, ImVec2(0, 1), ImVec2(1, 0)); // fill content region
         ImGuiIO& io = ImGui::GetIO();

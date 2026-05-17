@@ -6,8 +6,7 @@
 
 #include <Logical/Framework/World/Scene.hpp>
 #include <Logical/Animation/AnimationSystem.hpp>
-#include <unordered_map>
-#include <unordered_set>
+
 #include "GlobalContext.hpp"
 
 RenderSystem::RenderSystem()

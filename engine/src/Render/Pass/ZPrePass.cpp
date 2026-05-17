@@ -8,13 +8,13 @@ ZPrePass::ZPrePass()
 
 void ZPrePass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
     if (!framebuffer)
         return;
     framebuffer->bind();
     framebuffer->clear();
 
-    static RenderShaderObject* depth_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
+    static RenderShaderObject* depth_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
     depth_shader->start_using();
     Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
     Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;

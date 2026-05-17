@@ -12,6 +12,7 @@ public:
 protected:
 	void extractBright(RenderPassContext& context);
 	void blur(RenderPassContext& context);
+	void writeToScene(RenderPassContext& context);
 };
 
 #endif

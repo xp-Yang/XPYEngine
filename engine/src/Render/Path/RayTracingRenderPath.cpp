@@ -1,12 +1,12 @@
 #include "RayTracingRenderPath.hpp"
 
 #include "../Pass/RayTracingPass.hpp"
-#include "../Pass/CombinePass.hpp"
+#include "../Pass/FinalPass.hpp"
 
 RayTracingRenderPath::RayTracingRenderPath()
 {
     m_ray_tracing_pass = std::make_unique<RayTracingPass>();
-    m_combine_pass = std::make_unique<CombinePass>();
+    m_final_pass = std::make_unique<FinalPass>();
 }
 
 void RayTracingRenderPath::render(RenderSourceData& render_source_data)
@@ -18,15 +18,12 @@ void RayTracingRenderPath::render(RenderSourceData& render_source_data)
         .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
 
-    m_render_graph.addPass(RenderPass::Type::Combined, m_combine_pass.get())
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .read(RGResource::SceneColor)
-        .read(RGResource::SceneDepth)
-        .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
-        .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::Backbuffer, RenderTargetType::Backbuffer);
+    m_render_graph.addPass(RenderPass::Type::Final, m_final_pass.get())
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth)
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
 
-    m_render_graph.markOutput(RGResource::FinalColor);
+    m_render_graph.markOutput(RGResource::SceneColor);
     m_render_graph.compile();
     m_render_graph.execute(render_source_data);
 }

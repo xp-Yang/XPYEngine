@@ -30,7 +30,7 @@ RhiFrameBuffer* RenderPassContext::targetFrameBuffer(const std::string& target_n
 
 RhiFrameBuffer* RenderPassContext::defaultFrameBuffer() const
 {
-    const RenderGraphRenderTarget* target = m_graph->findRenderTarget(m_node->m_type, RGTarget::Backbuffer);
+    const RenderGraphRenderTarget* target = m_graph->findRenderTarget(m_node->m_type, RGTarget::ScreenFrameBuffer);
     return target ? target->framebuffer.get() : nullptr;
 }
 

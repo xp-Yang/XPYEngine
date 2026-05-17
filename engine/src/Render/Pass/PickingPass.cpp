@@ -9,13 +9,13 @@ PickingPass::PickingPass()
 void PickingPass::draw(RenderPassContext& context)
 {
     // render for picking
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
     if (!framebuffer)
         return;
     framebuffer->bind();
     framebuffer->clear();
 
-    static RenderShaderObject* picking_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
+    static RenderShaderObject* picking_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
     picking_shader->start_using();
 
     picking_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
@@ -34,7 +34,7 @@ void PickingPass::draw(RenderPassContext& context)
             picking_shader->setInt("bone_count", 0);
         }
         picking_shader->setMatrix("model", 1, render_node->model_matrix);
-        int id = render_node->node_id.object_id;
+        int id = render_node->node_id.object_id * PickingColorIDFactor;
         int r = (id & 0x000000FF) >> 0;
         int g = (id & 0x0000FF00) >> 8;
         int b = (id & 0x00FF0000) >> 16;

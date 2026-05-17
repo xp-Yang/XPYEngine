@@ -180,9 +180,9 @@ RenderShaderObject *RenderShaderObject::getShaderObject(const ShaderType &type)
         Shader shader = Shader{resource_dir + "/shader/mesh.vs", resource_dir + "/shader/fowardLighting_pbr.fs"};
         return new RenderShaderObject(shader);
     }
-    case ShaderType::OneColorShader:
+    case ShaderType::SingleColorShader:
     {
-        Shader shader = Shader{resource_dir + "/shader/mesh.vs", resource_dir + "/shader/oneColor.fs"};
+        Shader shader = Shader{resource_dir + "/shader/mesh.vs", resource_dir + "/shader/singleColor.fs"};
         return new RenderShaderObject(shader);
     }
     case ShaderType::SkyboxShader:
@@ -210,9 +210,9 @@ RenderShaderObject *RenderShaderObject::getShaderObject(const ShaderType &type)
         Shader shader = Shader{resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/rayTracing.fs"};
         return new RenderShaderObject(shader);
     }
-    case ShaderType::CombineShader:
+    case ShaderType::BloomShader:
     {
-        Shader shader = Shader{resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/combine.fs"};
+        Shader shader = Shader{resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/bloom.fs"};
         return new RenderShaderObject(shader);
     }
     case ShaderType::CubeMapShader:

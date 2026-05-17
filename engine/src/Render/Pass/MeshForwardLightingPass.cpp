@@ -19,7 +19,7 @@ void MeshForwardLightingPass::enablePBR(bool pbr)
 
 void MeshForwardLightingPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+    RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
     if (!framebuffer)
         return;
     framebuffer->bind();

@@ -12,7 +12,8 @@
 #include "../Pass/BloomPass.hpp"
 #include "../Pass/PickingPass.hpp"
 #include "../Pass/OutlinePass.hpp"
-#include "../Pass/CombinePass.hpp"
+#include "../Pass/FXAAPass.hpp"
+#include "../Pass/FinalPass.hpp"
 
 #include "Render/Graph/RenderGraphDumper.hpp"
 #include "../RenderSystem.hpp"
@@ -28,10 +29,11 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
     m_render_passes[RenderPass::Type::Transparent] = std::make_unique<TransparentPass>();
     m_render_passes[RenderPass::Type::Bloom] = std::make_unique<BloomPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
-    m_render_passes[RenderPass::Type::Combined] = std::make_unique<CombinePass>();
+    m_render_passes[RenderPass::Type::FXAA] = std::make_unique<FXAAPass>();
     m_render_passes[RenderPass::Type::WireFrame] = std::make_unique<WireFramePass>();
     m_render_passes[RenderPass::Type::CheckerBoard] = std::make_unique<CheckerBoardPass>();
     m_render_passes[RenderPass::Type::Normal] = std::make_unique<NormalPass>();
+    m_render_passes[RenderPass::Type::Final] = std::make_unique<FinalPass>();
 
     ref_render_system = render_system;
 }
@@ -91,10 +93,10 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
     }
 
     auto& lighting_node = m_render_graph.addPass(RenderPass::Type::DeferredLighting, pass(RenderPass::Type::DeferredLighting))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .read(RGResource::GBufferPosition)
         .read(RGResource::GBufferNormal)
         .read(RGResource::ShadowDirectionalDepth)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGBA16F)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH)
         .setSetup([this, &render_params](RenderPass& render_pass)
@@ -119,70 +121,60 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
     }
 
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .setEnabled(render_params.effect_params.skybox)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth);
-
-    m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .setEnabled(bloom_used)
-        .setDisabledExecution(RGDisabledExecution::Clear)
-        .read(RGResource::SceneColor)
-        .color(RGResource::BloomColor, RhiTexture::Format::RGB16F)
-        .target(RGTarget::BloomPingPong, RenderTargetType::FrameBuffer)
-        .color(RGResource::BloomPingPongColor, RhiTexture::Format::RGB16F);
-
-    m_render_graph.addPass(RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .setEnabled(checkerboard_enabled)
-        .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
-
-    m_render_graph.addPass(RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .setEnabled(render_params.effect_params.show_normal)
-        .readWrite(RGResource::SceneColor)
-        .readWrite(RGResource::SceneDepth);
-
-    m_render_graph.addPass(RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .setEnabled(render_params.effect_params.wireframe)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH)
+        .setEnabled(!render_source_data.picked_ids.empty());
 
-    auto& combine_node = m_render_graph.addPass(RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
+    m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
+        .setEnabled(bloom_used)
+        .setDisabledExecution(RGDisabledExecution::Clear)
+        .readWrite(RGResource::SceneColor)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .read(RGResource::SceneColor)
-        .read(RGResource::SceneDepth)
-        .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
-        .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::Backbuffer, RenderTargetType::Backbuffer)
-        .setSetup([&render_params](RenderPass& render_pass)
-        {
-            static_cast<CombinePass&>(render_pass).enableFXAA(render_params.post_processing_params.fxaa);
-        });
+        .color(RGResource::BloomBrightColor, RhiTexture::Format::RGB16F)
+        .target(RGTarget::BloomPingPong1, RenderTargetType::FrameBuffer)
+        .color(RGResource::BloomPingPong1Color, RhiTexture::Format::RGB16F)
+        .target(RGTarget::BloomPingPong2, RenderTargetType::FrameBuffer)
+        .color(RGResource::BloomPingPong2Color, RhiTexture::Format::RGB16F);
 
-    if (bloom_used)
-        combine_node.read(RGResource::BloomColor);
+    m_render_graph.addPass(RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
+        .setEnabled(checkerboard_enabled)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+        .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
+
+    m_render_graph.addPass(RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
+        .setEnabled(render_params.effect_params.wireframe)
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth);
+
+    m_render_graph.addPass(RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
+        .setEnabled(render_params.effect_params.show_normal)
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth);
+
+    m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
+        .setEnabled(render_params.post_processing_params.fxaa)
+        .readWrite(RGResource::SceneColor);
+
+    m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth)
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
 
     m_render_graph.markOutput(RGResource::PickingColor);
-    if (!bloom_used)
-        m_render_graph.markOutput(RGResource::BloomColor);
-    m_render_graph.markOutput(RGResource::FinalColor);
+    m_render_graph.markOutput(RGResource::SceneColor);
 
     m_render_graph.compile();
     m_render_graph.execute(render_source_data);

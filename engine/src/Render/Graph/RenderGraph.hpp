@@ -79,7 +79,7 @@ private:
     void ensureCubeDepthTargetCapacity(RenderPass::Type type, size_t count);
     void clearPassTargets(const RenderGraphPassNode& node);
     std::unique_ptr<RhiFrameBuffer> createFrameBuffer(const FrameBufferDesc& desc) const;
-    std::unique_ptr<RhiFrameBuffer> createBackbufferFrameBuffer() const;
+    std::unique_ptr<RhiFrameBuffer> createDefaultFrameBuffer() const;
     void resolveResourceDependencies();
     void resolveRead(RenderGraphPassNode& node, const RGResourceName& resource_name);
     void resolveReadWrite(RenderGraphPassNode& node, const RGResourceName& resource_name);

@@ -73,7 +73,6 @@ void RenderGraph::compile()
 {
     m_ordered_nodes.clear();
     resolveResourceDependencies();
-    ensureRenderTargets();
 
     std::unordered_set<RenderPass::Type> visiting;
     std::unordered_set<RenderPass::Type> visited;
@@ -95,6 +94,8 @@ void RenderGraph::compile()
         for (const auto& node : m_nodes)
             visit(node.m_type, visiting, visited);
     }
+
+    ensureRenderTargets();
 }
 
 void RenderGraph::execute(RenderSourceData& render_source_data)
@@ -140,8 +141,9 @@ const std::vector<unsigned int>& RenderGraph::cubeDepthTextures(RenderPass::Type
 
 void RenderGraph::ensureRenderTargets()
 {
-    for (RenderGraphPassNode& node : m_nodes)
+    for (RenderGraphPassNode* node_ : m_ordered_nodes)
     {
+        auto& node = *node_;
         for (const RenderTargetDeclaration& target_decl : node.m_targets)
         {
             RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
@@ -157,8 +159,9 @@ void RenderGraph::ensureRenderTargets()
         }
     }
 
-    for (RenderGraphPassNode& node : m_nodes)
+    for (RenderGraphPassNode* node_ : m_ordered_nodes)
     {
+        auto& node = *node_;
         for (const RenderTargetDeclaration& target_decl : node.m_targets)
         {
             RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
@@ -217,7 +220,7 @@ void RenderGraph::ensureRenderTargets()
                 }
                 continue;
             }
-            else if (target_decl.render_target_type == RenderTargetType::Backbuffer)
+            else if (target_decl.render_target_type == RenderTargetType::ScreenFrameBuffer)
             {
                 const bool recreate = !target.framebuffer ||
                                       !samePixelSize(target.framebuffer_desc.size, m_frame_size);
@@ -225,7 +228,7 @@ void RenderGraph::ensureRenderTargets()
                 {
                     target.framebuffer_desc = {};
                     target.framebuffer_desc.size = m_frame_size;
-                    target.framebuffer = createBackbufferFrameBuffer();
+                    target.framebuffer = createDefaultFrameBuffer();
                 }
                 continue;
             }
@@ -305,7 +308,7 @@ void RenderGraph::clearPassTargets(const RenderGraphPassNode& node)
         TargetKey key{ node.m_type, decalred_target.name };
         RenderGraphRenderTarget* target = findRenderTarget(key.pass, key.name);
         if (target) {
-            if (decalred_target.render_target_type == RenderTargetType::FrameBuffer || decalred_target.render_target_type == RenderTargetType::Backbuffer)
+            if (decalred_target.render_target_type == RenderTargetType::FrameBuffer || decalred_target.render_target_type == RenderTargetType::ScreenFrameBuffer)
             {
                 if (target->framebuffer)
                 {
@@ -392,7 +395,7 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const FrameBuffer
     return framebuffer;
 }
 
-std::unique_ptr<RhiFrameBuffer> RenderGraph::createBackbufferFrameBuffer() const
+std::unique_ptr<RhiFrameBuffer> RenderGraph::createDefaultFrameBuffer() const
 {
     return std::unique_ptr<RhiFrameBuffer>(m_rhi->newFrameBuffer(RhiAttachment(), m_frame_size));
 }

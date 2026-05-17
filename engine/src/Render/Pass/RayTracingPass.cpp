@@ -8,7 +8,7 @@ RayTracingPass::RayTracingPass()
 
 void RayTracingPass::draw(RenderPassContext& context)
 {
-	RhiFrameBuffer* framebuffer = context.targetFrameBuffer();
+	RhiFrameBuffer* framebuffer = context.targetFrameBuffer(RGTarget::Main);
 	if (!framebuffer)
 		return;
 	framebuffer->bind();

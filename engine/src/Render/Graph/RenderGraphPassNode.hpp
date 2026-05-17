@@ -27,14 +27,15 @@ static inline RGResourceName GBufferDepth = "GBuffer.Depth";
 static inline RGResourceName SceneColor = "Scene.Color";
 static inline RGResourceName SceneDepth = "Scene.Depth";
               
-static inline RGResourceName BloomColor = "Bloom.Color";
-static inline RGResourceName BloomPingPongColor = "Bloom.PingPongColor";
+static inline RGResourceName BloomBrightColor = "Bloom.BrightColor";
+static inline RGResourceName BloomPingPong1Color = "Bloom.PingPong1Color";
+static inline RGResourceName BloomPingPong2Color = "Bloom.PingPong2Color";
               
 static inline RGResourceName OutlineMaskColor = "Outline.MaskColor";
 static inline RGResourceName OutlineMaskDepth = "Outline.MaskDepth";
               
-static inline RGResourceName FinalColor = "Final.Color";
-static inline RGResourceName FinalDepth = "Final.Depth";
+//static inline RGResourceName FinalColor = "Final.Color";
+//static inline RGResourceName FinalDepth = "Final.Depth";
 }
 
 // 渲染目标名，描述这些纹理资源挂载到哪个framebuffer上
@@ -42,9 +43,10 @@ namespace RGTarget {
 // 普通framebuffer
 static inline RGTargetName Main = "Main";
 // 窗口默认framebuffer
-static inline RGTargetName Backbuffer = "Backbuffer";
+static inline RGTargetName ScreenFrameBuffer = "ScreenFrameBuffer";
 // BloomPass 的辅助 pingpong framebuffer
-static inline RGTargetName BloomPingPong = "Bloom.PingPong";
+static inline RGTargetName BloomPingPong1 = "Bloom.PingPong1";
+static inline RGTargetName BloomPingPong2 = "Bloom.PingPong2";
 // OutlinePass 的辅助 mask framebuffer
 static inline RGTargetName OutlineMask = "Outline.Mask";
 // ShadowPass 的点光源 cubemap depth 的framebuffer
@@ -64,11 +66,11 @@ enum class RGDisabledExecution {
 // TODO 放进rhi?
 enum class RenderTargetType {
     FrameBuffer,
-    Backbuffer,
+    ScreenFrameBuffer,
     CubeDepth,
 };
 
-// Pass 内部一个 framebuffer/cubemap/backbuffer 目标的声明。
+// Pass 内部一个 framebuffer/cubemap/screenFrameBuffer 目标的声明。
 struct RenderTargetDeclaration {
     RGTargetName name;
     RenderTargetType render_target_type{ RenderTargetType::FrameBuffer };

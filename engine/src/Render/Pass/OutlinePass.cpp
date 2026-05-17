@@ -19,7 +19,7 @@ void OutlinePass::draw(RenderPassContext& context)
     }
     for (auto picked_id : context.renderSourceData().picked_ids) {
         // render the picked one
-        static RenderShaderObject* one_color_shader = RenderShaderObject::getShaderObject(ShaderType::OneColorShader);
+        static RenderShaderObject* one_color_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
         one_color_shader->start_using();
         one_color_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
         one_color_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
@@ -41,7 +41,7 @@ void OutlinePass::draw(RenderPassContext& context)
                 one_color_shader->setInt("bone_count", 0);
             }
             one_color_shader->setMatrix("model", 1, render_node->model_matrix);
-            int id = picked_id;
+            int id = picked_id * PickingColorIDFactor;
             int r = (id & 0x000000FF) >> 0;
             int g = (id & 0x0000FF00) >> 8;
             int b = (id & 0x00FF0000) >> 16;
@@ -50,13 +50,13 @@ void OutlinePass::draw(RenderPassContext& context)
             m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
         }
     }
-    auto source_map = mask_framebuffer->colorAttachmentAt(0)->texture()->id();
 
 
     RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
     if (!target_framebuffer)
         return;
     target_framebuffer->bind();
+    auto source_map = mask_framebuffer->colorAttachmentAt(0)->texture()->id();
     auto obj_depth_map = mask_framebuffer->depthAttachment()->texture()->id();
     static RenderShaderObject* outline_shader = RenderShaderObject::getShaderObject(ShaderType::OutlineShader);
     outline_shader->start_using();

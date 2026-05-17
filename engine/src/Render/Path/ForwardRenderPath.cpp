@@ -5,7 +5,7 @@
 #include "../Pass/PickingPass.hpp"
 #include "../Pass/SkyBoxPass.hpp"
 #include "../Pass/OutlinePass.hpp"
-#include "../Pass/CombinePass.hpp"
+#include "../Pass/FinalPass.hpp"
 
 #include "Render/Graph/RenderGraphDumper.hpp"
 #include "../RenderSystem.hpp"
@@ -17,7 +17,7 @@ ForwardRenderPath::ForwardRenderPath(RenderSystem *render_system)
     m_render_passes[RenderPass::Type::Shadow] = std::make_unique<ShadowPass>();
     m_render_passes[RenderPass::Type::Forward] = std::make_unique<MeshForwardLightingPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
-    m_render_passes[RenderPass::Type::Combined] = std::make_unique<CombinePass>();
+    m_render_passes[RenderPass::Type::Final] = std::make_unique<FinalPass>();
 
     ref_render_system = render_system;
 }
@@ -47,16 +47,16 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
         .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH);
 
     m_render_graph.addPass(RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .setEnabled(render_params.shadow_params.enable)
         .setDisabledExecution(RGDisabledExecution::Clear)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
         .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth, 8);
 
     m_render_graph.addPass(RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .read(RGResource::ShadowDirectionalDepth)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGB8, 0, 4)
         .depthStencil(RGResource::SceneDepth, RhiTexture::Format::DEPTH24STENCIL8, 4)
         .setSetup([this, &render_params](RenderPass& render_pass)
@@ -68,33 +68,24 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
         });
 
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .setEnabled(render_params.effect_params.skybox)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .readWrite(RGResource::SceneColor)
         .readWrite(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
 
-    m_render_graph.addPass(RenderPass::Type::Combined, pass(RenderPass::Type::Combined))
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .read(RGResource::SceneColor)
-        .read(RGResource::SceneDepth)
-        .color(RGResource::FinalColor, RhiTexture::Format::RGB8)
-        .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::Backbuffer, RenderTargetType::Backbuffer)
-        .setSetup([&render_params](RenderPass& render_pass)
-        {
-            static_cast<CombinePass&>(render_pass).enableFXAA(render_params.post_processing_params.fxaa);
-        });
+    m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
+        .readWrite(RGResource::SceneColor)
+        .readWrite(RGResource::SceneDepth)
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
 
     m_render_graph.markOutput(RGResource::PickingColor);
-    m_render_graph.markOutput(RGResource::FinalColor);
+    m_render_graph.markOutput(RGResource::SceneColor);
 
     m_render_graph.compile();
     m_render_graph.execute(render_source_data);
