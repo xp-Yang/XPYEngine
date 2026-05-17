@@ -1,7 +1,9 @@
 #include "RenderGraphDumper.hpp"
 
 #include <algorithm>
+#include <map>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace {
@@ -28,6 +30,10 @@ const char* passTypeName(RenderPass::Type type)
         return "Transparent";
     case RenderPass::Type::Bloom:
         return "Bloom";
+    case RenderPass::Type::FXAA:
+        return "FXAA";
+    case RenderPass::Type::ColorGrading:
+        return "ColorGrading";
     case RenderPass::Type::Outline:
         return "Outline";
     case RenderPass::Type::WireFrame:
@@ -83,6 +89,36 @@ std::string bindingName(const RhiAttachmentDesc& desc)
         stream << desc.color_attachment_index;
     return stream.str();
 }
+
+bool isDepthAttachment(RhiAttachment::Type attachment)
+{
+    return attachment == RhiAttachment::Type::Depth || attachment == RhiAttachment::Type::DepthStencil;
+}
+
+void appendUnique(std::vector<RenderPass::Type>& values, RenderPass::Type value)
+{
+    if (std::find(values.begin(), values.end(), value) == values.end())
+        values.push_back(value);
+}
+
+void appendUnique(std::vector<std::string>& values, const std::string& value)
+{
+    if (std::find(values.begin(), values.end(), value) == values.end())
+        values.push_back(value);
+}
+
+void appendPassNames(std::vector<std::string>& out, const std::vector<RenderPass::Type>& values)
+{
+    for (RenderPass::Type value : values)
+        appendUnique(out, passTypeName(value));
+}
+
+void appendPasses(std::vector<RenderPass::Type>& out, const std::vector<RenderPass::Type>& values)
+{
+    for (RenderPass::Type value : values)
+        appendUnique(out, value);
+}
+
 
 const char* formatName(RhiTexture::Format format)
 {
@@ -176,22 +212,152 @@ RenderGraphDumper::RenderGraphDumper(const RenderGraph& graph)
 
 std::vector<std::string> RenderGraphDumper::resourceNames() const
 {
+    std::vector<std::string> names;
+    for (const RenderGraphResourceDebugInfo& info : resourceInfos())
+        names.push_back(info.name);
+    return names;
+}
+
+std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() const
+{
     std::unordered_set<RenderPass::Type> compiled_passes;
     compiled_passes.reserve(m_graph.m_ordered_nodes.size());
-    for (RenderGraphPassNode* node : m_graph.m_ordered_nodes)
-        compiled_passes.insert(node->m_type);
+    std::map<RenderPass::Type, size_t> pass_order;
+    for (size_t i = 0; i < m_graph.m_ordered_nodes.size(); ++i)
+    {
+        RenderGraphPassNode* node = m_graph.m_ordered_nodes[i];
+        if (node)
+        {
+            compiled_passes.insert(node->m_type);
+            pass_order[node->m_type] = i;
+        }
+    }
 
-    std::vector<std::string> names;
-    names.reserve(m_graph.m_resources.size());
+    std::vector<RGResourceName> ordered_names;
+    ordered_names.reserve(m_graph.m_resources.size());
+    std::unordered_set<RGResourceName> emitted_names;
+
+    auto appendResourceIfCurrent = [&](const RGResourceName& resource_name, RenderPass::Type pass)
+    {
+        auto it = m_graph.m_resources.find(resource_name);
+        if (it == m_graph.m_resources.end() || it->second.last_modifier_pass != pass)
+            return;
+        if (emitted_names.insert(resource_name).second)
+            ordered_names.push_back(resource_name);
+    };
+
+    for (RenderGraphPassNode* node : m_graph.m_ordered_nodes)
+    {
+        if (!node)
+            continue;
+        for (const RGResourceName& resource_name : node->m_read_writes)
+            appendResourceIfCurrent(resource_name, node->m_type);
+        for (const ResourceDeclaration& write : node->m_writes)
+            appendResourceIfCurrent(write.name, node->m_type);
+    }
+
+    std::vector<RGResourceName> remaining_names;
     for (const auto& resource_pair : m_graph.m_resources)
     {
         const RenderGraphResource& resource = resource_pair.second;
+        if (emitted_names.find(resource_pair.first) != emitted_names.end())
+            continue;
         if (compiled_passes.find(resource.owner_pass) != compiled_passes.end() ||
             compiled_passes.find(resource.last_modifier_pass) != compiled_passes.end())
-            names.push_back(resource_pair.first);
+            remaining_names.push_back(resource_pair.first);
     }
-    std::sort(names.begin(), names.end());
-    return names;
+    std::sort(remaining_names.begin(), remaining_names.end());
+    for (const RGResourceName& resource_name : remaining_names)
+        ordered_names.push_back(resource_name);
+
+    std::unordered_map<RGResourceName, std::vector<RenderPass::Type>> direct_history;
+    std::unordered_map<RGResourceName, std::vector<RenderPass::Type>> contributors;
+    for (RenderGraphPassNode* node : m_graph.m_ordered_nodes)
+    {
+        if (!node)
+            continue;
+
+        const bool clear_writes = !node->m_enabled && node->m_disabled_execution == RGDisabledExecution::Clear;
+        if (!node->m_enabled && !clear_writes)
+            continue;
+
+        std::vector<RenderPass::Type> input_contributors;
+        if (node->m_enabled)
+        {
+            for (const RGResourceName& resource_name : node->m_reads)
+                appendPasses(input_contributors, contributors[resource_name]);
+            for (const RGResourceName& resource_name : node->m_read_writes)
+                appendPasses(input_contributors, contributors[resource_name]);
+        }
+
+        for (const ResourceDeclaration& write : node->m_writes)
+        {
+            direct_history[write.name].clear();
+            contributors[write.name].clear();
+            appendUnique(direct_history[write.name], node->m_type);
+            appendPasses(contributors[write.name], input_contributors);
+            appendUnique(contributors[write.name], node->m_type);
+        }
+
+        if (!node->m_enabled)
+            continue;
+
+        for (const RGResourceName& resource_name : node->m_read_writes)
+        {
+            appendUnique(direct_history[resource_name], node->m_type);
+            appendPasses(contributors[resource_name], input_contributors);
+            appendUnique(contributors[resource_name], node->m_type);
+        }
+    }
+
+    std::vector<RenderGraphResourceDebugInfo> infos;
+    infos.reserve(ordered_names.size());
+    auto sortByExecutionOrder = [&pass_order](std::vector<RenderPass::Type>& values)
+    {
+        std::stable_sort(values.begin(), values.end(),
+            [&pass_order](RenderPass::Type lhs, RenderPass::Type rhs)
+            {
+                const auto lhs_it = pass_order.find(lhs);
+                const auto rhs_it = pass_order.find(rhs);
+                const size_t lhs_order = lhs_it == pass_order.end() ? static_cast<size_t>(-1) : lhs_it->second;
+                const size_t rhs_order = rhs_it == pass_order.end() ? static_cast<size_t>(-1) : rhs_it->second;
+                return lhs_order < rhs_order;
+            });
+    };
+
+    for (const RGResourceName& resource_name : ordered_names)
+    {
+        auto it = m_graph.m_resources.find(resource_name);
+        if (it == m_graph.m_resources.end())
+            continue;
+
+        const RenderGraphResource& resource = it->second;
+        const RhiAttachmentDesc& desc = resource.resource_decl.attachment_desc;
+        RhiTexture* texture = m_graph.textureOf(resource_name);
+
+        RenderGraphResourceDebugInfo info;
+        info.name = resource_name;
+        info.owner_pass = passTypeName(resource.owner_pass);
+        info.last_modifier_pass = passTypeName(resource.last_modifier_pass);
+        info.render_target = resource.resource_decl.owner_target_name;
+        info.attachment = bindingName(desc);
+        info.format = formatName(desc.format);
+        info.color_attachment_index = desc.color_attachment_index;
+        info.sample_count = desc.sample_count;
+        info.transient = desc.transient;
+        info.is_depth = isDepthAttachment(desc.attachment_type);
+        info.size = texture ? texture->pixelSize() : Vec2{};
+        info.texture_id = texture ? texture->id() : 0;
+        std::vector<RenderPass::Type> resource_history = direct_history[resource_name];
+        std::vector<RenderPass::Type> resource_contributors = contributors[resource_name];
+        sortByExecutionOrder(resource_history);
+        sortByExecutionOrder(resource_contributors);
+        appendPassNames(info.direct_history, resource_history);
+        appendPassNames(info.contributors, resource_contributors);
+
+        infos.push_back(info);
+    }
+    return infos;
 }
 
 std::string RenderGraphDumper::graph() const

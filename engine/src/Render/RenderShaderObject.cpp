@@ -251,6 +251,11 @@ RenderShaderObject *RenderShaderObject::getShaderObject(const ShaderType &type)
         Shader shader = Shader{resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/fxaa.fs"};
         return new RenderShaderObject(shader);
     }
+    case ShaderType::DebugTexturePreviewShader:
+    {
+        Shader shader = Shader{resource_dir + "/shader/debugTexturePreview.vs", resource_dir + "/shader/debugTexturePreview.fs"};
+        return new RenderShaderObject(shader);
+    }
     default:
         break;
     }

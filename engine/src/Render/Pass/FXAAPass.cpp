@@ -19,4 +19,6 @@ void FXAAPass::draw(RenderPassContext& context)
     auto color_map = framebuffer->colorAttachmentAt(0)->texture()->id();
     fxaa_shader->setTexture("mainTexture", 0, color_map);
     m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
+
+    m_rhi->setDepthMask(true);
 }

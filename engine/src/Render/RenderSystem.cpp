@@ -44,6 +44,11 @@ std::vector<std::string> RenderSystem::renderGraphResourceNames() const
     return m_curr_path ? m_curr_path->renderGraphResourceNames() : std::vector<std::string>{};
 }
 
+std::vector<RenderGraphResourceDebugInfo> RenderSystem::renderGraphResourceDebugInfos() const
+{
+    return m_curr_path ? m_curr_path->renderGraphResourceDebugInfos() : std::vector<RenderGraphResourceDebugInfo>{};
+}
+
 std::string RenderSystem::renderGraphDebugDump() const
 {
     return m_curr_path ? m_curr_path->renderGraphDebugDump() : std::string{};

@@ -15,6 +15,7 @@ public:
     bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]);
 
     std::vector<std::string> renderGraphResourceNames() const;
+    std::vector<RenderGraphResourceDebugInfo> renderGraphResourceDebugInfos() const;
     std::string renderGraphDebugDump() const;
     std::string renderGraphExecutionDump() const;
 

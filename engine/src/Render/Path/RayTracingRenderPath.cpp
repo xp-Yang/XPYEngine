@@ -2,6 +2,7 @@
 
 #include "../Pass/RayTracingPass.hpp"
 #include "../Pass/FinalPass.hpp"
+#include "Render/Graph/RenderGraphDumper.hpp"
 
 RayTracingRenderPath::RayTracingRenderPath()
 {
@@ -33,7 +34,32 @@ void RayTracingRenderPath::resizeRenderTargets(const Vec2 &pixel_size)
     m_render_graph.setFrameSize(pixel_size);
 }
 
+RhiTexture* RayTracingRenderPath::renderGraphTextureOf(const std::string& resource_name)
+{
+    return m_render_graph.textureOf(resource_name);
+}
+
 bool RayTracingRenderPath::readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
 {
     return m_render_graph.readPixelRGBAOf(resource_name, x, y, out_rgba);
+}
+
+std::vector<std::string> RayTracingRenderPath::renderGraphResourceNames() const
+{
+    return RenderGraphDumper(m_render_graph).resourceNames();
+}
+
+std::vector<RenderGraphResourceDebugInfo> RayTracingRenderPath::renderGraphResourceDebugInfos() const
+{
+    return RenderGraphDumper(m_render_graph).resourceInfos();
+}
+
+std::string RayTracingRenderPath::renderGraphDebugDump() const
+{
+    return RenderGraphDumper(m_render_graph).graph();
+}
+
+std::string RayTracingRenderPath::renderGraphExecutionDump() const
+{
+    return RenderGraphDumper(m_render_graph).executionOrder();
 }

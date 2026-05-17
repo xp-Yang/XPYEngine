@@ -26,6 +26,7 @@ enum class ShaderType {
 	InstancingShader,
 	BillBoardShader,
 	FXAAShader,
+	DebugTexturePreviewShader,
 };
 
 struct Shader {

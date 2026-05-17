@@ -3,6 +3,7 @@
 
 #include "Base/Common.hpp"
 #include "Render/Pass/RenderPass.hpp"
+#include "Render/Graph/RenderGraphDebugInfo.hpp"
 
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@ public:
     virtual bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) { return false; }
 
     virtual std::vector<std::string> renderGraphResourceNames() const { return {}; }
+    virtual std::vector<RenderGraphResourceDebugInfo> renderGraphResourceDebugInfos() const { return {}; }
     virtual std::string renderGraphDebugDump() const { return {}; }
     virtual std::string renderGraphExecutionDump() const { return {}; }
 

@@ -195,6 +195,11 @@ std::vector<std::string> DeferredRenderPath::renderGraphResourceNames() const
     return RenderGraphDumper(m_render_graph).resourceNames();
 }
 
+std::vector<RenderGraphResourceDebugInfo> DeferredRenderPath::renderGraphResourceDebugInfos() const
+{
+    return RenderGraphDumper(m_render_graph).resourceInfos();
+}
+
 std::string DeferredRenderPath::renderGraphDebugDump() const
 {
     return RenderGraphDumper(m_render_graph).graph();

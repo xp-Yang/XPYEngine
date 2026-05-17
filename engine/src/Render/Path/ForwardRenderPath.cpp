@@ -106,6 +106,11 @@ std::vector<std::string> ForwardRenderPath::renderGraphResourceNames() const
     return RenderGraphDumper(m_render_graph).resourceNames();
 }
 
+std::vector<RenderGraphResourceDebugInfo> ForwardRenderPath::renderGraphResourceDebugInfos() const
+{
+    return RenderGraphDumper(m_render_graph).resourceInfos();
+}
+
 std::string ForwardRenderPath::renderGraphDebugDump() const
 {
     return RenderGraphDumper(m_render_graph).graph();
