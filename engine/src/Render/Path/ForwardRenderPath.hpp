@@ -1,10 +1,8 @@
 #ifndef ForwardRenderPath_hpp
 #define ForwardRenderPath_hpp
 
-#include "Render/Graph/RenderGraph.hpp"
 #include "RenderPath.hpp"
 
-class RenderSystem;
 class ForwardRenderPath : public RenderPath {
 public:
     ForwardRenderPath(RenderSystem* render_system);
@@ -16,10 +14,6 @@ public:
     std::vector<RenderGraphResourceDebugInfo> renderGraphResourceDebugInfos() const override;
     std::string renderGraphDebugDump() const override;
     std::string renderGraphExecutionDump() const override;
-
-protected:
-    RenderSystem* ref_render_system{ nullptr };
-    RenderGraph m_render_graph;
 };
 
 #endif // !ForwardRenderPath_hpp

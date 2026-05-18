@@ -651,7 +651,8 @@ protected:
 class Rhi
 {
 public:
-    static Rhi *create();
+    static Rhi* get();
+    static Rhi* create();
 
     // render相关
     void drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1);
@@ -697,5 +698,5 @@ public:
     // virtual RhiSwapChain* newSwapChain();
 
 private:
-    RhiImpl *m_impl{nullptr};
+    RhiImpl* m_impl{ nullptr };
 };

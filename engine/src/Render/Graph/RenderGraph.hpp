@@ -86,7 +86,7 @@ private:
     void resolveResources(RenderGraphPassNode& node);
     void visit(RenderPass::Type type, std::unordered_set<RenderPass::Type>& visiting, std::unordered_set<RenderPass::Type>& visited);
 
-    std::shared_ptr<Rhi> m_rhi{ RenderSourceData::rhi };
+    std::shared_ptr<Rhi> m_rhi{ Rhi::get() };
     Vec2 m_frame_size{ DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y };
     std::vector<RenderGraphPassNode> m_nodes;
     std::vector<RenderGraphPassNode*> m_ordered_nodes;

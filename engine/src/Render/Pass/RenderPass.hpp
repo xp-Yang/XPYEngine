@@ -1,6 +1,7 @@
 #ifndef RenderPass_hpp
 #define RenderPass_hpp
 
+#include "Render/RHI/rhi.hpp"
 #include "Render/RenderSourceData.hpp"
 
 class RenderPassContext;
@@ -48,7 +49,7 @@ public:
         Final,
 	};
 
-	RenderPass() : m_rhi(RenderSourceData::rhi) {}
+	RenderPass() : m_rhi(Rhi::get()) {}
 	RenderPass(const RenderPass&) = delete;
 	RenderPass& operator=(const RenderPass&) = delete;
 	virtual ~RenderPass() = default;

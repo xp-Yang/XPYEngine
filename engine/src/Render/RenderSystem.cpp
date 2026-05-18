@@ -1,5 +1,7 @@
 #include "RenderSystem.hpp"
 
+#include "Render/RHI/rhi.hpp"
+
 #include "Path/ForwardRenderPath.hpp"
 #include "Path/DeferredRenderPath.hpp"
 #include "Path/RayTracingRenderPath.hpp"
@@ -11,7 +13,7 @@
 
 RenderSystem::RenderSystem()
 {
-    RenderSourceData::initRHI();
+    Rhi::create();
 
     m_render_source_data = std::make_shared<RenderSourceData>();
 

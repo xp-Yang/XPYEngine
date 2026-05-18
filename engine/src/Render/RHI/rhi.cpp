@@ -41,6 +41,14 @@ void RhiFrameBuffer::destroyGPU()
 {
 }
 
+Rhi* Rhi::get()
+{
+    static Rhi* rhi = nullptr;
+    if (!rhi)
+        rhi = Rhi::create();
+    return rhi;
+}
+
 Rhi* Rhi::create()
 {
 	Rhi* rhi = new Rhi();

@@ -9,6 +9,8 @@
 
 RhiOpenGL::RhiOpenGL()
 {
+    if (!glfwGetCurrentContext())
+        throw std::runtime_error("OpenGL context must be created before RHI.");
 	// 初始化GLAD，使其可以管理OpenGL函数指针
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 		throw std::runtime_error("Failed to initialize GLAD");

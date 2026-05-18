@@ -21,7 +21,6 @@ void PickingPass::draw(RenderPassContext& context)
     picking_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
     picking_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
 
-    // TODO Unpickable
     for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
         picking_shader->setBool("useSkinning", render_node->use_skinning);

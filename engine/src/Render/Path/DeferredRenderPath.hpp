@@ -1,10 +1,8 @@
 #ifndef DeferredRenderPath_hpp
 #define DeferredRenderPath_hpp
 
-#include "Render/Graph/RenderGraph.hpp"
 #include "RenderPath.hpp"
 
-class RenderSystem;
 class DeferredRenderPath : public RenderPath {
 public:
     DeferredRenderPath(RenderSystem* render_system);
@@ -20,10 +18,6 @@ public:
     std::string renderGraphExecutionDump() const override;
 
     void resizeRenderTargets(const Vec2& pixel_size) override;
-
-protected:
-    RenderSystem* ref_render_system{ nullptr };
-    RenderGraph m_render_graph;
 };
 
 #endif // !DeferredRenderPath_hpp

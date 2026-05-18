@@ -146,12 +146,6 @@ struct RenderCameraData {
 };
 
 struct RenderSourceData {
-    static inline std::shared_ptr<Rhi> rhi;
-    static void initRHI() {
-        // TODO 写成单例？
-        rhi = std::shared_ptr<Rhi>(Rhi::create());
-    }
-
     std::unordered_map<RenderMeshNodeID, std::shared_ptr<RenderMeshNode>, RenderMeshNodeIDHasher> render_mesh_nodes;
     bool has_transparent{ false };
     std::vector<RenderDirectionalLightData> render_directional_light_data_list;

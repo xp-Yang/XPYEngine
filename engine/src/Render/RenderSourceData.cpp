@@ -9,7 +9,7 @@ RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
         return;
     }
 
-    const auto &rhi = RenderSourceData::rhi;
+    const auto &rhi = Rhi::get();
 
     unsigned char *data = texture_->data;
     if (data)
@@ -35,7 +35,7 @@ RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
 
 RenderTextureData::RenderTextureData(const CubeTexture &cube_texture_)
 {
-    id = RenderSourceData::rhi->newCubeTexture(cube_texture_.width, cube_texture_.height, cube_texture_.datas);
+    id = Rhi::get()->newCubeTexture(cube_texture_.width, cube_texture_.height, cube_texture_.datas);
 }
 
 RenderTextureData &RenderTextureData::defaultTexture()
@@ -50,7 +50,7 @@ RenderMeshData::RenderMeshData(std::shared_ptr<Mesh> mesh_data)
     m_vertices_count = mesh_data->vertices.size();
     m_indices_count = mesh_data->indices.size();
 
-    const auto &rhi = RenderSourceData::rhi;
+    const auto &rhi = Rhi::get();
 
     RhiBuffer *vbuf = rhi->newBuffer(RhiBuffer::Immutable, RhiBuffer::VertexBuffer, (void *)(&(mesh_data->vertices[0])), mesh_data->vertices.size() * sizeof(Vertex));
     vbuf->create();
@@ -98,7 +98,7 @@ void RenderMeshData::create_instancing(void *instancing_data, int instancing_dat
     if (instancing_data_size <= 0)
         return;
 
-    const auto &rhi = RenderSourceData::rhi;
+    const auto &rhi = Rhi::get();
 
     m_instancing_capacity_bytes = buffer_capacity_size > 0 ? buffer_capacity_size : instancing_data_size;
     m_instancing_buffer = rhi->newBuffer(RhiBuffer::Dynamic, RhiBuffer::VertexBuffer, nullptr, m_instancing_capacity_bytes);

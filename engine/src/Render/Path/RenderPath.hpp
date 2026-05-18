@@ -3,12 +3,14 @@
 
 #include "Base/Common.hpp"
 #include "Render/Pass/RenderPass.hpp"
+#include "Render/Graph/RenderGraph.hpp"
 #include "Render/Graph/RenderGraphDebugInfo.hpp"
 
 #include <string>
 #include <vector>
 
 // Interface class
+class RenderSystem;
 class RenderPath {
 public:
     virtual void render(RenderSourceData& render_source_data) = 0;
@@ -25,6 +27,8 @@ public:
 
 protected:
     std::unordered_map<RenderPass::Type, std::unique_ptr<RenderPass>> m_render_passes;
+    RenderGraph m_render_graph;
+    RenderSystem* ref_render_system{ nullptr };
 };
 
 #endif // !RenderPipeline_hpp

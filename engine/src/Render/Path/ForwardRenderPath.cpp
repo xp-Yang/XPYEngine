@@ -35,10 +35,6 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
         return m_render_passes.at(type).get();
     };
 
-    // TODO samples更改了，重新初始化整个path，重新创建相关的RenderPass。
-    // configShadowMapSamples(render_params.shadow_map_sample_count);
-    // configSamples(render_params.msaa_sample_count);
-
     m_render_graph.reset();
 
     m_render_graph.addPass(RenderPass::Type::Picking, pass(RenderPass::Type::Picking))
