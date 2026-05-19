@@ -48,7 +48,7 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth, 8);
+        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth);
 
     m_render_graph.addPass(RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
         .read(RGResource::ShadowDirectionalDepth)
@@ -60,7 +60,6 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
             auto& main_pass = static_cast<MeshForwardLightingPass&>(render_pass);
             main_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             main_pass.enableReflection(render_params.effect_params.reflection);
-            main_pass.setCubeMaps(m_render_graph.cubeDepthTextures(RenderPass::Type::Shadow));
         });
 
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))

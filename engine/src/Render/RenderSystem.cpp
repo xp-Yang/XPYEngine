@@ -111,7 +111,7 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         // 初始化 天空盒
         std::shared_ptr<Mesh> skybox_mesh = Mesh::create_cube_mesh();
         const std::string resource_dir = RESOURCE_DIR;
-        CubeTexture skybox_cube_texture = CubeTexture(
+        std::shared_ptr<CubeTexture> skybox_cube_texture = std::make_shared<CubeTexture>(
             resource_dir + "/images/skybox/right.jpg",
             resource_dir + "/images/skybox/left.jpg",
             resource_dir + "/images/skybox/top.jpg",

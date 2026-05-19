@@ -190,7 +190,7 @@ std::string joinTargets(const std::vector<RenderTargetDeclaration>& values)
     return stream.str();
 }
 
-std::string joinWrites(const std::vector<ResourceDeclaration>& values)
+std::string joinWrites(const std::vector<RenderGraphResource>& values)
 {
     std::ostringstream stream;
     for (size_t i = 0; i < values.size(); ++i)
@@ -252,7 +252,7 @@ std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() con
             continue;
         for (const RGResourceName& resource_name : node->m_modifies)
             appendResourceIfCurrent(resource_name, node->m_type);
-        for (const ResourceDeclaration& write : node->m_resources)
+        for (const RenderGraphResource& write : node->m_resources)
             appendResourceIfCurrent(write.name, node->m_type);
     }
 
@@ -290,7 +290,7 @@ std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() con
                 appendPasses(input_contributors, contributors[resource_name]);
         }
 
-        for (const ResourceDeclaration& write : node->m_resources)
+        for (const RenderGraphResource& write : node->m_resources)
         {
             direct_history[write.name].clear();
             contributors[write.name].clear();
@@ -332,14 +332,14 @@ std::vector<RenderGraphResourceDebugInfo> RenderGraphDumper::resourceInfos() con
             continue;
 
         const RenderGraphResource& resource = it->second;
-        const RhiAttachmentDesc& desc = resource.resource_decl.attachment_desc;
+        const RhiAttachmentDesc& desc = resource.attachment_desc;
         RhiTexture* texture = m_graph.textureOf(resource_name);
 
         RenderGraphResourceDebugInfo info;
         info.name = resource_name;
         info.owner_pass = passTypeName(resource.owner_pass);
         info.last_modifier_pass = passTypeName(resource.last_modifier_pass);
-        info.render_target = resource.resource_decl.owner_target_name;
+        info.render_target = resource.owner_target_name;
         info.attachment = bindingName(desc);
         info.format = formatName(desc.format);
         info.color_attachment_index = desc.color_attachment_index;
@@ -392,9 +392,9 @@ std::string RenderGraphDumper::graph() const
             stream << "- " << resource_name
                    << " owner=" << passTypeName(resource.owner_pass)
                    << " last_modifier_pass=" << passTypeName(resource.last_modifier_pass)
-                   << " target=" << resource.resource_decl.owner_target_name
-                   << " binding=" << bindingName(resource.resource_decl.attachment_desc)
-                   << " desc=" << descName(resource.resource_decl.attachment_desc) << "\n";
+                   << " target=" << resource.owner_target_name
+                   << " binding=" << bindingName(resource.attachment_desc)
+                   << " desc=" << descName(resource.attachment_desc) << "\n";
         }
     }
 

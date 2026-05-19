@@ -76,13 +76,15 @@ enum class RenderTargetType {
 // Pass 内部一个 framebuffer/cubemap/screenFrameBuffer 目标的声明。
 struct RenderTargetDeclaration {
     RGTargetName name;
+    RenderPass::Type owner_pass;
     RenderTargetType render_target_type{ RenderTargetType::FrameBuffer };
-    int initial_cube_map_count{ 0 };
 };
 
 // Pass 写出的一个 resource
-struct ResourceDeclaration {
+struct RenderGraphResource {
     RGResourceName name;
+    RenderPass::Type owner_pass;
+    RenderPass::Type last_modifier_pass; //在声明阶段无法正确赋值
     RGTargetName owner_target_name;
     RhiAttachmentDesc attachment_desc;
 };
@@ -93,7 +95,7 @@ public:
     RenderGraphPassNode(RenderPass::Type type, RenderPass* pass);
 
     // 声明renderTarget，可能是多个
-    RenderGraphPassNode& target(const RGTargetName& target_name, RenderTargetType type, int initial_cube_map_count = 0);
+    RenderGraphPassNode& target(const RGTargetName& target_name, RenderTargetType type);
 
     // 声明所需的资源，表明pass将从该resource采样
     RenderGraphPassNode& read(const RGResourceName& resource_name);
@@ -131,8 +133,7 @@ private:
     std::vector<RGResourceName> m_reads;
     std::vector<RGResourceName> m_modifies;
     // 记录声明的写出的resource的targetName和Attachment信息
-    // RenderGraph
-    std::vector<ResourceDeclaration> m_resources;
+    std::vector<RenderGraphResource> m_resources;
     // 记录声明的RGTargetName和RenderTargetType信息，
     // RenderGraph的RenderGraphRenderTarget使用这些信息，
     // 用于创建framebuffer并记录framebuffer和targetName RenderPass的对应关系

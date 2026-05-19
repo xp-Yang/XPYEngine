@@ -66,7 +66,7 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
         .setDisabledExecution(RGDisabledExecution::Clear)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth, 8);
+        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth);
 
     auto& gbuffer_node = m_render_graph.addPass(RenderPass::Type::GBuffer, pass(RenderPass::Type::GBuffer))
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
@@ -103,7 +103,6 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
         {
             auto& lighting_pass = static_cast<DeferredLightingPass&>(render_pass);
             lighting_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
-            lighting_pass.setCubeMaps(m_render_graph.cubeDepthTextures(RenderPass::Type::Shadow));
         });
     if (render_params.material_model == MaterialModel::PBR)
     {

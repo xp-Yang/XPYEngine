@@ -39,30 +39,36 @@ bool OpenGLFrameBuffer::create()
         {
             color_attachment_size++;
             unsigned int textureID = texture->id();
-            if (texture->sampleCount() > 1)
+            if (texture->flags() & RhiTexture::CubeMap)
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_CUBE_MAP_POSITIVE_X + m_colorAttachments[i].layer(), textureID, m_colorAttachments[i].level());
+            else if (texture->sampleCount() > 1)
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D_MULTISAMPLE, textureID, 0);
             else
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, textureID, 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, textureID, m_colorAttachments[i].level());
         }
     }
     RhiTexture *depth_stencil_texture = m_depthStencilAttachment.texture();
     if (depth_stencil_texture)
     {
         unsigned int depthStencilTextureID = depth_stencil_texture->id();
-        if (depth_stencil_texture->sampleCount() > 1)
+        if (depth_stencil_texture->flags() & RhiTexture::CubeMap)
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + m_depthStencilAttachment.layer(), depthStencilTextureID, m_depthStencilAttachment.level());
+        else if (depth_stencil_texture->sampleCount() > 1)
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, depthStencilTextureID, 0);
         else
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthStencilTextureID, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthStencilTextureID, m_depthStencilAttachment.level());
     }
 
     RhiTexture *depth_texture = m_depthAttachment.texture();
     if (depth_texture)
     {
         unsigned int depthTextureID = depth_texture->id();
-        if (depth_texture->sampleCount() > 1)
+        if (depth_texture->flags() & RhiTexture::CubeMap)
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + m_depthAttachment.layer(), depthTextureID, m_depthAttachment.level());
+        else if (depth_texture->sampleCount() > 1)
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, depthTextureID, 0);
         else
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureID, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureID, m_depthAttachment.level());
     }
 
     if (color_attachment_size == 0)

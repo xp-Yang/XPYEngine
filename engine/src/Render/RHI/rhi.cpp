@@ -11,6 +11,15 @@ RhiTexture::RhiTexture(Format format_, const Vec2& pixelSize_, int sampleCount_,
 {
 }
 
+RhiTexture::RhiTexture(Format format_, const Vec2& pixelSize_, int sampleCount_, Flag flags_, const std::array<unsigned char*, 6>& cube_datas_)
+    : m_format(format_)
+    , m_pixelSize(pixelSize_)
+    , m_sampleCount(sampleCount_)
+    , m_flags(flags_)
+    , m_cube_datas(cube_datas_)
+{
+}
+
 RhiFrameBuffer::RhiFrameBuffer(const RhiAttachment& colorAttachment, const Vec2& pixelSize_, int sampleCount_)
 	: m_pixelSize(pixelSize_)
 	, m_sampleCount(sampleCount_)
@@ -18,19 +27,22 @@ RhiFrameBuffer::RhiFrameBuffer(const RhiAttachment& colorAttachment, const Vec2&
 	m_colorAttachments[0] = colorAttachment;
 }
 
-RhiAttachment::RhiAttachment(RhiTexture* texture)
+RhiAttachment::RhiAttachment(RhiTexture* texture, int layer, int level, bool owns_texture)
 	: m_texture(texture)
+    , m_layer(layer)
+    , m_level(level)
+    , m_owns_texture(owns_texture)
 {
 }
 
 void RhiAttachment::release()
 {
-	if (m_texture)
+	if (m_texture && m_owns_texture)
 	{
 		m_texture->destroy();
 		delete m_texture;
-		m_texture = nullptr;
 	}
+    m_texture = nullptr;
 }
 
 void RhiTexture::destroy()
@@ -92,41 +104,6 @@ void Rhi::readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char ou
 	m_impl->readPixelRGBA(framebuffer, x, y, out_rgba);
 }
 
-unsigned int Rhi::newFramebufferHandle()
-{
-	return m_impl->newFramebufferHandle();
-}
-
-void Rhi::bindFramebuffer(unsigned int framebuffer)
-{
-	m_impl->bindFramebuffer(framebuffer);
-}
-
-void Rhi::bindDefaultFramebuffer()
-{
-	m_impl->bindDefaultFramebuffer();
-}
-
-void Rhi::setFramebufferDrawReadNone()
-{
-	m_impl->setFramebufferDrawReadNone();
-}
-
-void Rhi::attachDepthCubeFace(unsigned int cube_map, int face)
-{
-	m_impl->attachDepthCubeFace(cube_map, face);
-}
-
-void Rhi::clearColorDepthStencil(float r, float g, float b, float a)
-{
-	m_impl->clearColorDepthStencil(r, g, b, a);
-}
-
-unsigned int Rhi::newDepthCubeMap(int size)
-{
-	return m_impl->newDepthCubeMap(size);
-}
-
 RhiBuffer* Rhi::newBuffer(RhiBuffer::Type type, RhiBuffer::UsageFlag usage, void* data, int size)
 {
 	return m_impl->newBuffer(type, usage, data, size);
@@ -142,9 +119,9 @@ RhiTexture* Rhi::newTexture(RhiTexture::Format format, const Vec2& pixelSize, in
 	return m_impl->newTexture(format, pixelSize, sampleCount, flags, data);
 }
 
-unsigned int Rhi::newCubeTexture(int width, int height, const std::array<unsigned char*, 6>& datas)
+RhiTexture* Rhi::newCubeTexture(RhiTexture::Format format, const Vec2& pixelSize, int sampleCount, RhiTexture::Flag flags, const std::array<unsigned char*, 6>& cube_datas)
 {
-	return m_impl->newCubeTexture(width, height, datas);
+    return m_impl->newCubeTexture(format, pixelSize, sampleCount, flags, cube_datas);
 }
 
 RhiFrameBuffer* Rhi::newFrameBuffer(const RhiAttachment& colorAttachment, const Vec2& pixelSize_, int sampleCount_)

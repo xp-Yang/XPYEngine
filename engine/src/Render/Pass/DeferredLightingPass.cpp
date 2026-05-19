@@ -42,21 +42,27 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		lighting_shader->setTexture("gSpecular", 3, g_specular_map);
 	}
 
-	RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
-	m_dir_light_shadow_map = shadow_texture ? shadow_texture->id() : 0;
+	RhiTexture* dir_light_shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
 	lighting_shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
 	for (const auto& render_directional_light_data : context.renderSourceData().render_directional_light_data_list) {
 		lighting_shader->setFloat3("directionalLight.direction", render_directional_light_data.direction);
 		lighting_shader->setFloat3("directionalLight.color", render_directional_light_data.color);
-		if (m_dir_light_shadow_map != 0) {
+		if (dir_light_shadow_texture) {
 			lighting_shader->setMatrix("lightSpaceMatrix", 1, render_directional_light_data.lightProjMatrix * render_directional_light_data.lightViewMatrix);
-			lighting_shader->setTexture("shadow_map", 8, m_dir_light_shadow_map);
+			lighting_shader->setTexture("shadow_map", 6, dir_light_shadow_texture->id());
 		}
 	}
-	for (int i = 0; i < m_cube_maps.size(); i++) {
-		std::string cube_map_id = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-		lighting_shader->setCubeTexture(cube_map_id, 9 + i, m_cube_maps[i]);
-	}
+    std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
+    int point_light_size = std::min(MAX_CUBE_SHADOW_MAP_COUNT, cube_shadow_maps.size());
+    for (int i = 0; i < MAX_CUBE_SHADOW_MAP_COUNT; i++) {
+        unsigned int cube_shadow_map_id =
+            i < static_cast<int>(cube_shadow_maps.size()) && cube_shadow_maps[i]
+            ? cube_shadow_maps[i]->id()
+            : RenderTextureData::defaultCubeTexture().id;
+        std::string cube_map_id_str = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
+        lighting_shader->setCubeTexture(cube_map_id_str, 7 + i, cube_shadow_map_id);
+    }
+
 	int point_light_idx = 0;
 	for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
 		std::string light_id = std::string("pointLights[") + std::to_string(point_light_idx) + "]";
@@ -65,10 +71,9 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		lighting_shader->setFloat(light_id + ".radius", render_point_light_data.radius);
 		point_light_idx++;
 	}
-	lighting_shader->setInt("point_lights_size", context.renderSourceData().render_point_light_data_list.size());
+	lighting_shader->setInt("point_lights_size", point_light_size);
 	m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
 	lighting_shader->stop_using();
-
 
 	gbuffer_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
 

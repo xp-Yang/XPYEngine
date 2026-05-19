@@ -19,6 +19,7 @@ enum class TextureType {
 };
 
 struct Texture {
+    Texture() = default;
 	Texture(TextureType type, const std::string& filepath, bool gamma);
 
 	TextureType texture_type{ TextureType::None };
@@ -26,13 +27,14 @@ struct Texture {
 	int width{ 0 };
 	int height{ 0 };
 	int channel_count{ 0 };
-	unsigned char* data;
+    unsigned char* data{ nullptr };
 	bool gamma{ false };
 
 	void freeData();
 };
 
 struct CubeTexture {
+    CubeTexture() = default;
 	CubeTexture(
 		const std::string& right_filepath,
 		const std::string& left_filepath,

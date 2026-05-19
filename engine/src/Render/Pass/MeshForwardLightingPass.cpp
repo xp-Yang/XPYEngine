@@ -31,9 +31,6 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
     Vec3 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
 
-    RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
-    m_shadow_map = shadow_texture ? shadow_texture->id() : 0;
-
     static RenderShaderObject *pbr_shader = RenderShaderObject::getShaderObject(ShaderType::PBRShader);
     static RenderShaderObject *blinn_phong_shader = RenderShaderObject::getShaderObject(ShaderType::BlinnPhongShader);
     RenderShaderObject *shader = m_pbr ? pbr_shader : blinn_phong_shader;
@@ -41,6 +38,8 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     int k = 0;
     for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
     {
+        if (k > MAX_CUBE_SHADOW_MAP_COUNT)
+            break;
         std::string light_id = std::string("pointLights[") + std::to_string(k) + "]";
         shader->setFloat3(light_id + ".position", render_point_light_data.position);
         shader->setFloat3(light_id + ".color", render_point_light_data.color);
@@ -94,15 +93,19 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         shader->setFloat3("directionalLight.direction", light_direction);
         shader->setFloat3("directionalLight.color", light_color);
 
-        if (m_shadow_map != 0)
+        RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
+        if (shadow_texture)
         {
             shader->setMatrix("lightSpaceMatrix", 1, light_ref_matrix);
-            shader->setTexture("shadow_map", 5, m_shadow_map);
+            shader->setTexture("shadow_map", 5, shadow_texture->id());
 
-            for (int i = 0; i < m_cube_maps.size(); i++)
+            std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
+            for (int i = 0; i < cube_shadow_maps.size(); i++)
             {
+                if (!cube_shadow_maps[i])
+                    continue;
                 std::string cube_map_id = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-                shader->setCubeTexture(cube_map_id, 6 + i, m_cube_maps[i]);
+                shader->setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]->id());
             }
         }
         m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);

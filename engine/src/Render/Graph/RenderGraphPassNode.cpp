@@ -20,7 +20,7 @@ RenderGraphPassNode& RenderGraphPassNode::modify(const RGResourceName& resource_
     return *this;
 }
 
-RenderGraphPassNode& RenderGraphPassNode::target(const RGTargetName& target_name, RenderTargetType type, int initial_cube_map_count)
+RenderGraphPassNode& RenderGraphPassNode::target(const RGTargetName& target_name, RenderTargetType type)
 {
     auto it = std::find_if(m_targets.begin(), m_targets.end(),
         [&target_name](const RenderTargetDeclaration& target)
@@ -30,14 +30,12 @@ RenderGraphPassNode& RenderGraphPassNode::target(const RGTargetName& target_name
 
     if (it == m_targets.end())
     {
-        m_targets.push_back(RenderTargetDeclaration{ target_name, type, initial_cube_map_count });
+        m_targets.push_back(RenderTargetDeclaration{ target_name, m_type, type });
     }
     else
     {
         if (it->render_target_type != type)
             throw std::runtime_error("RenderGraph target is declared with conflicting types: " + target_name);
-        if (type == RenderTargetType::CubeDepth)
-            it->initial_cube_map_count = std::max(it->initial_cube_map_count, initial_cube_map_count);
     }
     m_active_target = target_name;
     return *this;
@@ -79,12 +77,12 @@ RenderGraphPassNode& RenderGraphPassNode::setSetup(std::function<void(RenderPass
 RenderGraphPassNode& RenderGraphPassNode::produce(const RGResourceName& resource_name, const RhiAttachmentDesc& desc)
 {
     auto it_resource = std::find_if(m_resources.begin(), m_resources.end(),
-        [&resource_name](const ResourceDeclaration& resource)
+        [&resource_name](const RenderGraphResource& resource)
         {
             return resource.name == resource_name;
         });
     if (it_resource == m_resources.end())
-        m_resources.push_back(ResourceDeclaration{ resource_name, m_active_target, desc });
+        m_resources.push_back(RenderGraphResource{ resource_name, m_type, m_type, m_active_target, desc });
     else
     {
         throw std::runtime_error("RenderGraph resource is declared multiple times by one pass: " + resource_name);

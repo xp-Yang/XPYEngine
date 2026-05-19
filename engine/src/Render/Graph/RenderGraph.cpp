@@ -1,7 +1,5 @@
 #include "RenderGraph.hpp"
 #include "RenderPassContext.hpp"
-// TODO
-#include <glad/glad.h> 
 
 static bool samePixelSize(const Vec2& lhs, const Vec2& rhs)
 {
@@ -12,7 +10,7 @@ RenderGraph::~RenderGraph()
 {
     // TODO 移除gl依赖
     for (auto& pair : m_render_targets)
-        destroyCubeDepthTarget(pair.second);
+        destroyCubeShadowFrameBuffer(pair.second);
 }
 
 void RenderGraph::reset()
@@ -132,11 +130,18 @@ RenderGraphRenderTarget* RenderGraph::findRenderTarget(RenderPass::Type type, co
     return it == m_render_targets.end() ? nullptr : &it->second;
 }
 
-const std::vector<unsigned int>& RenderGraph::cubeDepthTextures(RenderPass::Type type) const
+std::vector<RhiTexture*> RenderGraph::cubeShadowMapsOf(RenderPass::Type type) const
 {
-    static const std::vector<unsigned int> empty;
+    std::vector<RhiTexture*> res;
     const RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
-    return target ? target->cube_maps : empty;
+    if (!target)
+        return res;
+
+    res.resize(target->cube_shadow_framebuffers.size());
+    for (size_t i = 0; i < target->cube_shadow_framebuffers.size(); i++) {
+        res[i] = target->cube_shadow_framebuffers[i][0]->depthAttachment()->texture();
+    }
+    return res;
 }
 
 void RenderGraph::ensureRenderTargets()
@@ -147,13 +152,12 @@ void RenderGraph::ensureRenderTargets()
         for (const RenderTargetDeclaration& target_decl : node.m_targets)
         {
             RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
-            target.owner_pass = node.m_type;
 
             if (target.target_decl.render_target_type != target_decl.render_target_type) {
                 if (target.framebuffer)
                     target.framebuffer->destroyGPU();
                 target.framebuffer.reset();
-                destroyCubeDepthTarget(target);
+                destroyCubeShadowFrameBuffer(target);
             }
             target.target_decl = target_decl;
         }
@@ -166,7 +170,7 @@ void RenderGraph::ensureRenderTargets()
         {
             RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
 
-            FrameBufferDesc framebuffer_desc;
+            RhiFrameBufferDesc framebuffer_desc;
             framebuffer_desc.size = m_frame_size;
 
             if (target_decl.render_target_type == RenderTargetType::FrameBuffer)
@@ -235,70 +239,9 @@ void RenderGraph::ensureRenderTargets()
             else if (target_decl.render_target_type == RenderTargetType::CubeDepth)
             {
                 target.framebuffer_desc.size = m_frame_size;
-                ensureCubeDepthTarget(target);
             }
         }
     }
-}
-
-void RenderGraph::destroyCubeDepthTarget(RenderGraphRenderTarget& target)
-{
-    for (unsigned id : target.cube_maps)
-    {
-        if (id != 0)
-            glDeleteTextures(1, &id);
-    }
-    target.cube_maps.clear();
-
-    if (target.cube_framebuffer != 0)
-    {
-        glDeleteFramebuffers(1, &target.cube_framebuffer);
-        target.cube_framebuffer = 0;
-    }
-    target.cube_edge = 0;
-}
-
-void RenderGraph::ensureCubeDepthTarget(RenderGraphRenderTarget& target)
-{
-    const int cube_edge = std::clamp(std::min((int)m_frame_size.x, (int)m_frame_size.y), 256, 4096);
-
-    if (target.cube_framebuffer == 0)
-    {
-        target.cube_framebuffer = m_rhi->newFramebufferHandle();
-        m_rhi->bindFramebuffer(target.cube_framebuffer);
-        m_rhi->setFramebufferDrawReadNone();
-    }
-
-    if (!target.cube_maps.empty() && target.cube_edge == cube_edge && target.cube_maps.size() >= (size_t)target.target_decl.initial_cube_map_count)
-        return;
-
-    for (unsigned id : target.cube_maps)
-    {
-        if (id != 0)
-            glDeleteTextures(1, &id);
-    }
-
-    target.cube_edge = cube_edge;
-    const size_t count = std::max<size_t>(target.target_decl.initial_cube_map_count, target.cube_maps.size());
-    target.cube_maps.assign(count, 0);
-    for (size_t i = 0; i < target.cube_maps.size(); ++i)
-        target.cube_maps[i] = m_rhi->newDepthCubeMap(target.cube_edge);
-}
-
-void RenderGraph::ensureCubeDepthTargetCapacity(RenderPass::Type type, size_t count)
-{
-    RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
-    if (!target)
-        return;
-    ensureCubeDepthTarget(*target);
-    if (target->cube_maps.size() >= count)
-        return;
-
-    m_rhi->bindFramebuffer(target->cube_framebuffer);
-    const size_t old_size = target->cube_maps.size();
-    target->cube_maps.resize(count, 0);
-    for (size_t i = old_size; i < target->cube_maps.size(); ++i)
-        target->cube_maps[i] = m_rhi->newDepthCubeMap(target->cube_edge);
 }
 
 void RenderGraph::clearPassTargets(const RenderGraphPassNode& node)
@@ -319,24 +262,20 @@ void RenderGraph::clearPassTargets(const RenderGraphPassNode& node)
 
             else if (decalred_target.render_target_type == RenderTargetType::CubeDepth)
             {
-                if (target->cube_framebuffer == 0)
-                    return;
-                m_rhi->bindFramebuffer(target->cube_framebuffer);
-                for (const unsigned cube_map : target->cube_maps)
+                for (auto& face_framebuffers : target->cube_shadow_framebuffers)
                 {
-                    for (int face = 0; face < 6; ++face)
+                    for (auto& framebuffer : face_framebuffers)
                     {
-                        m_rhi->attachDepthCubeFace(cube_map, face);
-                        m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
+                        if (framebuffer)
+                            framebuffer->clear(Color4(1.0f, 1.0f, 1.0f, 1.0f));
                     }
                 }
-                m_rhi->bindDefaultFramebuffer();
             }
         }
     }
 }
 
-std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const FrameBufferDesc& desc) const
+std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const RhiFrameBufferDesc& desc) const
 {
     if (desc.has_depth && desc.has_depth_stencil)
         throw std::runtime_error("RenderGraph framebuffer cannot have both depth and depth-stencil attachments");
@@ -400,6 +339,73 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createDefaultFrameBuffer() const
     return std::unique_ptr<RhiFrameBuffer>(m_rhi->newFrameBuffer(RhiAttachment(), m_frame_size));
 }
 
+void RenderGraph::destroyCubeShadowFrameBuffer(RenderGraphRenderTarget& target)
+{
+    for (auto& face_framebuffers : target.cube_shadow_framebuffers)
+    {
+        for (auto& framebuffer : face_framebuffers)
+        {
+            if (framebuffer)
+                framebuffer->destroyGPU();
+            framebuffer.reset();
+        }
+    }
+    target.cube_shadow_framebuffers.clear();
+
+    // TODO 释放cube_shadow_framebuffers的texture资源，因为cube_shadow_framebuffers.depthAttachment不是这些texture的owner，不会释放
+    //for (RhiTexture* tex : cube_textures)
+    //{
+    //    if (!tex)
+    //        continue;
+    //    tex->destroy();
+    //    delete tex;
+    //}
+}
+
+void RenderGraph::ensureCubeShadowMapsCount(RenderPass::Type type, size_t count)
+{
+    RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
+    if (!target || target->cube_shadow_framebuffers.size() >= count)
+        return;
+
+    while (target->cube_shadow_framebuffers.size() < count)
+        appendCubeShadowMap(*target);
+}
+
+void RenderGraph::appendCubeShadowMap(RenderGraphRenderTarget& target)
+{
+    const int cube_edge = std::clamp(std::min((int)m_frame_size.x, (int)m_frame_size.y), 256, 4096);
+    RhiTexture* cube_texture = m_rhi->newTexture(
+        RhiTexture::Format::DEPTH,
+        Vec2(cube_edge),
+        1,
+        static_cast<RhiTexture::Flag>(RhiTexture::RenderTarget | RhiTexture::CubeMap));
+    cube_texture->create();
+
+    std::array<std::unique_ptr<RhiFrameBuffer>, 6> face_framebuffers;
+    for (int face = 0; face < 6; ++face)
+    {
+        std::unique_ptr<RhiFrameBuffer> framebuffer(m_rhi->newFrameBuffer(RhiAttachment(), Vec2(cube_edge), 1));
+        framebuffer->setDepthAttachment(RhiAttachment(cube_texture, face, 0, false));
+        framebuffer->create();
+        face_framebuffers[face] = std::move(framebuffer);
+    }
+
+    target.cube_shadow_framebuffers.push_back(std::move(face_framebuffers));
+}
+
+RhiFrameBuffer* RenderGraph::cubeShadowFaceFrameBufferOf(RenderPass::Type type, size_t cube_index, int face) const
+{
+    if (face < 0 || face >= 6)
+        return nullptr;
+
+    const RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
+    if (!target || cube_index >= target->cube_shadow_framebuffers.size())
+        return nullptr;
+
+    return target->cube_shadow_framebuffers[cube_index][face].get();
+}
+
 RhiTexture* RenderGraph::textureOf(const RGResourceName& resource_name) const
 {
     auto it = m_resources.find(resource_name);
@@ -412,10 +418,10 @@ RhiTexture* RenderGraph::textureOf(const RGResourceName& resource_name) const
 
     const RhiAttachment* attachment = nullptr;
     auto& resource = it->second;
-    switch (resource.resource_decl.attachment_desc.attachment_type)
+    switch (resource.attachment_desc.attachment_type)
     {
     case RhiAttachment::Type::Color:
-        attachment = framebuffer->colorAttachmentAt(resource.resource_decl.attachment_desc.color_attachment_index);
+        attachment = framebuffer->colorAttachmentAt(resource.attachment_desc.color_attachment_index);
         break;
     case RhiAttachment::Type::Depth:
         attachment = framebuffer->depthAttachment();
@@ -436,7 +442,7 @@ RhiFrameBuffer* RenderGraph::frameBufferOf(const RGResourceName& resource_name) 
     if (it == m_resources.end())
         return nullptr;
     auto& resource = it->second;
-    const RenderGraphRenderTarget* target = findRenderTarget(resource.owner_pass, resource.resource_decl.owner_target_name);
+    const RenderGraphRenderTarget* target = findRenderTarget(resource.owner_pass, resource.owner_target_name);
     return target ? target->framebuffer.get() : nullptr;
 }
 
@@ -481,7 +487,7 @@ void RenderGraph::resolveResources(RenderGraphPassNode& node)
     {
         if (m_resources.find(resource_decl.name) != m_resources.end())
             throw std::runtime_error("RenderGraph resource is produced by multiple passes: " + resource_decl.name);
-        m_resources[resource_decl.name] = RenderGraphResource{ node.m_type, node.m_type, resource_decl };
+        m_resources[resource_decl.name] = resource_decl;
     }
 }
 

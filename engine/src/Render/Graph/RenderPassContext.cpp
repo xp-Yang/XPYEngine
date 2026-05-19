@@ -34,26 +34,19 @@ RhiFrameBuffer* RenderPassContext::defaultFrameBuffer() const
     return target ? target->framebuffer.get() : nullptr;
 }
 
-const std::vector<unsigned int>& RenderPassContext::cubeDepthTextures() const
+std::vector<RhiTexture*> RenderPassContext::cubeShadowMaps() const
 {
-    static const std::vector<unsigned int> empty;
-    return m_graph && m_node ? m_graph->cubeDepthTextures(m_node->m_type) : empty;
+    std::vector<RhiTexture*> empty;
+    return m_graph && m_node ? m_graph->cubeShadowMapsOf(RenderPass::Type::Shadow) : empty;
 }
 
-unsigned int RenderPassContext::cubeDepthFrameBuffer() const
+RhiFrameBuffer* RenderPassContext::cubeShadowFaceFrameBufferOf(size_t cube_index, int face) const
 {
-    const RenderGraphRenderTarget* target = m_graph && m_node ? m_graph->findRenderTarget(m_node->m_type, RGTarget::ShadowPointDepth) : nullptr;
-    return target ? target->cube_framebuffer : 0;
+    return m_graph && m_node ? m_graph->cubeShadowFaceFrameBufferOf(RenderPass::Type::Shadow, cube_index, face) : nullptr;
 }
 
-int RenderPassContext::cubeDepthEdge() const
-{
-    const RenderGraphRenderTarget* target = m_graph && m_node ? m_graph->findRenderTarget(m_node->m_type, RGTarget::ShadowPointDepth) : nullptr;
-    return target ? target->cube_edge : 0;
-}
-
-void RenderPassContext::ensureCubeDepthTextureCount(size_t count)
+void RenderPassContext::ensureCubeShadowMapsCount(size_t count)
 {
     if (m_graph && m_node)
-        m_graph->ensureCubeDepthTargetCapacity(m_node->m_type, count);
+        m_graph->ensureCubeShadowMapsCount(RenderPass::Type::Shadow, count);
 }

@@ -16,10 +16,10 @@ public:
     RhiFrameBuffer* frameBuffer(const std::string& resource_name) const;
     RhiFrameBuffer* frameBufferOfTarget(const std::string& target_name) const;
     RhiFrameBuffer* defaultFrameBuffer() const;
-    const std::vector<unsigned int>& cubeDepthTextures() const;
-    unsigned int cubeDepthFrameBuffer() const;
-    int cubeDepthEdge() const;
-    void ensureCubeDepthTextureCount(size_t count);
+
+    std::vector<RhiTexture*> cubeShadowMaps() const;
+    RhiFrameBuffer* cubeShadowFaceFrameBufferOf(size_t cube_index, int face) const;
+    void ensureCubeShadowMapsCount(size_t count);
 
 private:
     RenderGraph* m_graph{ nullptr };

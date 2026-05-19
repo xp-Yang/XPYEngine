@@ -33,15 +33,37 @@ RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
     }
 }
 
-RenderTextureData::RenderTextureData(const CubeTexture &cube_texture_)
+RenderTextureData::RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_)
 {
-    id = Rhi::get()->newCubeTexture(cube_texture_.width, cube_texture_.height, cube_texture_.datas);
+    RhiTexture::Format format = RhiTexture::Format::RGB8;
+    if (cube_texture_->channel_count == 4)
+        format = RhiTexture::Format::RGBA8;
+
+    RhiTexture* texture = Rhi::get()->newCubeTexture(format, Vec2(cube_texture_->width, cube_texture_->height), 1, RhiTexture::CubeMap, cube_texture_->datas);
+    texture->create();
+    id = texture->id();
 }
 
 RenderTextureData &RenderTextureData::defaultTexture()
 {
     static std::shared_ptr<Texture> diffuse_texture = std::make_shared<Texture>(TextureType::Custom, std::string(RESOURCE_DIR) + "/images/default_map.png", false);
     static RenderTextureData texture(diffuse_texture);
+    return texture;
+}
+
+RenderTextureData &RenderTextureData::defaultCubeTexture()
+{
+    static std::shared_ptr<CubeTexture> cube_texture;
+    if (!cube_texture) {
+        cube_texture = std::make_shared<CubeTexture>();
+        cube_texture->width = 1;
+        cube_texture->height = 1;
+        cube_texture->channel_count = 3;
+        static float neutral_depth = 1.0f;
+        std::array<unsigned char*, 6> cube_data{};
+        cube_texture->datas.fill(reinterpret_cast<unsigned char*>(&neutral_depth));
+    }
+    static RenderTextureData texture(cube_texture);
     return texture;
 }
 

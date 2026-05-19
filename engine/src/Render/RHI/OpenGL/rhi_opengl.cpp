@@ -5,6 +5,7 @@
 #include "OpenGLVertexLayout.hpp"
 #include "OpenGLRenderer.hpp"
 
+#include <assert.h>
 #include <stdexcept>
 
 RhiOpenGL::RhiOpenGL()
@@ -65,56 +66,6 @@ void RhiOpenGL::readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned c
 	glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, out_rgba);
 }
 
-unsigned int RhiOpenGL::newFramebufferHandle()
-{
-	unsigned int fbo = 0;
-	glGenFramebuffers(1, &fbo);
-	return fbo;
-}
-
-void RhiOpenGL::bindFramebuffer(unsigned int framebuffer)
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-}
-
-void RhiOpenGL::bindDefaultFramebuffer()
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void RhiOpenGL::setFramebufferDrawReadNone()
-{
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-}
-
-void RhiOpenGL::attachDepthCubeFace(unsigned int cube_map, int face)
-{
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cube_map, 0);
-}
-
-void RhiOpenGL::clearColorDepthStencil(float r, float g, float b, float a)
-{
-	glClearColor(r, g, b, a);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-}
-
-unsigned int RhiOpenGL::newDepthCubeMap(int size)
-{
-	unsigned int texture = 0;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-	for (int i = 0; i < 6; ++i) {
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	return texture;
-}
-
 RhiBuffer *RhiOpenGL::newBuffer(RhiBuffer::Type type, RhiBuffer::UsageFlag usage, void *data, int size)
 {
 	OpenGLBuffer *buffer = new OpenGLBuffer(type, usage, data, size);
@@ -133,24 +84,10 @@ RhiTexture *RhiOpenGL::newTexture(RhiTexture::Format format, const Vec2 &pixelSi
 	return texture;
 }
 
-unsigned int RhiOpenGL::newCubeTexture(int width, int height, const std::array<unsigned char*, 6>& datas)
+RhiTexture* RhiOpenGL::newCubeTexture(RhiTexture::Format format, const Vec2& pixelSize, int sampleCount, RhiTexture::Flag flags, const std::array<unsigned char*, 6>& cube_datas)
 {
-	unsigned int texture = 0;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-	for (unsigned int i = 0; i < datas.size(); ++i) {
-		if (!datas[i]) {
-			assert(false);
-			continue;
-		}
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, datas[i]);
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	return texture;
+    OpenGLTexture* texture = new OpenGLTexture(format, pixelSize, sampleCount, flags, cube_datas);
+    return texture;
 }
 
 RhiFrameBuffer *RhiOpenGL::newFrameBuffer(const RhiAttachment &colorAttachment, const Vec2 &pixelSize_, int sampleCount_)

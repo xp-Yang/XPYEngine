@@ -8,15 +8,18 @@
 #include "RenderShaderObject.hpp"
 #include "Render/RHI/rhi.hpp"
 
+static const size_t MAX_CUBE_SHADOW_MAP_COUNT = 8;
+
 using GL_RESOURCE_HANLE = unsigned int;
 
 struct RenderTextureData {
     RenderTextureData(std::shared_ptr<Texture> texture_);
-    RenderTextureData(const CubeTexture& cube_texture_);
+    RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_);
 
     GL_RESOURCE_HANLE id;
 
     static RenderTextureData& defaultTexture();
+    static RenderTextureData& defaultCubeTexture();
 };
 
 struct RenderMaterialData {

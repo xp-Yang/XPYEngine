@@ -65,22 +65,20 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
         light_radius.push_back(render_point_light_data.radius);
     }
 
-    context.ensureCubeDepthTextureCount(context.renderSourceData().render_point_light_data_list.size());
-    const std::vector<unsigned int>& cube_maps = context.cubeDepthTextures();
-    const unsigned int cube_framebuffer = context.cubeDepthFrameBuffer();
-    const int cube_edge = context.cubeDepthEdge();
-    if (cube_framebuffer == 0 || cube_edge <= 0 || cube_maps.empty())
-        return;
-
-    m_rhi->bindFramebuffer(cube_framebuffer);
-    m_rhi->setViewport(0, 0, cube_edge, cube_edge);
+    context.ensureCubeShadowMapsCount(std::min(MAX_CUBE_SHADOW_MAP_COUNT, context.renderSourceData().render_point_light_data_list.size()));
 
     for (int cube_map_id = 0; cube_map_id < context.renderSourceData().render_point_light_data_list.size(); cube_map_id++)
     {
         for (int i = 0; i < 6; i++)
         {
-            m_rhi->attachDepthCubeFace(cube_maps[cube_map_id], i);
-            m_rhi->clearColorDepthStencil(1.0f, 1.0f, 1.0f, 1.0f);
+            RhiFrameBuffer* face_framebuffer = context.cubeShadowFaceFrameBufferOf(cube_map_id, i);
+
+            if (!face_framebuffer)
+                continue;
+            face_framebuffer->bind();
+            face_framebuffer->clear(Color4(1.0f, 1.0f, 1.0f, 1.0f));
+
+            m_rhi->setViewport(0, 0, face_framebuffer->pixelSize().x, face_framebuffer->pixelSize().y);
 
             for (const auto &pair : context.renderSourceData().render_mesh_nodes)
             {
