@@ -651,7 +651,7 @@ protected:
 class Rhi
 {
 public:
-    static Rhi* get();
+    static Rhi*& get();
     static Rhi* create();
 
     // render相关

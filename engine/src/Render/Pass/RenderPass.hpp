@@ -56,7 +56,7 @@ public:
 	virtual void draw(RenderPassContext& context) = 0;
 
 protected:
-	std::shared_ptr<Rhi> m_rhi;
+	Rhi* m_rhi;
 
 	Type m_type;
 };
