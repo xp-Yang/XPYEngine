@@ -18,11 +18,10 @@ void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    framebuffer->clear();
+    m_command_buffer->beginPass(framebuffer);
 
     static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-    depth_shader->start_using();
+    m_command_buffer->setGraphicsPipeline(depth_shader->graphicsPipeline());
     Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
     Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
     for (const auto &pair : context.renderSourceData().render_mesh_nodes)
@@ -43,15 +42,15 @@ void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
         depth_shader->setMatrix("view", 1, light_view);
         depth_shader->setMatrix("projection", 1, light_proj);
         depth_shader->setFloat4("color", Color4(1.0));
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
+    m_command_buffer->endPass();
 }
 
 void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
 {
     static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::CubeMapShader);
-
-    depth_shader->start_using();
 
     std::vector<std::array<Mat4, 6>> light_view;
     std::vector<Mat4> light_proj;
@@ -75,10 +74,9 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
 
             if (!face_framebuffer)
                 continue;
-            face_framebuffer->bind();
-            face_framebuffer->clear(Color4(1.0f, 1.0f, 1.0f, 1.0f));
-
-            m_rhi->setViewport(0, 0, face_framebuffer->pixelSize().x, face_framebuffer->pixelSize().y);
+            m_command_buffer->beginPass(face_framebuffer, Color4(1.0f, 1.0f, 1.0f, 1.0f));
+            m_command_buffer->setViewport(0, 0, static_cast<int>(face_framebuffer->pixelSize().x), static_cast<int>(face_framebuffer->pixelSize().y));
+            m_command_buffer->setGraphicsPipeline(depth_shader->graphicsPipeline());
 
             for (const auto &pair : context.renderSourceData().render_mesh_nodes)
             {
@@ -99,8 +97,10 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
                 depth_shader->setMatrix("projection", 1, light_proj[cube_map_id]);
                 depth_shader->setFloat3("lightPos", light_pos[cube_map_id]);
                 depth_shader->setFloat("far_plane", light_radius[cube_map_id]);
-                m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+                m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+                m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
             }
+            m_command_buffer->endPass();
         }
     }
 }

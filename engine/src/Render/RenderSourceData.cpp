@@ -222,43 +222,43 @@ void RenderMeshNode::updateRenderMaterialData(std::shared_ptr<Material> material
     // TODO 贴图更新了，texture数据的释放和加载
     if (material.albedo_map == 0)
     {
-        unsigned int albedo_texture = RenderTextureData(material_->albedo_texture).id;
+        GL_HANDLE albedo_texture = RenderTextureData(material_->albedo_texture).id;
         material.albedo_map = albedo_texture;
     }
     if (material.metallic_map == 0)
     {
-        unsigned int metallic_map = RenderTextureData(material_->metallic_texture).id;
+        GL_HANDLE metallic_map = RenderTextureData(material_->metallic_texture).id;
         material.metallic_map = metallic_map;
     }
     if (material.roughness_map == 0)
     {
-        unsigned int roughness_map = RenderTextureData(material_->roughness_texture).id;
+        GL_HANDLE roughness_map = RenderTextureData(material_->roughness_texture).id;
         material.roughness_map = roughness_map;
     }
     if (material.ao_map == 0)
     {
-        unsigned int ao_map = RenderTextureData(material_->ao_texture).id;
+        GL_HANDLE ao_map = RenderTextureData(material_->ao_texture).id;
         material.ao_map = ao_map;
     }
 
     if (material.diffuse_map == 0)
     {
-        unsigned int diffuse_map = RenderTextureData(material_->diffuse_texture).id;
+        GL_HANDLE diffuse_map = RenderTextureData(material_->diffuse_texture).id;
         material.diffuse_map = diffuse_map;
     }
     if (material.specular_map == 0)
     {
-        unsigned int specular_map = RenderTextureData(material_->specular_texture).id;
+        GL_HANDLE specular_map = RenderTextureData(material_->specular_texture).id;
         material.specular_map = specular_map;
     }
     if (material.normal_map == 0)
     {
-        unsigned int normal_map = RenderTextureData(material_->normal_texture).id;
+        GL_HANDLE normal_map = RenderTextureData(material_->normal_texture).id;
         material.normal_map = normal_map;
     }
     if (material.height_map == 0)
     {
-        unsigned int height_map = RenderTextureData(material_->height_texture).id;
+        GL_HANDLE height_map = RenderTextureData(material_->height_texture).id;
         material.height_map = height_map;
     }
 }

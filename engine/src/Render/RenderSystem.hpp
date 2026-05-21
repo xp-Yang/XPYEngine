@@ -3,6 +3,7 @@
 
 #include "RenderParams.hpp"
 #include "Path/RenderPath.hpp"
+#include "Render/RHI/rhi.hpp"
 
 class Scene;
 class RenderSystem {
@@ -11,7 +12,7 @@ public:
     RenderParams& renderParams();
     void onUpdate(std::shared_ptr<Scene> scene);
 
-    unsigned int renderGraphTextureOf(const std::string& resource_name);
+    GL_HANDLE renderGraphTextureOf(const std::string& resource_name);
     bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]);
 
     std::vector<std::string> renderGraphResourceNames() const;

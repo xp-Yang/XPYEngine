@@ -2,6 +2,7 @@
 #define RenderGraphDebugInfo_hpp
 
 #include "Base/Common.hpp"
+#include "Render/RHI/rhi.hpp"
 
 #include <string>
 #include <vector>
@@ -21,7 +22,7 @@ struct RenderGraphResourceDebugInfo {
     bool is_depth{ false };
 
     Vec2 size;
-    unsigned int texture_id{ 0 };
+    GL_HANDLE texture_id{ 0 };
 
     std::vector<std::string> direct_history;
     std::vector<std::string> contributors;

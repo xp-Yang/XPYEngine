@@ -9,8 +9,8 @@ public:
     virtual ~RhiImpl() {};
 
     // render相关
-    virtual void drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1) = 0;
-    virtual void drawTriangles(unsigned int vao_id, size_t array_count) = 0;
+    virtual void drawIndexed(GL_HANDLE vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1) = 0;
+    virtual void drawTriangles(GL_HANDLE vao_id, size_t array_count) = 0;
 
     // context 全局状态
     virtual void setViewport(int x, int y, int width, int height) = 0;
@@ -20,7 +20,7 @@ public:
 
     // framebuffer 管理
     virtual RhiFrameBuffer* newFrameBuffer(const RhiAttachment& colorAttachment, const Vec2& pixelSize_, int sampleCount_ = 1) = 0;
-    virtual void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]) = 0;
+    virtual void readPixelRGBA(GL_HANDLE framebuffer, int x, int y, unsigned char out_rgba[4]) = 0;
 
     //// binding resource
     // virtual void bindTexture(/*TextureData*/) = 0;
@@ -44,6 +44,9 @@ public:
                                  int size) = 0;
 
     virtual RhiVertexLayout *newVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer) = 0;
+
+    virtual RhiGraphicsPipeline *newGraphicsPipeline() = 0;
+    virtual RhiCommandBuffer *newCommandBuffer() = 0;
 };
 
 #endif

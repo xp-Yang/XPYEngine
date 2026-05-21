@@ -11,16 +11,16 @@ void OutlinePass::draw(RenderPassContext& context)
     RhiFrameBuffer* mask_framebuffer = context.frameBufferOfTarget(RGTarget::OutlineMask);
     if (!mask_framebuffer)
         return;
-    mask_framebuffer->bind();
-    mask_framebuffer->clear();
+    m_command_buffer->beginPass(mask_framebuffer);
 
     if (context.renderSourceData().picked_ids.empty()) {
+        m_command_buffer->endPass();
         return;
     }
+    static RenderShaderObject* one_color_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
+    m_command_buffer->setGraphicsPipeline(one_color_shader->graphicsPipeline());
     for (auto picked_id : context.renderSourceData().picked_ids) {
         // render the picked one
-        static RenderShaderObject* one_color_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-        one_color_shader->start_using();
         one_color_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
         one_color_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
 
@@ -47,20 +47,24 @@ void OutlinePass::draw(RenderPassContext& context)
             int b = (id & 0x00FF0000) >> 16;
             Color4 color(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
             one_color_shader->setFloat4("color", color);
-            m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+            m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+            m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
         }
     }
+    m_command_buffer->endPass();
 
 
     RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
     if (!target_framebuffer)
         return;
-    target_framebuffer->bind();
+    m_command_buffer->beginPass(target_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
     auto source_map = mask_framebuffer->colorAttachmentAt(0)->texture()->id();
     auto obj_depth_map = mask_framebuffer->depthAttachment()->texture()->id();
     static RenderShaderObject* outline_shader = RenderShaderObject::getShaderObject(ShaderType::OutlineShader);
-    outline_shader->start_using();
+    m_command_buffer->setGraphicsPipeline(outline_shader->graphicsPipeline());
     outline_shader->setTexture("objMap", 0, source_map);
     outline_shader->setTexture("objDepthMap", 1, obj_depth_map);
-    m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
+    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->endPass();
 }

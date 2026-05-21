@@ -14,10 +14,7 @@ void TransparentPass::init()
 void TransparentPass::draw(RenderPassContext& context)
 {
     RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
-    target_framebuffer->bind();
-
-    m_rhi->setBlend(true);
-    m_rhi->setDepthMask(false);
+    m_command_buffer->beginPass(target_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
 
     static auto shader_ = Shader{ std::string(RESOURCE_DIR) + "/shader/mesh.vs", std::string(RESOURCE_DIR) + "/shader/transparent.fs"};
     static RenderShaderObject* shader = new RenderShaderObject(shader_);
@@ -27,7 +24,10 @@ void TransparentPass::draw(RenderPassContext& context)
     Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
     Vec3 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
 
-    shader->start_using();
+    RenderPipelineState state;
+    state.blend = true;
+    state.depthWrite = false;
+    m_command_buffer->setGraphicsPipeline(shader->graphicsPipeline(state));
     shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
     shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
     for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
@@ -65,10 +65,8 @@ void TransparentPass::draw(RenderPassContext& context)
 
         shader->setFloat("alpha", material.alpha);
 
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
-    shader->stop_using();
-
-    m_rhi->setBlend(false);
-    m_rhi->setDepthMask(true);
+    m_command_buffer->endPass();
 }

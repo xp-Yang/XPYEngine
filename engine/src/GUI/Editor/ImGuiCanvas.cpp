@@ -15,7 +15,7 @@
 #include "Logical/Framework/World/Scene.hpp"
 #include "GlobalContext.hpp"
 
-static ImTextureID to_imgui_texture_id(unsigned int texture_id)
+static ImTextureID to_imgui_texture_id(GL_HANDLE texture_id)
 {
     return reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texture_id));
 }

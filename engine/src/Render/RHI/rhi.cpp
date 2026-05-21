@@ -27,6 +27,13 @@ RhiFrameBuffer::RhiFrameBuffer(const RhiAttachment& colorAttachment, const Vec2&
 	m_colorAttachments[0] = colorAttachment;
 }
 
+RhiShaderStage::RhiShaderStage(Type type_, std::string source_, std::string debug_name_)
+    : m_type(type_)
+    , m_source(std::move(source_))
+    , m_debug_name(std::move(debug_name_))
+{
+}
+
 RhiAttachment::RhiAttachment(RhiTexture* texture, int layer, int level, bool owns_texture)
 	: m_texture(texture)
     , m_layer(layer)
@@ -69,12 +76,12 @@ Rhi* Rhi::create()
 	return rhi;
 }
 
-void Rhi::drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset, int inst_amount)
+void Rhi::drawIndexed(GL_HANDLE vao_id, size_t indices_count, size_t index_offset, int inst_amount)
 {
 	m_impl->drawIndexed(vao_id, indices_count, index_offset, inst_amount);
 }
 
-void Rhi::drawTriangles(unsigned int vao_id, size_t array_count)
+void Rhi::drawTriangles(GL_HANDLE vao_id, size_t array_count)
 {
 	m_impl->drawTriangles(vao_id, array_count);
 }
@@ -99,7 +106,7 @@ void Rhi::setFrontFaceCW(bool cw)
 	m_impl->setFrontFaceCW(cw);
 }
 
-void Rhi::readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4])
+void Rhi::readPixelRGBA(GL_HANDLE framebuffer, int x, int y, unsigned char out_rgba[4])
 {
 	m_impl->readPixelRGBA(framebuffer, x, y, out_rgba);
 }
@@ -112,6 +119,16 @@ RhiBuffer* Rhi::newBuffer(RhiBuffer::Type type, RhiBuffer::UsageFlag usage, void
 RhiVertexLayout* Rhi::newVertexLayout(RhiBuffer* vbuffer, RhiBuffer* ibuffer)
 {
 	return m_impl->newVertexLayout(vbuffer, ibuffer);
+}
+
+RhiGraphicsPipeline* Rhi::newGraphicsPipeline()
+{
+    return m_impl->newGraphicsPipeline();
+}
+
+RhiCommandBuffer* Rhi::newCommandBuffer()
+{
+    return m_impl->newCommandBuffer();
 }
 
 RhiTexture* Rhi::newTexture(RhiTexture::Format format, const Vec2& pixelSize, int sampleCount, RhiTexture::Flag flags, unsigned char* data)

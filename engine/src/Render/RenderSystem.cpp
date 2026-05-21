@@ -30,7 +30,7 @@ RenderParams &RenderSystem::renderParams()
     return m_render_params;
 }
 
-unsigned int RenderSystem::renderGraphTextureOf(const std::string& resource_name)
+GL_HANDLE RenderSystem::renderGraphTextureOf(const std::string& resource_name)
 {
     RhiTexture* texture = m_curr_path->renderGraphTextureOf(resource_name);
     return texture ? texture->id() : 0;

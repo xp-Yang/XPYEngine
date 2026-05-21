@@ -10,13 +10,11 @@
 
 static const size_t MAX_CUBE_SHADOW_MAP_COUNT = 8;
 
-using GL_RESOURCE_HANLE = unsigned int;
-
 struct RenderTextureData {
     RenderTextureData(std::shared_ptr<Texture> texture_);
     RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_);
 
-    GL_RESOURCE_HANLE id;
+    GL_HANDLE id;
 
     static RenderTextureData& defaultTexture();
     static RenderTextureData& defaultCubeTexture();
@@ -25,19 +23,19 @@ struct RenderTextureData {
 struct RenderMaterialData {
     RenderMaterialData(std::shared_ptr<Material> material_);
 
-    GL_RESOURCE_HANLE albedo_map{ 0 };
-    GL_RESOURCE_HANLE metallic_map{ 0 };
-    GL_RESOURCE_HANLE roughness_map{ 0 };
-    GL_RESOURCE_HANLE ao_map{ 0 };
+    GL_HANDLE albedo_map{ 0 };
+    GL_HANDLE metallic_map{ 0 };
+    GL_HANDLE roughness_map{ 0 };
+    GL_HANDLE ao_map{ 0 };
     Vec3 base_color_factor{ 1.0f, 1.0f, 1.0f };
     float metallic_factor{ 0.0f };
     float roughness_factor{ 1.0f };
     float ao_factor{ 1.0f };
 
-    GL_RESOURCE_HANLE diffuse_map{ 0 };
-    GL_RESOURCE_HANLE specular_map{ 0 };
-    GL_RESOURCE_HANLE normal_map{ 0 };
-    GL_RESOURCE_HANLE height_map{ 0 };
+    GL_HANDLE diffuse_map{ 0 };
+    GL_HANDLE specular_map{ 0 };
+    GL_HANDLE normal_map{ 0 };
+    GL_HANDLE height_map{ 0 };
     Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
     Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
     float shininess{ 128.0f };
@@ -52,7 +50,8 @@ public:
     ~RenderMeshData() { reset(); }
 
     void reset();
-    GL_RESOURCE_HANLE getVAO() const { return m_vertex_layout->id(); }
+    GL_HANDLE getVAO() const { return m_vertex_layout->id(); }
+    RhiVertexLayout* vertexLayout() const { return m_vertex_layout; }
     size_t verticesCount() const { return m_vertices_count; }
     size_t indicesCount() const { return m_indices_count; }
     void create_instancing(void* instancing_data, int instancing_data_size, int buffer_capacity_size = -1);
@@ -135,7 +134,7 @@ struct RenderMeshNode {
 };
 
 struct RenderSkyboxNode {
-    GL_RESOURCE_HANLE skybox_cube_map;
+    GL_HANDLE skybox_cube_map;
 
     std::shared_ptr<RenderMeshData> mesh;
 };

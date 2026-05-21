@@ -2,6 +2,7 @@
 #define ImGuiToolbar_hpp
 
 #include "Base/Common.hpp"
+#include "Render/RHI/rhi.hpp"
 
 enum class ToolbarType : int {
     Translate,
@@ -22,9 +23,9 @@ protected:
     ToolbarType m_toolbar_type{ ToolbarType::Translate };
     ImGuiCanvas* m_parent{ nullptr };
 
-    unsigned int m_tranlate_icon_id{ 0 };
-    unsigned int m_rotate_icon_id{ 0 };
-    unsigned int m_scale_icon_id{ 0 };
+    GL_HANDLE m_tranlate_icon_id{ 0 };
+    GL_HANDLE m_rotate_icon_id{ 0 };
+    GL_HANDLE m_scale_icon_id{ 0 };
 
     std::shared_ptr<Scene> ref_scene;
 };

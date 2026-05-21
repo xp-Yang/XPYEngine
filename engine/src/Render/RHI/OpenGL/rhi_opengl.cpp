@@ -4,6 +4,8 @@
 #include "OpenGLBuffer.hpp"
 #include "OpenGLVertexLayout.hpp"
 #include "OpenGLRenderer.hpp"
+#include "OpenGLGraphicsPipeline.hpp"
+#include "OpenGLCommandBuffer.hpp"
 
 #include <assert.h>
 #include <stdexcept>
@@ -27,13 +29,14 @@ RhiOpenGL::RhiOpenGL()
 	glFrontFace(GL_CCW);
 }
 
-void RhiOpenGL::drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset, int inst_amount)
+void RhiOpenGL::drawIndexed(GL_HANDLE vao_id, size_t indices_count, size_t index_offset, int inst_amount)
 {
 	OpenGLRenderer::drawIndexed(vao_id, indices_count, index_offset, inst_amount);
 }
 
-void RhiOpenGL::drawTriangles(unsigned int vao_id, size_t array_count)
+void RhiOpenGL::drawTriangles(GL_HANDLE vao_id, size_t array_count)
 {
+	OpenGLRenderer::drawTriangle(vao_id, array_count);
 }
 
 void RhiOpenGL::setViewport(int x, int y, int width, int height)
@@ -59,7 +62,7 @@ void RhiOpenGL::setFrontFaceCW(bool cw)
 	glFrontFace(cw ? GL_CW : GL_CCW);
 }
 
-void RhiOpenGL::readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4])
+void RhiOpenGL::readPixelRGBA(GL_HANDLE framebuffer, int x, int y, unsigned char out_rgba[4])
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -76,6 +79,16 @@ RhiVertexLayout *RhiOpenGL::newVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuff
 {
 	OpenGLVertexLayout *vertex_layout = new OpenGLVertexLayout(vbuffer, ibuffer);
 	return vertex_layout;
+}
+
+RhiGraphicsPipeline* RhiOpenGL::newGraphicsPipeline()
+{
+    return new OpenGLGraphicsPipeline();
+}
+
+RhiCommandBuffer* RhiOpenGL::newCommandBuffer()
+{
+    return new OpenGLCommandBuffer();
 }
 
 RhiTexture *RhiOpenGL::newTexture(RhiTexture::Format format, const Vec2 &pixelSize, int sampleCount, RhiTexture::Flag flags, unsigned char *data)

@@ -49,14 +49,18 @@ public:
         Final,
 	};
 
-	RenderPass() : m_rhi(Rhi::get()) {}
+	RenderPass()
+        : m_rhi(Rhi::get())
+        , m_command_buffer(m_rhi ? m_rhi->newCommandBuffer() : nullptr)
+    {}
 	RenderPass(const RenderPass&) = delete;
 	RenderPass& operator=(const RenderPass&) = delete;
-	virtual ~RenderPass() = default;
+	virtual ~RenderPass() { delete m_command_buffer; }
 	virtual void draw(RenderPassContext& context) = 0;
 
 protected:
 	Rhi* m_rhi;
+    RhiCommandBuffer* m_command_buffer{ nullptr };
 
 	Type m_type;
 };

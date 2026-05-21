@@ -11,13 +11,12 @@ void GBufferPass::draw(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    framebuffer->clear();
+    m_command_buffer->beginPass(framebuffer);
 
     static RenderShaderObject* g_pbr_shader = RenderShaderObject::getShaderObject(ShaderType::GBufferShader);
     static RenderShaderObject* g_phong_shader = RenderShaderObject::getShaderObject(ShaderType::GBufferPhongShader);
     RenderShaderObject* g_shader = m_pbr ? g_pbr_shader : g_phong_shader;
-    g_shader->start_using();
+    m_command_buffer->setGraphicsPipeline(g_shader->graphicsPipeline());
     g_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
     g_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
     for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
@@ -56,11 +55,10 @@ void GBufferPass::draw(RenderPassContext& context)
             g_shader->setTexture("diffuse_map", 0, material.diffuse_map);
             g_shader->setTexture("specular_map", 1, material.specular_map);
         }
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
-    g_shader->stop_using();
-
-    framebuffer->unBind();
+    m_command_buffer->endPass();
 }
 
 void GBufferPass::enablePBR(bool enable)

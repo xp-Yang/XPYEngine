@@ -2,12 +2,15 @@
 
 #include <Base/Common.hpp>
 
+using GL_HANDLE = unsigned int;
+
 class RhiResource;
 class RhiBuffer;
 class RhiTexture;
 class RhiAttachment;
 class RhiFrameBuffer;
 class RhiCommandBuffer;
+class RhiGraphicsPipeline;
 class Window;
 class RhiSwapChain;
 class RhiImpl;
@@ -59,7 +62,7 @@ public:
     int size() const { return m_size; }
     void setSize(int sz) { m_size = sz; }
 
-    unsigned int id() const { return m_id; }
+    GL_HANDLE id() const { return m_id; }
 
     virtual bool create() = 0;
     virtual void update(void* data, int size, int offset = 0) = 0;
@@ -70,7 +73,7 @@ protected:
     UsageFlag m_usage;
     void *m_data{nullptr};
     int m_size;
-    unsigned int m_id{0};
+    GL_HANDLE m_id{0};
 };
 
 class RhiTexture
@@ -123,7 +126,7 @@ public:
     int sampleCount() const { return m_sampleCount; }
     void setSampleCount(int s) { m_sampleCount = s; }
 
-    unsigned int id() const { return m_id; }
+    GL_HANDLE id() const { return m_id; }
 
     virtual bool create() = 0; // true generate and bind texture
     virtual void destroy(); // release GL name; safe to call multiple times
@@ -137,7 +140,7 @@ protected:
     Flag m_flags;
     unsigned char *m_data{nullptr};
     std::array<unsigned char*, 6> m_cube_datas{};
-    unsigned int m_id{0};
+    GL_HANDLE m_id{0};
 };
 
 class RhiAttachment
@@ -228,7 +231,7 @@ public:
     void setSampleCount(int sampleCount_) { m_sampleCount = sampleCount_; }
     int sampleCount() const { return m_sampleCount; }
 
-    unsigned int id() const { return m_id; }
+    GL_HANDLE id() const { return m_id; }
 
     const RhiAttachment *colorAttachmentAt(int index) const { return &m_colorAttachments.at(index); }
     void setColorAttachments(std::initializer_list<RhiAttachment> list)
@@ -265,7 +268,7 @@ protected:
     RhiAttachment m_depthStencilAttachment;
     Vec2 m_pixelSize;
     int m_sampleCount{1};
-    unsigned int m_id{0};
+    GL_HANDLE m_id{0};
 };
 
 struct RhiVertexAttribute
@@ -307,7 +310,7 @@ public:
     const RhiVertexAttribute *cbeginAttributes() const { return m_attributes.empty() ? nullptr : m_attributes.data(); }
     const RhiVertexAttribute *cendAttributes() const { return m_attributes.empty() ? nullptr : m_attributes.data() + m_attributes.size(); }
 
-    unsigned int id() const { return m_id; }
+    GL_HANDLE id() const { return m_id; }
 
     virtual bool create() = 0;
 
@@ -319,7 +322,331 @@ protected:
     std::vector<RhiVertexAttribute> m_attributes;
     RhiBuffer *m_vbuffer;
     RhiBuffer *m_ibuffer;
-    unsigned int m_id;
+    GL_HANDLE m_id;
+};
+
+// 一段 shader stage 的输入描述。
+//
+// Qt RHI 里 shader 是 pipeline 的一部分，而不是 pass 里随手 bind 的独立对象。
+// 这里先采用 OpenGL-only 的精简形态：直接保存 GLSL 源码和调试名，由
+// RhiGraphicsPipeline::create() 的后端实现负责编译并链接成 native program。
+class RhiShaderStage
+{
+public:
+    enum Type
+    {
+        Vertex,
+        Fragment,
+        Geometry
+    };
+
+    RhiShaderStage() = default;
+    RhiShaderStage(Type type_, std::string source_, std::string debug_name_ = {});
+
+    Type type() const { return m_type; }
+    const std::string& source() const { return m_source; }
+    const std::string& debugName() const { return m_debug_name; }
+
+private:
+    Type m_type{ Vertex };
+    std::string m_source;
+    std::string m_debug_name;
+};
+
+// GraphicsPipeline 表示“一类 draw call 的固定渲染配方”。
+//
+// 它不是某个 Mesh，也不是某一次 draw。它收束的是过去分散在 RenderPass 中的
+// shader program、primitive topology、cull/front face、blend、depth/stencil、
+// vertex input layout 等固定状态。引入它之后，pass 中不应该再零散地调用
+// setBlend()/setDepthMask()/setFrontFaceCW() 来临时拼状态，而是切换到描述完整的
+// pipeline。
+//
+// 当前项目长期只支持 OpenGL，所以这个抽象比 Qt QRhiGraphicsPipeline 精简：
+// - 暂不包含跨后端 render-pass compatibility 对象；
+// - 暂不包含 pipeline cache；
+// - 暂不包含 compute/tessellation 的复杂路径；
+// - viewport/scissor/blend constants/stencil ref 仍作为 CommandBuffer 的动态状态。
+class RhiGraphicsPipeline
+{
+public:
+    virtual ~RhiGraphicsPipeline() = default;
+
+    enum Flag
+    {
+        UsesBlendConstants = 1 << 0,
+        UsesStencilRef = 1 << 1,
+        UsesScissor = 1 << 2,
+        CompileShadersWithDebugInfo = 1 << 3
+    };
+
+    enum Topology
+    {
+        Triangles,
+        TriangleStrip,
+        TriangleFan,
+        Lines,
+        LineStrip,
+        Points
+    };
+
+    enum CullMode
+    {
+        None,
+        Front,
+        Back
+    };
+
+    enum FrontFace
+    {
+        CCW,
+        CW
+    };
+
+    enum ColorMask
+    {
+        R = 1 << 0,
+        G = 1 << 1,
+        B = 1 << 2,
+        A = 1 << 3
+    };
+
+    enum BlendFactor
+    {
+        Zero,
+        One,
+        SrcColor,
+        OneMinusSrcColor,
+        DstColor,
+        OneMinusDstColor,
+        SrcAlpha,
+        OneMinusSrcAlpha,
+        DstAlpha,
+        OneMinusDstAlpha,
+        ConstantColor,
+        OneMinusConstantColor,
+        ConstantAlpha,
+        OneMinusConstantAlpha,
+        SrcAlphaSaturate
+    };
+
+    enum BlendOp
+    {
+        Add,
+        Subtract,
+        ReverseSubtract,
+        Min,
+        Max
+    };
+
+    struct TargetBlend
+    {
+        int colorWrite{ R | G | B | A };
+        bool enable{ false };
+        BlendFactor srcColor{ One };
+        BlendFactor dstColor{ OneMinusSrcAlpha };
+        BlendOp opColor{ Add };
+        BlendFactor srcAlpha{ One };
+        BlendFactor dstAlpha{ OneMinusSrcAlpha };
+        BlendOp opAlpha{ Add };
+    };
+
+    enum CompareOp
+    {
+        Never,
+        Less,
+        Equal,
+        LessOrEqual,
+        Greater,
+        NotEqual,
+        GreaterOrEqual,
+        Always
+    };
+
+    enum StencilOp
+    {
+        StencilZero,
+        Keep,
+        Replace,
+        IncrementAndClamp,
+        DecrementAndClamp,
+        Invert,
+        IncrementAndWrap,
+        DecrementAndWrap
+    };
+
+    struct StencilOpState
+    {
+        StencilOp failOp{ Keep };
+        StencilOp depthFailOp{ Keep };
+        StencilOp passOp{ Keep };
+        CompareOp compareOp{ Always };
+    };
+
+    int flags() const { return m_flags; }
+    void setFlags(int f) { m_flags = f; }
+
+    Topology topology() const { return m_topology; }
+    void setTopology(Topology t) { m_topology = t; }
+
+    CullMode cullMode() const { return m_cullMode; }
+    void setCullMode(CullMode mode) { m_cullMode = mode; }
+
+    FrontFace frontFace() const { return m_frontFace; }
+    void setFrontFace(FrontFace f) { m_frontFace = f; }
+
+    void setTargetBlends(std::initializer_list<TargetBlend> list)
+    {
+        m_targetBlends.assign(list.begin(), list.end());
+    }
+    template <typename InputIterator>
+    void setTargetBlends(InputIterator first, InputIterator last)
+    {
+        m_targetBlends.assign(first, last);
+    }
+    const TargetBlend* cbeginTargetBlends() const { return m_targetBlends.empty() ? nullptr : m_targetBlends.data(); }
+    const TargetBlend* cendTargetBlends() const { return m_targetBlends.empty() ? nullptr : m_targetBlends.data() + m_targetBlends.size(); }
+    const std::vector<TargetBlend>& targetBlends() const { return m_targetBlends; }
+
+    bool hasDepthTest() const { return m_depthTest; }
+    void setDepthTest(bool enable) { m_depthTest = enable; }
+
+    bool hasDepthWrite() const { return m_depthWrite; }
+    void setDepthWrite(bool enable) { m_depthWrite = enable; }
+
+    CompareOp depthOp() const { return m_depthOp; }
+    void setDepthOp(CompareOp op) { m_depthOp = op; }
+
+    bool hasStencilTest() const { return m_stencilTest; }
+    void setStencilTest(bool enable) { m_stencilTest = enable; }
+
+    StencilOpState stencilFront() const { return m_stencilFront; }
+    void setStencilFront(const StencilOpState& state) { m_stencilFront = state; }
+
+    StencilOpState stencilBack() const { return m_stencilBack; }
+    void setStencilBack(const StencilOpState& state) { m_stencilBack = state; }
+
+    int stencilReadMask() const { return m_stencilReadMask; }
+    void setStencilReadMask(int mask) { m_stencilReadMask = mask; }
+
+    int stencilWriteMask() const { return m_stencilWriteMask; }
+    void setStencilWriteMask(int mask) { m_stencilWriteMask = mask; }
+
+    int sampleCount() const { return m_sampleCount; }
+    void setSampleCount(int s) { m_sampleCount = s; }
+
+    float lineWidth() const { return m_lineWidth; }
+    void setLineWidth(float width) { m_lineWidth = width; }
+
+    int depthBias() const { return m_depthBias; }
+    void setDepthBias(int bias) { m_depthBias = bias; }
+
+    float slopeScaledDepthBias() const { return m_slopeScaledDepthBias; }
+    void setSlopeScaledDepthBias(float bias) { m_slopeScaledDepthBias = bias; }
+
+    void setShaderStages(std::initializer_list<RhiShaderStage> list)
+    {
+        m_shaderStages.assign(list.begin(), list.end());
+    }
+    template <typename InputIterator>
+    void setShaderStages(InputIterator first, InputIterator last)
+    {
+        m_shaderStages.assign(first, last);
+    }
+    const RhiShaderStage* cbeginShaderStages() const { return m_shaderStages.empty() ? nullptr : m_shaderStages.data(); }
+    const RhiShaderStage* cendShaderStages() const { return m_shaderStages.empty() ? nullptr : m_shaderStages.data() + m_shaderStages.size(); }
+    const std::vector<RhiShaderStage>& shaderStages() const { return m_shaderStages; }
+
+    RhiVertexLayout* vertexInputLayout() const { return m_vertexInputLayout; }
+    void setVertexInputLayout(RhiVertexLayout* layout) { m_vertexInputLayout = layout; }
+
+    // OpenGL-only 阶段仍有少量旧代码需要直接设置 uniform。
+    // 这里暴露的是后端 native shader program 的只读句柄；上层 RenderPass 不应拿它来做 draw，
+    // draw 入口统一走 CommandBuffer。
+    virtual GL_HANDLE id() const { return 0; }
+
+    // 后端在 create() 中把描述转换成 native object。
+    // OpenGL 后端会在这里编译 shader 并链接 program。
+    virtual bool create() = 0;
+
+protected:
+    RhiGraphicsPipeline() = default;
+
+    int m_flags{ 0 };
+    Topology m_topology{ Triangles };
+    CullMode m_cullMode{ Back };
+    FrontFace m_frontFace{ CCW };
+    std::vector<TargetBlend> m_targetBlends;
+    bool m_depthTest{ true };
+    bool m_depthWrite{ true };
+    CompareOp m_depthOp{ LessOrEqual };
+    bool m_stencilTest{ false };
+    StencilOpState m_stencilFront;
+    StencilOpState m_stencilBack;
+    int m_stencilReadMask{ 0xFF };
+    int m_stencilWriteMask{ 0xFF };
+    int m_sampleCount{ 1 };
+    float m_lineWidth{ 1.0f };
+    int m_depthBias{ 0 };
+    float m_slopeScaledDepthBias{ 0.0f };
+    std::vector<RhiShaderStage> m_shaderStages;
+    RhiVertexLayout* m_vertexInputLayout{ nullptr };
+};
+
+// CommandBuffer 是 RenderPass 和后端 API 之间的命令接口。
+//
+// Qt 的 RHI 会把命令记录下来，在 endFrame/finish 时统一提交。项目目前只支持
+// OpenGL，因此第一版采用“立即执行式 CommandBuffer”：接口长得像命令缓冲，
+// 但 OpenGL 后端在调用时就立刻执行 glBindFramebuffer/glUseProgram/glDraw*。
+//
+// 这样做的意义不是为了模拟 Vulkan，而是给上层建立清晰边界：
+// 1. beginPass/endPass 明确 render target 和清屏时机；
+// 2. draw 前必须显式绑定 GraphicsPipeline；
+// 3. vertex/index input、viewport、scissor、dynamic state 有统一入口；
+// 4. 后续如果想切换为真正录制命令，上层 RenderPass 不需要再改 API。
+class RhiCommandBuffer
+{
+public:
+    virtual ~RhiCommandBuffer() = default;
+
+    enum IndexFormat
+    {
+        IndexUInt16,
+        IndexUInt32
+    };
+
+    virtual void beginPass(RhiFrameBuffer* render_target,
+                           const Color4& color_clear_value = Color4(0.f, 0.f, 0.f, 1.f),
+                           float depth_clear_value = 1.0f,
+                           int stencil_clear_value = 0,
+                           bool clear_color = true,
+                           bool clear_depth_stencil = true) = 0;
+    virtual void endPass() = 0;
+
+    virtual void setGraphicsPipeline(RhiGraphicsPipeline* pipeline) = 0;
+    virtual void setVertexInput(RhiVertexLayout* layout,
+                                RhiBuffer* index_buffer = nullptr,
+                                int index_offset = 0,
+                                IndexFormat index_format = IndexUInt32) = 0;
+    virtual void setViewport(int x, int y, int width, int height) = 0;
+    virtual void setScissor(int x, int y, int width, int height) = 0;
+    virtual void setBlendConstants(const Color4& c) = 0;
+    virtual void setStencilRef(int ref_value) = 0;
+    virtual void blit(RhiFrameBuffer* source,
+                      RhiFrameBuffer* dest,
+                      RhiTexture::Format format = RhiTexture::Format::RGBA16F) = 0;
+
+    virtual void draw(int vertex_count,
+                      int instance_count = 1,
+                      int first_vertex = 0,
+                      int first_instance = 0) = 0;
+    virtual void drawIndexed(int index_count,
+                             int instance_count = 1,
+                             int first_index = 0,
+                             int vertex_offset = 0,
+                             int first_instance = 0) = 0;
+
+protected:
+    RhiCommandBuffer() = default;
 };
 
 class Rhi
@@ -329,8 +656,8 @@ public:
     static Rhi* create();
 
     // render相关
-    void drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1);
-    void drawTriangles(unsigned int vao_id, size_t array_count);
+    void drawIndexed(GL_HANDLE vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1);
+    void drawTriangles(GL_HANDLE vao_id, size_t array_count);
 
     // context 全局状态
     void setViewport(int x, int y, int width, int height);
@@ -340,7 +667,7 @@ public:
 
     // framebuffer 管理
     RhiFrameBuffer* newFrameBuffer(const RhiAttachment& colorAttachment, const Vec2& pixelSize_, int sampleCount_ = 1);
-    void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]);
+    void readPixelRGBA(GL_HANDLE framebuffer, int x, int y, unsigned char out_rgba[4]);
 
     //// binding resource
     // virtual void bindTexture(/*TextureData*/) = 0;
@@ -366,339 +693,9 @@ public:
 
     RhiVertexLayout *newVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer);
 
+    RhiGraphicsPipeline* newGraphicsPipeline();
+    RhiCommandBuffer* newCommandBuffer();
+
 private:
     RhiImpl* m_impl{ nullptr };
 };
-
-//class RhiCommandBuffer
-//{
-//public:
-//    enum IndexFormat
-//    {
-//        IndexUInt16,
-//        IndexUInt32
-//    };
-//
-//    enum BeginPassFlag
-//    {
-//        ExternalContent = 0x01,
-//        DoNotTrackResourcesForCompute = 0x02
-//    };
-//
-//    // void resourceUpdate(QRhiResourceUpdateBatch* resourceUpdates);
-//
-//    // void beginPass(RhiRenderTarget* rt,
-//    //     const Color4& colorClearValue,
-//    //     const QRhiDepthStencilClearValue& depthStencilClearValue,
-//    //     QRhiResourceUpdateBatch* resourceUpdates = nullptr,
-//    //     BeginPassFlags flags = {});
-//    // void endPass(QRhiResourceUpdateBatch* resourceUpdates = nullptr);
-//
-//    // using VertexInput = std::pair<RhiBuffer*, int>; // buffer, offset
-//    // void setVertexInput(int startBinding, int bindingCount, const VertexInput* bindings,
-//    //     RhiBuffer* indexBuf = nullptr, int indexOffset = 0,
-//    //     IndexFormat indexFormat = IndexUInt16);
-//
-//    // void setViewport(const RhiViewport& viewport);
-//    // void setScissor(const RhiScissor& scissor);
-//    void setBlendConstants(const Color4& c);
-//    void setStencilRef(int refValue);
-//
-//    void draw(int vertexCount,
-//        int instanceCount = 1,
-//        int firstVertex = 0,
-//        int firstInstance = 0);
-//
-//    void drawIndexed(int indexCount,
-//        int instanceCount = 1,
-//        int firstIndex = 0,
-//        int vertexOffset = 0,
-//        int firstInstance = 0);
-//
-//protected:
-//    RhiCommandBuffer();
-//};
-//
-//class RhiSwapChain
-//{
-//public:
-//    enum Flag
-//    {
-//        sRGB = 1 << 2,
-//        UsedAsTransferSource = 1 << 3,
-//        NoVSync = 1 << 4,
-//        MinimalBufferCount = 1 << 5
-//    };
-//
-//    enum Format
-//    {
-//        SDR,
-//        HDRExtendedSrgbLinear,
-//        HDR10
-//    };
-//
-//    enum StereoTargetBuffer
-//    {
-//        LeftBuffer,
-//        RightBuffer
-//    };
-//
-//    Window* window() const { return m_window; }
-//    void setWindow(Window* window) { m_window = window; }
-//
-//    Flag flags() const { return m_flags; }
-//    void setFlags(Flag f) { m_flags = f; }
-//
-//    Format format() const { return m_format; }
-//    void setFormat(Format f) { m_format = f; }
-//
-//    const RhiAttachment* depthStencil() const { return &m_depthStencilAttachment; }
-//    void setDepthStencil(RhiAttachment depthStencilAttachment_) { m_depthStencilAttachment = depthStencilAttachment_; }
-//
-//    int sampleCount() const { return m_sampleCount; }
-//    void setSampleCount(int samples) { m_sampleCount = samples; }
-//
-//    Vec2 currentPixelSize() const { return m_currentPixelSize; }
-//
-//    virtual RhiCommandBuffer* currentFrameCommandBuffer() = 0;
-//    // virtual RhiRenderTarget* currentFrameRenderTarget() = 0;
-//    // virtual RhiRenderTarget* currentFrameRenderTarget(StereoTargetBuffer targetBuffer);
-//    virtual Vec2 surfacePixelSize() = 0;
-//    virtual bool isFormatSupported(Format f) = 0;
-//    virtual bool createOrResize() = 0;
-//
-//protected:
-//    RhiSwapChain();
-//    Window* m_window = nullptr;
-//    Flag m_flags;
-//    Format m_format = SDR;
-//    RhiAttachment m_depthStencilAttachment;
-//    int m_sampleCount = 1;
-//    Vec2 m_currentPixelSize;
-//};
-//
-//class RhiGraphicsPipeline
-//{
-//public:
-//    enum Flag
-//    {
-//        UsesBlendConstants = 1 << 0,
-//        UsesStencilRef = 1 << 1,
-//        UsesScissor = 1 << 2,
-//        CompileShadersWithDebugInfo = 1 << 3
-//    };
-//
-//    enum Topology
-//    {
-//        Triangles,
-//        TriangleStrip,
-//        TriangleFan,
-//        Lines,
-//        LineStrip,
-//        Points,
-//        Patches
-//    };
-//
-//    enum CullMode
-//    {
-//        None,
-//        Front,
-//        Back
-//    };
-//
-//    enum FrontFace
-//    {
-//        CCW,
-//        CW
-//    };
-//
-//    enum ColorMask
-//    {
-//        R = 1 << 0,
-//        G = 1 << 1,
-//        B = 1 << 2,
-//        A = 1 << 3
-//    };
-//
-//    enum BlendFactor
-//    {
-//        Zero,
-//        One,
-//        SrcColor,
-//        OneMinusSrcColor,
-//        DstColor,
-//        OneMinusDstColor,
-//        SrcAlpha,
-//        OneMinusSrcAlpha,
-//        DstAlpha,
-//        OneMinusDstAlpha,
-//        ConstantColor,
-//        OneMinusConstantColor,
-//        ConstantAlpha,
-//        OneMinusConstantAlpha,
-//        SrcAlphaSaturate,
-//        Src1Color,
-//        OneMinusSrc1Color,
-//        Src1Alpha,
-//        OneMinusSrc1Alpha
-//    };
-//
-//    enum BlendOp
-//    {
-//        Add,
-//        Subtract,
-//        ReverseSubtract,
-//        Min,
-//        Max
-//    };
-//
-//    struct TargetBlend
-//    {
-//        ColorMask colorWrite = ColorMask(0xF); // R | G | B | A
-//        bool enable = false;
-//        BlendFactor srcColor = One;
-//        BlendFactor dstColor = OneMinusSrcAlpha;
-//        BlendOp opColor = Add;
-//        BlendFactor srcAlpha = One;
-//        BlendFactor dstAlpha = OneMinusSrcAlpha;
-//        BlendOp opAlpha = Add;
-//    };
-//
-//    enum CompareOp
-//    {
-//        Never,
-//        Less,
-//        Equal,
-//        LessOrEqual,
-//        Greater,
-//        NotEqual,
-//        GreaterOrEqual,
-//        Always
-//    };
-//
-//    enum StencilOp
-//    {
-//        StencilZero,
-//        Keep,
-//        Replace,
-//        IncrementAndClamp,
-//        DecrementAndClamp,
-//        Invert,
-//        IncrementAndWrap,
-//        DecrementAndWrap
-//    };
-//
-//    struct StencilOpState
-//    {
-//        StencilOp failOp = Keep;
-//        StencilOp depthFailOp = Keep;
-//        StencilOp passOp = Keep;
-//        CompareOp compareOp = Always;
-//    };
-//
-//    Flag flags() const { return m_flags; }
-//    void setFlags(Flag f) { m_flags = f; }
-//
-//    Topology topology() const { return m_topology; }
-//    void setTopology(Topology t) { m_topology = t; }
-//
-//    CullMode cullMode() const { return m_cullMode; }
-//    void setCullMode(CullMode mode) { m_cullMode = mode; }
-//
-//    FrontFace frontFace() const { return m_frontFace; }
-//    void setFrontFace(FrontFace f) { m_frontFace = f; }
-//
-//    template <typename InputIterator>
-//    void setTargetBlends(InputIterator first, InputIterator last)
-//    {
-//        m_targetBlends.clear();
-//        std::copy(first, last, std::back_inserter(m_targetBlends));
-//    }
-//    const TargetBlend *cbeginTargetBlends() const { return m_targetBlends.data(); }
-//    const TargetBlend *cendTargetBlends() const { return m_targetBlends.data() + m_targetBlends.size(); }
-//
-//    bool hasDepthTest() const { return m_depthTest; }
-//    void setDepthTest(bool enable) { m_depthTest = enable; }
-//
-//    bool hasDepthWrite() const { return m_depthWrite; }
-//    void setDepthWrite(bool enable) { m_depthWrite = enable; }
-//
-//    CompareOp depthOp() const { return m_depthOp; }
-//    void setDepthOp(CompareOp op) { m_depthOp = op; }
-//
-//    bool hasStencilTest() const { return m_stencilTest; }
-//    void setStencilTest(bool enable) { m_stencilTest = enable; }
-//
-//    StencilOpState stencilFront() const { return m_stencilFront; }
-//    void setStencilFront(const StencilOpState &state) { m_stencilFront = state; }
-//
-//    StencilOpState stencilBack() const { return m_stencilBack; }
-//    void setStencilBack(const StencilOpState &state) { m_stencilBack = state; }
-//
-//    int stencilReadMask() const { return m_stencilReadMask; }
-//    void setStencilReadMask(int mask) { m_stencilReadMask = mask; }
-//
-//    int stencilWriteMask() const { return m_stencilWriteMask; }
-//    void setStencilWriteMask(int mask) { m_stencilWriteMask = mask; }
-//
-//    int sampleCount() const { return m_sampleCount; }
-//    void setSampleCount(int s) { m_sampleCount = s; }
-//
-//    float lineWidth() const { return m_lineWidth; }
-//    void setLineWidth(float width) { m_lineWidth = width; }
-//
-//    int depthBias() const { return m_depthBias; }
-//    void setDepthBias(int bias) { m_depthBias = bias; }
-//
-//    float slopeScaledDepthBias() const { return m_slopeScaledDepthBias; }
-//    void setSlopeScaledDepthBias(float bias) { m_slopeScaledDepthBias = bias; }
-//
-//    // void setShaderStages(std::initializer_list<QRhiShaderStage> list) { m_shaderStages = list; }
-//    // template<typename InputIterator>
-//    // void setShaderStages(InputIterator first, InputIterator last)
-//    //{
-//    //     m_shaderStages.clear();
-//    //     std::copy(first, last, std::back_inserter(m_shaderStages));
-//    // }
-//    // const RhiShaderStage* cbeginShaderStages() const { return m_shaderStages.cbegin(); }
-//    // const RhiShaderStage* cendShaderStages() const { return m_shaderStages.cend(); }
-//
-//    RhiVertexLayout *vertexInputLayout() const { return m_vertexInputLayout; }
-//    void setVertexInputLayout(RhiVertexLayout *layout) { m_vertexInputLayout = layout; }
-//
-//    // RhiShaderResourceBindings* shaderResourceBindings() const { return m_shaderResourceBindings; }
-//    // void setShaderResourceBindings(RhiShaderResourceBindings* srb) { m_shaderResourceBindings = srb; }
-//
-//    // RhiRenderPassDescriptor* renderPassDescriptor() const { return m_renderPassDesc; }
-//    // void setRenderPassDescriptor(RhiRenderPassDescriptor* desc) { m_renderPassDesc = desc; }
-//
-//    int patchControlPointCount() const { return m_patchControlPointCount; }
-//    void setPatchControlPointCount(int count) { m_patchControlPointCount = count; }
-//
-//    virtual bool create() = 0;
-//
-//protected:
-//    RhiGraphicsPipeline();
-//    Flag m_flags;
-//    Topology m_topology = Triangles;
-//    CullMode m_cullMode = None;
-//    FrontFace m_frontFace = CCW;
-//    std::vector<TargetBlend> m_targetBlends;
-//    bool m_depthTest = false;
-//    bool m_depthWrite = false;
-//    CompareOp m_depthOp = Less;
-//    bool m_stencilTest = false;
-//    StencilOpState m_stencilFront;
-//    StencilOpState m_stencilBack;
-//    int m_stencilReadMask = 0xFF;
-//    int m_stencilWriteMask = 0xFF;
-//    int m_sampleCount = 1;
-//    float m_lineWidth = 1.0f;
-//    int m_depthBias = 0;
-//    float m_slopeScaledDepthBias = 0.0f;
-//    int m_patchControlPointCount = 3;
-//    // std::array<RhiShaderStage, 4> m_shaderStages;
-//    RhiVertexLayout *m_vertexInputLayout;
-//    // RhiShaderResourceBindings* m_shaderResourceBindings = nullptr;
-//    // RhiRenderPassDescriptor* m_renderPassDesc = nullptr;
-//};

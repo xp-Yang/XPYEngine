@@ -11,11 +11,10 @@ void ZPrePass::draw(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    framebuffer->clear();
+    m_command_buffer->beginPass(framebuffer);
 
     static RenderShaderObject* depth_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-    depth_shader->start_using();
+    m_command_buffer->setGraphicsPipeline(depth_shader->graphicsPipeline());
     Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
     Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
     for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
@@ -35,6 +34,8 @@ void ZPrePass::draw(RenderPassContext& context)
         depth_shader->setMatrix("view", 1, light_view);
         depth_shader->setMatrix("projection", 1, light_proj);
         depth_shader->setFloat4("color", Color4(1.0));
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
+    m_command_buffer->endPass();
 }

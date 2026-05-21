@@ -29,7 +29,7 @@ ResourceViewerState& resourceViewerState()
     return state;
 }
 
-ImTextureID toImTextureID(unsigned int texture_id)
+ImTextureID toImTextureID(GL_HANDLE texture_id)
 {
     return reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texture_id));
 }
@@ -72,7 +72,7 @@ ImVec2 imageFitSize(const Vec2& texture_size, const ImVec2& max_size)
 
 class DebugTexturePreviewRenderer {
 public:
-    unsigned int render(unsigned int source_texture, bool remap_depth, float depth_min, float depth_max, int width, int height)
+    GL_HANDLE render(GL_HANDLE source_texture, bool remap_depth, float depth_min, float depth_max, int width, int height)
     {
         if (source_texture == 0 || width <= 0 || height <= 0)
             return 0;
@@ -169,9 +169,9 @@ private:
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
     }
 
-    unsigned int m_framebuffer{ 0 };
-    unsigned int m_texture{ 0 };
-    unsigned int m_vertex_array{ 0 };
+    GL_HANDLE m_framebuffer{ 0 };
+    GL_HANDLE m_texture{ 0 };
+    GL_HANDLE m_vertex_array{ 0 };
     int m_width{ 0 };
     int m_height{ 0 };
 };
@@ -315,7 +315,7 @@ void renderRenderGraphResourceViewer(RenderSystem* render_system, std::string& s
     const ImVec2 available = ImGui::GetContentRegionAvail();
     const float preview_max_height = std::max(180.0f, available.y * 0.62f);
     const ImVec2 image_size = imageFitSize(selected_info->size, ImVec2(available.x, preview_max_height));
-    unsigned int preview_texture = selected_info->texture_id;
+    GL_HANDLE preview_texture = selected_info->texture_id;
 
     if (selected_info->is_depth)
     {

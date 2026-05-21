@@ -11,6 +11,10 @@
 #include "Base/Logger/Logger.hpp"
 
 RenderShaderObject::RenderShaderObject(const Shader &shader)
+    : m_id(0)
+    , m_vertexCode(shader.vsCode)
+    , m_fragmentCode(shader.fsCode)
+    , m_geometryCode(shader.gsCode)
 {
     const char *vShaderCode = shader.vsCode.c_str();
     const char *fShaderCode = shader.fsCode.c_str();
@@ -19,7 +23,7 @@ RenderShaderObject::RenderShaderObject(const Shader &shader)
     bool has_geo_shader = !shader.gsCode.empty();
 
     // compile
-    unsigned int vertex, fragment, geometry;
+    GL_HANDLE vertex, fragment, geometry;
     int success;
     char infoLog[512];
 
@@ -82,6 +86,62 @@ RenderShaderObject::RenderShaderObject(const Shader &shader)
         glDeleteShader(geometry);
 }
 
+RenderShaderObject::~RenderShaderObject()
+{
+    for (PipelineVariant& variant : m_pipeline_variants)
+        delete variant.pipeline;
+    m_pipeline_variants.clear();
+}
+
+RhiGraphicsPipeline* RenderShaderObject::graphicsPipeline(const RenderPipelineState& state)
+{
+    for (PipelineVariant& variant : m_pipeline_variants)
+    {
+        if (variant.state == state)
+        {
+            m_id = variant.pipeline->id();
+            return variant.pipeline;
+        }
+    }
+
+    RhiGraphicsPipeline* pipeline = Rhi::get()->newGraphicsPipeline();
+    std::vector<RhiShaderStage> stages;
+    stages.emplace_back(RhiShaderStage::Vertex, m_vertexCode, "RenderShaderObject vertex");
+    stages.emplace_back(RhiShaderStage::Fragment, m_fragmentCode, "RenderShaderObject fragment");
+    if (!m_geometryCode.empty())
+        stages.emplace_back(RhiShaderStage::Geometry, m_geometryCode, "RenderShaderObject geometry");
+
+    pipeline->setShaderStages(stages.begin(), stages.end());
+    pipeline->setTopology(state.topology);
+    pipeline->setCullMode(state.cullMode);
+    pipeline->setFrontFace(state.frontFace);
+    pipeline->setDepthTest(state.depthTest);
+    pipeline->setDepthWrite(state.depthWrite);
+
+    if (state.blend)
+    {
+        RhiGraphicsPipeline::TargetBlend blend;
+        blend.enable = true;
+        blend.srcColor = RhiGraphicsPipeline::SrcAlpha;
+        blend.dstColor = RhiGraphicsPipeline::OneMinusSrcAlpha;
+        blend.srcAlpha = RhiGraphicsPipeline::SrcAlpha;
+        blend.dstAlpha = RhiGraphicsPipeline::OneMinusSrcAlpha;
+        pipeline->setTargetBlends({ blend });
+    }
+
+    if (!pipeline->create())
+    {
+        delete pipeline;
+        Logger::error("RenderShaderObject failed to create graphics pipeline.");
+        assert(false);
+        return nullptr;
+    }
+
+    m_id = pipeline->id();
+    m_pipeline_variants.push_back(PipelineVariant{ state, pipeline });
+    return pipeline;
+}
+
 void RenderShaderObject::start_using() const
 {
     glUseProgram(m_id);
@@ -124,7 +184,7 @@ void RenderShaderObject::setMatrix(const std::string &name, int count, const Mat
     GLuint transformLoc = glGetUniformLocation(m_id, name.c_str());
     glUniformMatrix4fv(transformLoc, count, GL_FALSE, /*glm::value_ptr(mat_value)*/ &(mat_value[0].x));
 }
-void RenderShaderObject::setTexture(const std::string &name, int texture_unit, unsigned int texture_id) const
+void RenderShaderObject::setTexture(const std::string &name, int texture_unit, GL_HANDLE texture_id) const
 {
     glActiveTexture(GL_TEXTURE0 + texture_unit);
     glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -132,7 +192,7 @@ void RenderShaderObject::setTexture(const std::string &name, int texture_unit, u
     glActiveTexture(GL_TEXTURE0);
 }
 
-void RenderShaderObject::setCubeTexture(const std::string &name, int texture_unit, unsigned int texture_id) const
+void RenderShaderObject::setCubeTexture(const std::string &name, int texture_unit, GL_HANDLE texture_id) const
 {
     glActiveTexture(GL_TEXTURE0 + texture_unit);
     glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);

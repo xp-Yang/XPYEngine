@@ -11,11 +11,10 @@ void CheckerBoardPass::draw(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    framebuffer->clear();
+    m_command_buffer->beginPass(framebuffer);
 
     static RenderShaderObject* shader = RenderShaderObject::getShaderObject(ShaderType::CheckerboardShader);
-    shader->start_using();
+    m_command_buffer->setGraphicsPipeline(shader->graphicsPipeline());
     shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
     shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
     for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
@@ -26,7 +25,8 @@ void CheckerBoardPass::draw(RenderPassContext& context)
         Math::DecomposeMatrix(render_node->model_matrix, modelTranslation, modelRotation, modelScale);
         shader->setMatrix("modelScale", 1, modelScale);
         shader->setMatrix("model", 1, render_node->model_matrix);
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
-    shader->stop_using();
+    m_command_buffer->endPass();
 }

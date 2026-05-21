@@ -18,16 +18,16 @@ void BloomPass::extractBright(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    framebuffer->clear();
+    m_command_buffer->beginPass(framebuffer);
 
     RhiTexture* lighted_texture = context.texture(RGResource::SceneColor);
-    auto lighted_map = lighted_texture ? lighted_texture->id() : 0;
+    GL_HANDLE lighted_map = lighted_texture ? lighted_texture->id() : 0;
     static RenderShaderObject* extract_bright_shader = RenderShaderObject::getShaderObject(ShaderType::ExtractBrightShader);
-    extract_bright_shader->start_using();
+    m_command_buffer->setGraphicsPipeline(extract_bright_shader->graphicsPipeline());
     extract_bright_shader->setTexture("Texture", 0, lighted_map);
-    m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
-    extract_bright_shader->stop_using();
+    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->endPass();
 }
 
 void BloomPass::blur(RenderPassContext& context)
@@ -38,49 +38,48 @@ void BloomPass::blur(RenderPassContext& context)
     if (!framebuffer || !pingpong1_framebuffer || !pingpong2_framebuffer)
         return;
 
-    pingpong1_framebuffer->bind();
-    pingpong1_framebuffer->clear();
-    pingpong2_framebuffer->bind();
-    pingpong2_framebuffer->clear();
+    m_command_buffer->beginPass(pingpong1_framebuffer);
+    m_command_buffer->endPass();
+    m_command_buffer->beginPass(pingpong2_framebuffer);
+    m_command_buffer->endPass();
 
-    auto bright_map = framebuffer->colorAttachmentAt(0)->texture()->id();
+    GL_HANDLE bright_map = framebuffer->colorAttachmentAt(0)->texture()->id();
 
     static RenderShaderObject* blur_shader = RenderShaderObject::getShaderObject(ShaderType::GaussianBlur);
     bool horizontal = true;
     unsigned int amount = 16;
-    blur_shader->start_using();
     for (unsigned int i = 0; i < amount; i++)
     {
-        if (horizontal)
-            pingpong1_framebuffer->bind();
-        else
-            pingpong2_framebuffer->bind();
-        unsigned int map = horizontal ?
+        RhiFrameBuffer* target = horizontal ? pingpong1_framebuffer : pingpong2_framebuffer;
+        m_command_buffer->beginPass(target, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
+        m_command_buffer->setGraphicsPipeline(blur_shader->graphicsPipeline());
+        GL_HANDLE map = horizontal ?
             pingpong2_framebuffer->colorAttachmentAt(0)->texture()->id() :
             pingpong1_framebuffer->colorAttachmentAt(0)->texture()->id();
         blur_shader->setTexture("image", 0, (i == 0) ? bright_map : map);
         blur_shader->setInt("horizontal", horizontal);
-        m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
+        m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
+        m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+        m_command_buffer->endPass();
         horizontal = !horizontal;
     }
-    blur_shader->stop_using();
 }
 
 void BloomPass::writeToScene(RenderPassContext& context)
 {
     RhiFrameBuffer* scene_framebuffer = context.frameBuffer(RGResource::SceneColor);
-    scene_framebuffer->bind();
-
-    m_rhi->setDepthMask(false);
+    m_command_buffer->beginPass(scene_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
 
     static RenderShaderObject* bloom_shader = RenderShaderObject::getShaderObject(ShaderType::BloomShader);
-    bloom_shader->start_using();
+    RenderPipelineState state;
+    state.depthWrite = false;
+    m_command_buffer->setGraphicsPipeline(bloom_shader->graphicsPipeline(state));
     RhiTexture* lighted_texture = context.texture(RGResource::SceneColor);
-    auto lighted_map = lighted_texture ? lighted_texture->id() : 0;
+    GL_HANDLE lighted_map = lighted_texture ? lighted_texture->id() : 0;
     bloom_shader->setTexture("Texture", 0, lighted_map);
     RhiTexture* blurred_bright_texture = context.texture(RGResource::BloomPingPong1Color);
     bloom_shader->setTexture("bloomMap", 1, blurred_bright_texture->id());
-    m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
-
-    m_rhi->setDepthMask(true);
+    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->endPass();
 }

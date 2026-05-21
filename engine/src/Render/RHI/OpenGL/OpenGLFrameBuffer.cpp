@@ -1,6 +1,7 @@
 #include "OpenGLFrameBuffer.hpp"
 #include "../rhi.hpp"
 #include <assert.h>
+#include <vector>
 
 OpenGLFrameBuffer::OpenGLFrameBuffer(const RhiAttachment &colorAttachment, const Vec2 &pixelSize_, int sampleCount_)
     : RhiFrameBuffer(colorAttachment, pixelSize_, sampleCount_)
@@ -27,7 +28,7 @@ void OpenGLFrameBuffer::destroyGPU()
 
 bool OpenGLFrameBuffer::create()
 {
-    unsigned fbo_id;
+    GL_HANDLE fbo_id;
     glGenFramebuffers(1, &fbo_id);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
 
@@ -38,7 +39,7 @@ bool OpenGLFrameBuffer::create()
         if (texture)
         {
             color_attachment_size++;
-            unsigned int textureID = texture->id();
+            GL_HANDLE textureID = texture->id();
             if (texture->flags() & RhiTexture::CubeMap)
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_CUBE_MAP_POSITIVE_X + m_colorAttachments[i].layer(), textureID, m_colorAttachments[i].level());
             else if (texture->sampleCount() > 1)
@@ -50,7 +51,7 @@ bool OpenGLFrameBuffer::create()
     RhiTexture *depth_stencil_texture = m_depthStencilAttachment.texture();
     if (depth_stencil_texture)
     {
-        unsigned int depthStencilTextureID = depth_stencil_texture->id();
+        GL_HANDLE depthStencilTextureID = depth_stencil_texture->id();
         if (depth_stencil_texture->flags() & RhiTexture::CubeMap)
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + m_depthStencilAttachment.layer(), depthStencilTextureID, m_depthStencilAttachment.level());
         else if (depth_stencil_texture->sampleCount() > 1)
@@ -62,7 +63,7 @@ bool OpenGLFrameBuffer::create()
     RhiTexture *depth_texture = m_depthAttachment.texture();
     if (depth_texture)
     {
-        unsigned int depthTextureID = depth_texture->id();
+        GL_HANDLE depthTextureID = depth_texture->id();
         if (depth_texture->flags() & RhiTexture::CubeMap)
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + m_depthAttachment.layer(), depthTextureID, m_depthAttachment.level());
         else if (depth_texture->sampleCount() > 1)
@@ -78,13 +79,12 @@ bool OpenGLFrameBuffer::create()
     }
     else if (color_attachment_size > 1)
     { // 有2个及以上
-        unsigned int *attachments = new unsigned int[color_attachment_size];
-        for (unsigned int i = 0; i < color_attachment_size; i++)
+        std::vector<GLenum> attachments(color_attachment_size);
+        for (int i = 0; i < color_attachment_size; i++)
         {
             attachments[i] = GL_COLOR_ATTACHMENT0 + i;
         }
-        glDrawBuffers(color_attachment_size, attachments);
-        delete[] attachments;
+        glDrawBuffers(color_attachment_size, attachments.data());
         // glDrawBuffers函数并不是一个Draw Call,而是一个状态机参数设置的函数,它的作用是告诉OpenGL,把绘制output put填充到这些Attachment对应的Buffer里,所以这个函数在创建Framebuffer的时候就可以被调用了。
     }
 

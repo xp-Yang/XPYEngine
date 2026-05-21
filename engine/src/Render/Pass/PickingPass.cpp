@@ -12,11 +12,10 @@ void PickingPass::draw(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    framebuffer->clear();
+    m_command_buffer->beginPass(framebuffer);
 
     static RenderShaderObject* picking_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-    picking_shader->start_using();
+    m_command_buffer->setGraphicsPipeline(picking_shader->graphicsPipeline());
 
     picking_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
     picking_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
@@ -39,8 +38,9 @@ void PickingPass::draw(RenderPassContext& context)
         int b = (id & 0x00FF0000) >> 16;
         Color4 color(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
         picking_shader->setFloat4("color", color);
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
 
-    framebuffer->unBind();
+    m_command_buffer->endPass();
 }

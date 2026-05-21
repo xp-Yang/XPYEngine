@@ -67,7 +67,7 @@ bool getTextureFormatDesc(RhiTexture::Format format, TextureFormatDesc& desc)
 
 bool OpenGLTexture::create()
 {
-    unsigned int textureID;
+    GL_HANDLE textureID;
 
     if (m_flags & RhiTexture::CubeMap)
     {

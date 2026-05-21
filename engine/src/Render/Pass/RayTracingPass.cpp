@@ -11,14 +11,13 @@ void RayTracingPass::draw(RenderPassContext& context)
 	RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
 	if (!framebuffer)
 		return;
-	framebuffer->bind();
-	framebuffer->clear();
+	m_command_buffer->beginPass(framebuffer);
 
 	static RenderShaderObject *rt_shader = RenderShaderObject::getShaderObject(ShaderType::RayTracingShader);
 	auto camera = context.renderSourceData().render_camera;
 
 	{
-		rt_shader->start_using();
+		m_command_buffer->setGraphicsPipeline(rt_shader->graphicsPipeline());
 		// camera
 		rt_shader->setFloat3("camera.pos", camera->pos);
 		rt_shader->setFloat("camera.distance", 1.0f /*camera->focal_length*/);
@@ -38,8 +37,9 @@ void RayTracingPass::draw(RenderPassContext& context)
 		// random
 		rt_shader->setFloat("randOrigin", 674764.0f * (Math::randomUnit() + 1.0f));
 		// render to framebuffer
-		m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
+		m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
+		m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
 	}
 
-	framebuffer->unBind();
+	m_command_buffer->endPass();
 }

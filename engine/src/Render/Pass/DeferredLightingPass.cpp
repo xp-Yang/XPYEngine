@@ -12,32 +12,31 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferPosition);
 	if (!framebuffer || !gbuffer_framebuffer)
 		return;
-	framebuffer->bind();
-	//framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
-	framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
+	// framebuffer clear color before gamma correction: Color4(0.046, 0.046, 0.046, 1.0)
+	m_command_buffer->beginPass(framebuffer, Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
 
 	// deferred lighting
 	static RenderShaderObject* lighting_pbr_shader = RenderShaderObject::getShaderObject(ShaderType::DeferredLightingShader);
 	static RenderShaderObject* lighting_phong_shader = RenderShaderObject::getShaderObject(ShaderType::DeferredLightingPhongShader);
 	RenderShaderObject* lighting_shader = m_pbr ? lighting_pbr_shader : lighting_phong_shader;
-	lighting_shader->start_using();
-	unsigned int g_position_map = gbuffer_framebuffer->colorAttachmentAt(0)->texture()->id();
-	unsigned int g_normal_map = gbuffer_framebuffer->colorAttachmentAt(1)->texture()->id();
+	m_command_buffer->setGraphicsPipeline(lighting_shader->graphicsPipeline());
+	GL_HANDLE g_position_map = gbuffer_framebuffer->colorAttachmentAt(0)->texture()->id();
+	GL_HANDLE g_normal_map = gbuffer_framebuffer->colorAttachmentAt(1)->texture()->id();
 	lighting_shader->setTexture("gPosition", 0, g_position_map);
 	lighting_shader->setTexture("gNormal", 1, g_normal_map);
 	if (m_pbr) {
-		unsigned int g_albedo_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
-		unsigned int g_metallic_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
-		unsigned int g_roughness_map = gbuffer_framebuffer->colorAttachmentAt(4)->texture()->id();
-		unsigned int g_ao_map = gbuffer_framebuffer->colorAttachmentAt(5)->texture()->id();
+		GL_HANDLE g_albedo_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
+		GL_HANDLE g_metallic_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
+		GL_HANDLE g_roughness_map = gbuffer_framebuffer->colorAttachmentAt(4)->texture()->id();
+		GL_HANDLE g_ao_map = gbuffer_framebuffer->colorAttachmentAt(5)->texture()->id();
 		lighting_shader->setTexture("gAlbedo", 2, g_albedo_map);
 		lighting_shader->setTexture("gMetallic", 3, g_metallic_map);
 		lighting_shader->setTexture("gRoughness", 4, g_roughness_map);
 		lighting_shader->setTexture("gAo", 5, g_ao_map);
 	}
 	else {
-		unsigned int g_diffuse_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
-		unsigned int g_specular_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
+		GL_HANDLE g_diffuse_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
+		GL_HANDLE g_specular_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
 		lighting_shader->setTexture("gDiffuse", 2, g_diffuse_map);
 		lighting_shader->setTexture("gSpecular", 3, g_specular_map);
 	}
@@ -55,7 +54,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
     std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
     int point_light_size = std::min(MAX_CUBE_SHADOW_MAP_COUNT, cube_shadow_maps.size());
     for (int i = 0; i < MAX_CUBE_SHADOW_MAP_COUNT; i++) {
-        unsigned int cube_shadow_map_id =
+        GL_HANDLE cube_shadow_map_id =
             i < static_cast<int>(cube_shadow_maps.size()) && cube_shadow_maps[i]
             ? cube_shadow_maps[i]->id()
             : RenderTextureData::defaultCubeTexture().id;
@@ -72,40 +71,26 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		point_light_idx++;
 	}
 	lighting_shader->setInt("point_lights_size", point_light_size);
-	m_rhi->drawIndexed(context.renderSourceData().screen_quad->getVAO(), context.renderSourceData().screen_quad->indicesCount());
-	lighting_shader->stop_using();
+	m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
+	m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+	m_command_buffer->endPass();
 
-	gbuffer_framebuffer->blitTo(framebuffer, RhiTexture::Format::DEPTH);
-
-	// lights
-	//static RenderShaderObject* point_light_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-	//for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
-	//	const auto& render_point_light_sub_mesh_data = render_point_light_data.render_sub_mesh_data;
-	//	point_light_shader->start_using();
-	//	point_light_shader->setFloat4("color", render_point_light_data.color);
-	//	point_light_shader->setMatrix("model", 1, render_point_light_sub_mesh_data->transform());
-	//	point_light_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
-	//	point_light_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-	//	m_rhi->drawIndexed(render_point_light_sub_mesh_data->getVAO(), render_point_light_sub_mesh_data->indicesCount());
-	//	point_light_shader->stop_using();
-	//}
+	m_command_buffer->blit(gbuffer_framebuffer, framebuffer, RhiTexture::Format::DEPTH);
 
 	// instancing lights
     if (context.renderSourceData().render_point_light_inst_mesh && context.renderSourceData().point_light_inst_amount > 0)
     {
+        m_command_buffer->beginPass(framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
         static RenderShaderObject* point_light_instancing_shader = RenderShaderObject::getShaderObject(ShaderType::InstancingShader);
-        point_light_instancing_shader->start_using();
+        m_command_buffer->setGraphicsPipeline(point_light_instancing_shader->graphicsPipeline());
         point_light_instancing_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
         point_light_instancing_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-        m_rhi->drawIndexed(
-            context.renderSourceData().render_point_light_inst_mesh->getVAO(),
-            context.renderSourceData().render_point_light_inst_mesh->indicesCount(),
-            0,
+        m_command_buffer->setVertexInput(context.renderSourceData().render_point_light_inst_mesh->vertexLayout());
+        m_command_buffer->drawIndexed(
+            static_cast<int>(context.renderSourceData().render_point_light_inst_mesh->indicesCount()),
             context.renderSourceData().point_light_inst_amount);
-        point_light_instancing_shader->stop_using();
+        m_command_buffer->endPass();
     }
-
-	framebuffer->unBind();
 }
 
 void DeferredLightingPass::enablePBR(bool enable)

@@ -14,8 +14,8 @@ public:
     ~RhiOpenGL() override {};
 
     // render相关
-    void drawIndexed(unsigned int vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1) override;
-    void drawTriangles(unsigned int vao_id, size_t array_count) override;
+    void drawIndexed(GL_HANDLE vao_id, size_t indices_count, size_t index_offset = 0, int inst_amount = -1) override;
+    void drawTriangles(GL_HANDLE vao_id, size_t array_count) override;
 
     // context 全局状态
     void setViewport(int x, int y, int width, int height) override;
@@ -25,7 +25,7 @@ public:
 
     // framebuffer 管理
     RhiFrameBuffer *newFrameBuffer(const RhiAttachment &colorAttachment, const Vec2 &pixelSize_, int sampleCount_ = 1) override;
-    void readPixelRGBA(unsigned int framebuffer, int x, int y, unsigned char out_rgba[4]) override;
+    void readPixelRGBA(GL_HANDLE framebuffer, int x, int y, unsigned char out_rgba[4]) override;
 
     //// binding resource
     // void bindTexture(/*TextureData*/) override;
@@ -49,6 +49,9 @@ public:
                          int size) override;
 
     RhiVertexLayout *newVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer) override;
+
+    RhiGraphicsPipeline *newGraphicsPipeline() override;
+    RhiCommandBuffer *newCommandBuffer() override;
 };
 
 #endif

@@ -22,9 +22,8 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     if (!framebuffer)
         return;
-    framebuffer->bind();
-    // framebuffer->clear(Color4(0.046, 0.046, 0.046, 1.0)); // before gamma correction
-    framebuffer->clear(Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
+    // framebuffer clear color before gamma correction: Color4(0.046, 0.046, 0.046, 1.0)
+    m_command_buffer->beginPass(framebuffer, Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
 
     Mat4 light_ref_matrix = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix *
                             context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
@@ -34,7 +33,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     static RenderShaderObject *pbr_shader = RenderShaderObject::getShaderObject(ShaderType::PBRShader);
     static RenderShaderObject *blinn_phong_shader = RenderShaderObject::getShaderObject(ShaderType::BlinnPhongShader);
     RenderShaderObject *shader = m_pbr ? pbr_shader : blinn_phong_shader;
-    shader->start_using();
+    m_command_buffer->setGraphicsPipeline(shader->graphicsPipeline());
     int k = 0;
     for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
     {
@@ -108,7 +107,8 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
                 shader->setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]->id());
             }
         }
-        m_rhi->drawIndexed(render_node->mesh.getVAO(), render_node->source_index_count, render_node->source_index_offset);
+        m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
+        m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
-    shader->stop_using();
+    m_command_buffer->endPass();
 }

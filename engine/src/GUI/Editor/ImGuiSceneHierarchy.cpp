@@ -194,10 +194,10 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             return;
         }
 
-        static std::unordered_map<const Texture*, unsigned int> texture_preview_cache;
+        static std::unordered_map<const Texture*, GL_HANDLE> texture_preview_cache;
         auto it = texture_preview_cache.find(tex.get());
         if (it == texture_preview_cache.end()) {
-            const unsigned int preview_id = RenderTextureData(tex).id;
+            const GL_HANDLE preview_id = RenderTextureData(tex).id;
             it = texture_preview_cache.insert({ tex.get(), preview_id }).first;
         }
 
