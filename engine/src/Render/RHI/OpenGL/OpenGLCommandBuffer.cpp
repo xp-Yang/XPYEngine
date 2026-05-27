@@ -68,6 +68,60 @@ void OpenGLCommandBuffer::setGraphicsPipeline(RhiGraphicsPipeline* pipeline)
     m_current_pipeline->bind();
 }
 
+void OpenGLCommandBuffer::setShaderResources(RhiShaderResourceBindings* bindings)
+{
+    assert(insidePass() && "setShaderResources must be called inside a render pass");
+    assert(m_current_pipeline && "setShaderResources requires a graphics pipeline");
+    if (!bindings)
+        return;
+
+    const GL_HANDLE program = m_current_pipeline->program();
+    for (const RhiShaderResourceBindings::Binding& binding : bindings->bindings())
+    {
+        const GLint location = glGetUniformLocation(program, binding.name.c_str());
+        switch (binding.type)
+        {
+        case RhiShaderResourceBindings::Bool:
+        case RhiShaderResourceBindings::Int:
+            if (location != -1)
+                glUniform1i(location, binding.int_value);
+            break;
+        case RhiShaderResourceBindings::Float:
+            if (location != -1)
+                glUniform1f(location, binding.values[0]);
+            break;
+        case RhiShaderResourceBindings::Float3:
+            if (location != -1)
+                glUniform3f(location, binding.values[0], binding.values[1], binding.values[2]);
+            break;
+        case RhiShaderResourceBindings::Float4:
+            if (location != -1)
+                glUniform4f(location, binding.values[0], binding.values[1], binding.values[2], binding.values[3]);
+            break;
+        case RhiShaderResourceBindings::Matrix:
+            if (location != -1 && !binding.matrices.empty())
+                glUniformMatrix4fv(location,
+                                   static_cast<GLsizei>(binding.matrices.size()),
+                                   GL_FALSE,
+                                   &(binding.matrices[0][0].x));
+            break;
+        case RhiShaderResourceBindings::Texture2D:
+            glActiveTexture(GL_TEXTURE0 + binding.texture_unit);
+            glBindTexture(GL_TEXTURE_2D, binding.texture_id);
+            if (location != -1)
+                glUniform1i(location, binding.texture_unit);
+            break;
+        case RhiShaderResourceBindings::TextureCube:
+            glActiveTexture(GL_TEXTURE0 + binding.texture_unit);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, binding.texture_id);
+            if (location != -1)
+                glUniform1i(location, binding.texture_unit);
+            break;
+        }
+    }
+    glActiveTexture(GL_TEXTURE0);
+}
+
 void OpenGLCommandBuffer::setVertexInput(RhiVertexLayout* layout,
                                          RhiBuffer* index_buffer,
                                          int index_offset,

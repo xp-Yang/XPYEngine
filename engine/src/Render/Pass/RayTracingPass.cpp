@@ -13,20 +13,20 @@ void RayTracingPass::draw(RenderPassContext& context)
 		return;
 	m_command_buffer->beginPass(framebuffer);
 
-	static RenderShaderObject *rt_shader = RenderShaderObject::getShaderObject(ShaderType::RayTracingShader);
 	auto camera = context.renderSourceData().render_camera;
 
 	{
-		m_command_buffer->setGraphicsPipeline(rt_shader->graphicsPipeline());
+		m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::RayTracingShader));
+        ShaderResourceBindings bindings;
 		// camera
-		rt_shader->setFloat3("camera.pos", camera->pos);
-		rt_shader->setFloat("camera.distance", 1.0f /*camera->focal_length*/);
-		rt_shader->setFloat("camera.fov", camera->fov);
-		rt_shader->setFloat("camera.aspect_ratio", 16.0f / 9.0f); // TODO 需要一种方法不会拉伸纹理也不影响fov
+		bindings.setFloat3("camera.pos", camera->pos);
+		bindings.setFloat("camera.distance", 1.0f /*camera->focal_length*/);
+		bindings.setFloat("camera.fov", camera->fov);
+		bindings.setFloat("camera.aspect_ratio", 16.0f / 9.0f); // TODO 需要一种方法不会拉伸纹理也不影响fov
 
-		rt_shader->setFloat3("camera.front", camera->direction);
-		rt_shader->setFloat3("camera.right", camera->rightDirection);
-		rt_shader->setFloat3("camera.up", camera->upDirection);
+		bindings.setFloat3("camera.front", camera->direction);
+		bindings.setFloat3("camera.right", camera->rightDirection);
+		bindings.setFloat3("camera.up", camera->upDirection);
 
 		// debug
 		// float width = tan(camera->fov / 2.0f) * camera->focal_length * 2.0;
@@ -35,7 +35,8 @@ void RayTracingPass::draw(RenderPassContext& context)
 		// Vec3 leftbottom = camera->pos + camera->focal_length * camera->direction - width / 2.0f * camera->getRightDirection() - height / 2.0f * camera->upDirection;
 
 		// random
-		rt_shader->setFloat("randOrigin", 674764.0f * (Math::randomUnit() + 1.0f));
+		bindings.setFloat("randOrigin", 674764.0f * (Math::randomUnit() + 1.0f));
+        m_command_buffer->setShaderResources(&bindings);
 		// render to framebuffer
 		m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
 		m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));

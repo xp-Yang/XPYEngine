@@ -20,28 +20,29 @@ void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
         return;
     m_command_buffer->beginPass(framebuffer);
 
-    static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-    m_command_buffer->setGraphicsPipeline(depth_shader->graphicsPipeline());
+    m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::SingleColorShader));
+    ShaderResourceBindings bindings;
     Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
     Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
     for (const auto &pair : context.renderSourceData().render_mesh_nodes)
     {
         const auto &render_node = pair.second;
-        depth_shader->setBool("useSkinning", render_node->use_skinning);
+        bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty())
         {
             int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
-            depth_shader->setInt("bone_count", bone_count);
-            depth_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+            bindings.setInt("bone_count", bone_count);
+            bindings.setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
         }
         else
         {
-            depth_shader->setInt("bone_count", 0);
+            bindings.setInt("bone_count", 0);
         }
-        depth_shader->setMatrix("model", 1, render_node->model_matrix);
-        depth_shader->setMatrix("view", 1, light_view);
-        depth_shader->setMatrix("projection", 1, light_proj);
-        depth_shader->setFloat4("color", Color4(1.0));
+        bindings.setMatrix("model", 1, render_node->model_matrix);
+        bindings.setMatrix("view", 1, light_view);
+        bindings.setMatrix("projection", 1, light_proj);
+        bindings.setFloat4("color", Color4(1.0));
+        m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
         m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }
@@ -50,8 +51,6 @@ void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
 
 void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
 {
-    static RenderShaderObject *depth_shader = RenderShaderObject::getShaderObject(ShaderType::CubeMapShader);
-
     std::vector<std::array<Mat4, 6>> light_view;
     std::vector<Mat4> light_proj;
     std::vector<Vec3> light_pos;
@@ -76,27 +75,29 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
                 continue;
             m_command_buffer->beginPass(face_framebuffer, Color4(1.0f, 1.0f, 1.0f, 1.0f));
             m_command_buffer->setViewport(0, 0, static_cast<int>(face_framebuffer->pixelSize().x), static_cast<int>(face_framebuffer->pixelSize().y));
-            m_command_buffer->setGraphicsPipeline(depth_shader->graphicsPipeline());
+            m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::CubeMapShader));
+            ShaderResourceBindings bindings;
 
             for (const auto &pair : context.renderSourceData().render_mesh_nodes)
             {
                 const auto &render_node = pair.second;
-                depth_shader->setBool("useSkinning", render_node->use_skinning);
+                bindings.setBool("useSkinning", render_node->use_skinning);
                 if (render_node->use_skinning && !render_node->bone_matrices.empty())
                 {
                     int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
-                    depth_shader->setInt("bone_count", bone_count);
-                    depth_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+                    bindings.setInt("bone_count", bone_count);
+                    bindings.setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
                 }
                 else
                 {
-                    depth_shader->setInt("bone_count", 0);
+                    bindings.setInt("bone_count", 0);
                 }
-                depth_shader->setMatrix("model", 1, render_node->model_matrix);
-                depth_shader->setMatrix("view", 1, light_view[cube_map_id][i]);
-                depth_shader->setMatrix("projection", 1, light_proj[cube_map_id]);
-                depth_shader->setFloat3("lightPos", light_pos[cube_map_id]);
-                depth_shader->setFloat("far_plane", light_radius[cube_map_id]);
+                bindings.setMatrix("model", 1, render_node->model_matrix);
+                bindings.setMatrix("view", 1, light_view[cube_map_id][i]);
+                bindings.setMatrix("projection", 1, light_proj[cube_map_id]);
+                bindings.setFloat3("lightPos", light_pos[cube_map_id]);
+                bindings.setFloat("far_plane", light_radius[cube_map_id]);
+                m_command_buffer->setShaderResources(&bindings);
                 m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
                 m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
             }

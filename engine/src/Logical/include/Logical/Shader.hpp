@@ -27,11 +27,15 @@ enum class ShaderType {
 	BillBoardShader,
 	FXAAShader,
 	DebugTexturePreviewShader,
+	TransparentShader,
 };
 
 struct Shader {
 	Shader(const std::string& vs_filepath, const std::string& fs_filepath);
 	Shader(const std::string& vs_filepath, const std::string& fs_filepath, const std::string& gs_filepath);
+
+	static Shader create(const ShaderType& type);
+	static const Shader& get(const ShaderType& type);
 
 	std::string vsCode;
 	std::string fsCode;

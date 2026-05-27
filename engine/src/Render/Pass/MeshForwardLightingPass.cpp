@@ -30,73 +30,72 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
     Vec3 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
 
-    static RenderShaderObject *pbr_shader = RenderShaderObject::getShaderObject(ShaderType::PBRShader);
-    static RenderShaderObject *blinn_phong_shader = RenderShaderObject::getShaderObject(ShaderType::BlinnPhongShader);
-    RenderShaderObject *shader = m_pbr ? pbr_shader : blinn_phong_shader;
-    m_command_buffer->setGraphicsPipeline(shader->graphicsPipeline());
+    const ShaderType shader_type = m_pbr ? ShaderType::PBRShader : ShaderType::BlinnPhongShader;
+    m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(shader_type));
+    ShaderResourceBindings bindings;
     int k = 0;
     for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
     {
         if (k > MAX_CUBE_SHADOW_MAP_COUNT)
             break;
         std::string light_id = std::string("pointLights[") + std::to_string(k) + "]";
-        shader->setFloat3(light_id + ".position", render_point_light_data.position);
-        shader->setFloat3(light_id + ".color", render_point_light_data.color);
-        shader->setFloat(light_id + ".radius", render_point_light_data.radius);
+        bindings.setFloat3(light_id + ".position", render_point_light_data.position);
+        bindings.setFloat3(light_id + ".color", render_point_light_data.color);
+        bindings.setFloat(light_id + ".radius", render_point_light_data.radius);
         k++;
     }
-    shader->setInt("point_lights_size", k);
+    bindings.setInt("point_lights_size", k);
     for (const auto &pair : context.renderSourceData().render_mesh_nodes)
     {
         const auto &render_node = pair.second;
         auto &material = render_node->material;
         if (m_pbr)
         {
-            shader->setFloat3("base_color_factor", material.base_color_factor);
-            shader->setFloat("metallic_factor", material.metallic_factor);
-            shader->setFloat("roughness_factor", material.roughness_factor);
-            shader->setFloat("ao_factor", material.ao_factor);
-            shader->setTexture("albedo_map", 0, material.albedo_map);
-            shader->setTexture("metallic_map", 1, material.metallic_map);
-            shader->setTexture("roughness_map", 2, material.roughness_map);
-            shader->setTexture("ao_map", 3, material.ao_map);
+            bindings.setFloat3("base_color_factor", material.base_color_factor);
+            bindings.setFloat("metallic_factor", material.metallic_factor);
+            bindings.setFloat("roughness_factor", material.roughness_factor);
+            bindings.setFloat("ao_factor", material.ao_factor);
+            bindings.setTexture("albedo_map", 0, material.albedo_map);
+            bindings.setTexture("metallic_map", 1, material.metallic_map);
+            bindings.setTexture("roughness_map", 2, material.roughness_map);
+            bindings.setTexture("ao_map", 3, material.ao_map);
         }
         else
         {
-            shader->setFloat3("diffuse_factor", material.diffuse_factor);
-            shader->setFloat3("specular_factor", material.specular_factor);
-            shader->setFloat("shininess", material.shininess);
-            shader->setTexture("material.diffuse_map", 0, material.diffuse_map);
-            shader->setTexture("material.specular_map", 1, material.specular_map);
-            shader->setTexture("material.normal_map", 2, material.normal_map);
-            shader->setTexture("material.height_map", 3, material.height_map);
+            bindings.setFloat3("diffuse_factor", material.diffuse_factor);
+            bindings.setFloat3("specular_factor", material.specular_factor);
+            bindings.setFloat("shininess", material.shininess);
+            bindings.setTexture("material.diffuse_map", 0, material.diffuse_map);
+            bindings.setTexture("material.specular_map", 1, material.specular_map);
+            bindings.setTexture("material.normal_map", 2, material.normal_map);
+            bindings.setTexture("material.height_map", 3, material.height_map);
         }
 
-        shader->setBool("useSkinning", render_node->use_skinning);
+        bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty())
         {
             int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
-            shader->setInt("bone_count", bone_count);
-            shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+            bindings.setInt("bone_count", bone_count);
+            bindings.setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
         }
         else
         {
-            shader->setInt("bone_count", 0);
+            bindings.setInt("bone_count", 0);
         }
 
-        shader->setMatrix("model", 1, render_node->model_matrix);
-        shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
-        shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-        shader->setFloat3("cameraPos", context.renderSourceData().camera_position);
+        bindings.setMatrix("model", 1, render_node->model_matrix);
+        bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
+        bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+        bindings.setFloat3("cameraPos", context.renderSourceData().camera_position);
 
-        shader->setFloat3("directionalLight.direction", light_direction);
-        shader->setFloat3("directionalLight.color", light_color);
+        bindings.setFloat3("directionalLight.direction", light_direction);
+        bindings.setFloat3("directionalLight.color", light_color);
 
         RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
         if (shadow_texture)
         {
-            shader->setMatrix("lightSpaceMatrix", 1, light_ref_matrix);
-            shader->setTexture("shadow_map", 5, shadow_texture->id());
+            bindings.setMatrix("lightSpaceMatrix", 1, light_ref_matrix);
+            bindings.setTexture("shadow_map", 5, shadow_texture->id());
 
             std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
             for (int i = 0; i < cube_shadow_maps.size(); i++)
@@ -104,9 +103,10 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
                 if (!cube_shadow_maps[i])
                     continue;
                 std::string cube_map_id = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-                shader->setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]->id());
+                bindings.setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]->id());
             }
         }
+        m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
         m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }

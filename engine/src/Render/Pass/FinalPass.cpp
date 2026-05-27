@@ -20,13 +20,14 @@ void FinalPass::draw(RenderPassContext& context)
     m_command_buffer->beginPass(framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
 
     // pristine grid
-    static RenderShaderObject* grid_shader = RenderShaderObject::getShaderObject(ShaderType::PristineGridShader);
     RenderPipelineState state;
     state.blend = true;
     state.depthWrite = false;
-    m_command_buffer->setGraphicsPipeline(grid_shader->graphicsPipeline(state));
-    grid_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
-    grid_shader->setMatrix("proj", 1, context.renderSourceData().proj_matrix);
+    m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::PristineGridShader, state));
+    ShaderResourceBindings bindings;
+    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
+    bindings.setMatrix("proj", 1, context.renderSourceData().proj_matrix);
+    m_command_buffer->setShaderResources(&bindings);
     m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
     m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
     m_command_buffer->endPass();

@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "Logical/Framework/World/Scene.hpp"
+#include "Render/RenderPipelineLibrary.hpp"
 #include "Render/RenderSystem.hpp"
-#include "Render/RenderShaderObject.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "GlobalContext.hpp"
 
@@ -111,12 +111,14 @@ public:
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        static RenderShaderObject* preview_shader = RenderShaderObject::getShaderObject(ShaderType::DebugTexturePreviewShader);
-        preview_shader->start_using();
-        preview_shader->setTexture("debugTexture", 0, source_texture);
-        preview_shader->setBool("remapDepth", remap_depth);
-        preview_shader->setFloat("depthMin", depth_min);
-        preview_shader->setFloat("depthMax", depth_max);
+        RhiGraphicsPipeline* preview_pipeline = RenderPipelineLibrary::graphicsPipeline(ShaderType::DebugTexturePreviewShader);
+        glUseProgram(preview_pipeline->id());
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, source_texture);
+        glUniform1i(glGetUniformLocation(preview_pipeline->id(), "debugTexture"), 0);
+        glUniform1i(glGetUniformLocation(preview_pipeline->id(), "remapDepth"), remap_depth ? 1 : 0);
+        glUniform1f(glGetUniformLocation(preview_pipeline->id(), "depthMin"), depth_min);
+        glUniform1f(glGetUniformLocation(preview_pipeline->id(), "depthMax"), depth_max);
 
         glBindVertexArray(m_vertex_array);
         glDrawArrays(GL_TRIANGLES, 0, 3);

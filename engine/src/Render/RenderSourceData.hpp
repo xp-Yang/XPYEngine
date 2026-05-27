@@ -5,7 +5,6 @@
 #include "Logical/Texture.hpp"
 #include "Logical/Mesh.hpp"
 #include "Logical/Framework/Object/GObject.hpp"
-#include "RenderShaderObject.hpp"
 #include "Render/RHI/rhi.hpp"
 
 static const size_t MAX_CUBE_SHADOW_MAP_COUNT = 8;

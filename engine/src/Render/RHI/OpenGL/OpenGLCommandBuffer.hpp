@@ -22,6 +22,7 @@ public:
     void endPass() override;
 
     void setGraphicsPipeline(RhiGraphicsPipeline* pipeline) override;
+    void setShaderResources(RhiShaderResourceBindings* bindings = nullptr) override;
     void setVertexInput(RhiVertexLayout* layout,
                         RhiBuffer* index_buffer = nullptr,
                         int index_offset = 0,

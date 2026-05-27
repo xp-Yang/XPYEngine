@@ -14,30 +14,31 @@ void PickingPass::draw(RenderPassContext& context)
         return;
     m_command_buffer->beginPass(framebuffer);
 
-    static RenderShaderObject* picking_shader = RenderShaderObject::getShaderObject(ShaderType::SingleColorShader);
-    m_command_buffer->setGraphicsPipeline(picking_shader->graphicsPipeline());
+    m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::SingleColorShader));
+    ShaderResourceBindings bindings;
 
-    picking_shader->setMatrix("view", 1, context.renderSourceData().view_matrix);
-    picking_shader->setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
+    bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
 
     for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
         const auto& render_node = pair.second;
-        picking_shader->setBool("useSkinning", render_node->use_skinning);
+        bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty()) {
             int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
-            picking_shader->setInt("bone_count", bone_count);
-            picking_shader->setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
+            bindings.setInt("bone_count", bone_count);
+            bindings.setMatrix("bones[0]", bone_count, render_node->bone_matrices[0]);
         }
         else {
-            picking_shader->setInt("bone_count", 0);
+            bindings.setInt("bone_count", 0);
         }
-        picking_shader->setMatrix("model", 1, render_node->model_matrix);
+        bindings.setMatrix("model", 1, render_node->model_matrix);
         int id = render_node->node_id.object_id * PickingColorIDFactor;
         int r = (id & 0x000000FF) >> 0;
         int g = (id & 0x0000FF00) >> 8;
         int b = (id & 0x00FF0000) >> 16;
         Color4 color(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
-        picking_shader->setFloat4("color", color);
+        bindings.setFloat4("color", color);
+        m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());
         m_command_buffer->drawIndexed(render_node->source_index_count, 1, render_node->source_index_offset);
     }

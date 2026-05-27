@@ -34,6 +34,92 @@ RhiShaderStage::RhiShaderStage(Type type_, std::string source_, std::string debu
 {
 }
 
+void RhiShaderResourceBindings::clear()
+{
+    m_bindings.clear();
+}
+
+void RhiShaderResourceBindings::setBool(const std::string& name, bool value)
+{
+    Binding& binding = upsert(name, Bool);
+    binding.int_value = value ? 1 : 0;
+}
+
+void RhiShaderResourceBindings::setInt(const std::string& name, int value)
+{
+    Binding& binding = upsert(name, Int);
+    binding.int_value = value;
+}
+
+void RhiShaderResourceBindings::setFloat(const std::string& name, float value)
+{
+    Binding& binding = upsert(name, Float);
+    binding.values[0] = value;
+}
+
+void RhiShaderResourceBindings::setFloat3(const std::string& name, const Vec3& value)
+{
+    Binding& binding = upsert(name, Float3);
+    binding.values[0] = value.x;
+    binding.values[1] = value.y;
+    binding.values[2] = value.z;
+}
+
+void RhiShaderResourceBindings::setFloat4(const std::string& name, float value1, float value2, float value3, float value4)
+{
+    Binding& binding = upsert(name, Float4);
+    binding.values[0] = value1;
+    binding.values[1] = value2;
+    binding.values[2] = value3;
+    binding.values[3] = value4;
+}
+
+void RhiShaderResourceBindings::setFloat4(const std::string& name, const Vec4& value)
+{
+    setFloat4(name, value.x, value.y, value.z, value.w);
+}
+
+void RhiShaderResourceBindings::setMatrix(const std::string& name, int count, const Mat4& mat_value)
+{
+    Binding& binding = upsert(name, Matrix);
+    binding.matrices.assign(&mat_value, &mat_value + std::max(count, 0));
+}
+
+void RhiShaderResourceBindings::setTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id)
+{
+    Binding& binding = upsert(name, Texture2D);
+    binding.texture_unit = texture_unit;
+    binding.texture_id = texture_id;
+}
+
+void RhiShaderResourceBindings::setCubeTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id)
+{
+    Binding& binding = upsert(name, TextureCube);
+    binding.texture_unit = texture_unit;
+    binding.texture_id = texture_id;
+}
+
+RhiShaderResourceBindings::Binding& RhiShaderResourceBindings::upsert(const std::string& name, Type type)
+{
+    auto it = std::find_if(m_bindings.begin(), m_bindings.end(),
+        [&name](const Binding& binding)
+        {
+            return binding.name == name;
+        });
+    if (it != m_bindings.end())
+    {
+        it->type = type;
+        it->matrices.clear();
+        return *it;
+    }
+
+    Binding binding;
+    binding.name = name;
+    binding.type = type;
+    m_bindings.push_back(std::move(binding));
+    return m_bindings.back();
+}
+
 RhiAttachment::RhiAttachment(RhiTexture* texture, int layer, int level, bool owns_texture)
 	: m_texture(texture)
     , m_layer(layer)

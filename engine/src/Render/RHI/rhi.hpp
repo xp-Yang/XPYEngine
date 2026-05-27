@@ -11,6 +11,7 @@ class RhiAttachment;
 class RhiFrameBuffer;
 class RhiCommandBuffer;
 class RhiGraphicsPipeline;
+class RhiShaderResourceBindings;
 class Window;
 class RhiSwapChain;
 class RhiImpl;
@@ -353,6 +354,57 @@ private:
     std::string m_debug_name;
 };
 
+// ShaderResourceBindings 是 draw 前要暴露给 shader 的动态资源集合。
+// 当前 OpenGL-only 版本先保留 name-based uniform/texture 绑定，避免过早引入
+// descriptor set / bind group layout 的复杂度；CommandBuffer 会在绑定了
+// GraphicsPipeline 之后，把这些条目应用到当前 native shader program。
+class RhiShaderResourceBindings
+{
+public:
+    enum Type
+    {
+        Bool,
+        Int,
+        Float,
+        Float3,
+        Float4,
+        Matrix,
+        Texture2D,
+        TextureCube
+    };
+
+    struct Binding
+    {
+        std::string name;
+        Type type{ Int };
+        int int_value{ 0 };
+        float values[4]{ 0.f, 0.f, 0.f, 0.f };
+        int texture_unit{ 0 };
+        GL_HANDLE texture_id{ 0 };
+        std::vector<Mat4> matrices;
+    };
+
+    void clear();
+    void setBool(const std::string& name, bool value);
+    void setInt(const std::string& name, int value);
+    void setFloat(const std::string& name, float value);
+    void setFloat3(const std::string& name, const Vec3& value);
+    void setFloat4(const std::string& name, float value1, float value2, float value3, float value4);
+    void setFloat4(const std::string& name, const Vec4& value);
+    void setMatrix(const std::string& name, int count, const Mat4& mat_value);
+    void setTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id);
+    void setCubeTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id);
+
+    const std::vector<Binding>& bindings() const { return m_bindings; }
+
+private:
+    Binding& upsert(const std::string& name, Type type);
+
+    std::vector<Binding> m_bindings;
+};
+
+using ShaderResourceBindings = RhiShaderResourceBindings;
+
 // GraphicsPipeline 表示“一类 draw call 的固定渲染配方”。
 //
 // 它不是某个 Mesh，也不是某一次 draw。它收束的是过去分散在 RenderPass 中的
@@ -623,6 +675,7 @@ public:
     virtual void endPass() = 0;
 
     virtual void setGraphicsPipeline(RhiGraphicsPipeline* pipeline) = 0;
+    virtual void setShaderResources(RhiShaderResourceBindings* bindings = nullptr) = 0;
     virtual void setVertexInput(RhiVertexLayout* layout,
                                 RhiBuffer* index_buffer = nullptr,
                                 int index_offset = 0,
