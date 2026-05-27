@@ -15,7 +15,7 @@ struct CameraComponent;
 
 class CameraManipulator{
 public:
-	CameraManipulator(CameraComponent& camera);
+	CameraManipulator(CameraComponent& camera_);
 	void syncContext(const Viewport& viewport);
 	void onUpdate();
 	void onKeyUpdate(int key, float frame_time);
@@ -31,9 +31,9 @@ public:
 
 protected:
 #if ENABLE_ECS
-	ecs::CameraComponent& main_camera;
+	ecs::CameraComponent& camera;
 #else 
-	CameraComponent& main_camera;
+	CameraComponent& camera;
 #endif
 
 	Viewport m_viewport;

@@ -10,9 +10,11 @@
 #include "AssetManager/DTO.hpp"
 #include "AssetManager/ModelImporter.hpp"
 
+#include <cassert>
+
 Scene::Scene()
 {
-	m_camera = std::make_shared<CameraComponent>(nullptr);
+	createCamera();
 	createDirectionalLight();
 }
 
@@ -21,6 +23,24 @@ GObject* Scene::createObject(const std::string& name)
 	auto obj = GObject::create(nullptr, name);
 	obj->addComponent<TransformComponent>();
 	m_objects.push_back(std::shared_ptr<GObject>(obj));
+	return obj;
+}
+
+GObject* Scene::createCamera(const std::string& name)
+{
+	GObject* obj = createObject(name);
+	auto& camera = obj->addComponent<CameraComponent>();
+	camera.refreshView();
+	camera.refreshProjection();
+
+	// CameraComponent 仍然维护渲染用的 pos/direction/view；
+	// TransformComponent 则让相机作为普通 GObject 参与层级、选择和序列化。
+	// 创建时先把 Transform 的位置对齐到相机当前位置，后续由 CameraManipulator
+	// 和 Gizmo 负责继续同步。
+	if (auto* transform = obj->getComponent<TransformComponent>())
+		transform->translation = camera.pos;
+
+	m_main_camera_object_id = obj->ID().id;
 	return obj;
 }
 
@@ -128,9 +148,10 @@ ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 		GObject& obj = *obj_sp;
 		const TransformComponent* tc = obj.getComponent<TransformComponent>();
 		const MeshComponent* mc = obj.getComponent<MeshComponent>();
+		const CameraComponent* camera = obj.getComponent<CameraComponent>();
 		const PointLightComponent* point_light = obj.getComponent<PointLightComponent>();
 		const DirectionalLightComponent* directional_light = obj.getComponent<DirectionalLightComponent>();
-		if (!mc && !point_light && !directional_light) continue;
+		if (!mc && !camera && !point_light && !directional_light) continue;
 
 		ObjectDTO obj_dto;
 		obj_dto.name = obj.name();
@@ -153,6 +174,20 @@ ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 			obj_dto.directional_light.luminous_color = directional_light->luminousColor;
 			obj_dto.directional_light.direction = directional_light->direction;
 			obj_dto.directional_light.aspect_ratio = directional_light->aspectRatio;
+		}
+		if (camera) {
+			obj_dto.has_camera = true;
+			obj_dto.camera.mode = static_cast<int>(camera->mode);
+			obj_dto.camera.projection_mode = static_cast<int>(camera->projection_mode);
+			obj_dto.camera.zoom_mode = static_cast<int>(camera->zoom_mode);
+			obj_dto.camera.origin_fov = camera->originFov;
+			obj_dto.camera.fov = camera->fov;
+			obj_dto.camera.near_plane = camera->nearPlane;
+			obj_dto.camera.far_plane = camera->farPlane;
+			obj_dto.camera.aspect_ratio = camera->aspectRatio;
+			obj_dto.camera.position = camera->pos;
+			obj_dto.camera.direction = camera->direction;
+			obj_dto.camera.up_direction = camera->upDirection;
 		}
 
 		if (mc) {
@@ -200,7 +235,21 @@ ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 {
     if (clear_old) {
+		// CameraManipulator 持有 Main Camera 的 CameraComponent 引用。
+		// 因此清空场景时保留主相机对象本身，只重载它的数据；这样 GUI 输入系统
+		// 不会因为项目切换而拿到悬空引用。项目文件里的 CameraDTO 会覆盖其状态。
+		std::shared_ptr<GObject> main_camera_object;
+		for (const auto& obj : m_objects) {
+			if (obj && obj->ID().id == m_main_camera_object_id && obj->hasComponent<CameraComponent>()) {
+				main_camera_object = obj;
+				break;
+			}
+		}
         this->m_objects.clear();
+		if (main_camera_object)
+			this->m_objects.push_back(main_camera_object);
+		else
+			createCamera();
         this->m_picked_objects.clear();
     }
 
@@ -213,7 +262,9 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 		if (!obj_dto.filepath.empty()) {
 			model_abs = PathService::join(project_dir, obj_dto.filepath);
 		}
-		if (!model_abs.empty() && (ft == FileType::OBJ || ft == FileType::None))
+		if (obj_dto.has_camera && model_abs.empty())
+			obj = mainCameraObject() ? mainCameraObject() : createCamera(obj_dto.name.empty() ? "Main Camera" : obj_dto.name);
+		if (!obj && !model_abs.empty() && (ft == FileType::OBJ || ft == FileType::None))
 			obj = this->loadModel(model_abs);
 		if (!obj && (obj_dto.has_point_light || obj_dto.has_directional_light))
 			obj = this->createObject(obj_dto.name.empty() ? "Light" : obj_dto.name);
@@ -287,8 +338,32 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 			directional_light->direction = obj_dto.directional_light.direction;
 			directional_light->aspectRatio = obj_dto.directional_light.aspect_ratio;
 		}
+		if (obj_dto.has_camera) {
+			auto* camera = obj->getComponent<CameraComponent>();
+			if (!camera)
+				camera = &obj->addComponent<CameraComponent>();
+			camera->mode = static_cast<Mode>(obj_dto.camera.mode);
+			camera->projection_mode = static_cast<Projection>(obj_dto.camera.projection_mode);
+			camera->zoom_mode = static_cast<ZoomMode>(obj_dto.camera.zoom_mode);
+			camera->originFov = obj_dto.camera.origin_fov;
+			camera->fov = obj_dto.camera.fov;
+			camera->nearPlane = obj_dto.camera.near_plane;
+			camera->farPlane = obj_dto.camera.far_plane;
+			camera->aspectRatio = obj_dto.camera.aspect_ratio;
+			camera->pos = obj_dto.camera.position;
+			camera->direction = obj_dto.camera.direction;
+			camera->upDirection = obj_dto.camera.up_direction;
+			camera->refreshView();
+			camera->refreshProjection();
+			m_main_camera_object_id = obj->ID().id;
+
+			if (auto* transform = obj->getComponent<TransformComponent>())
+				transform->translation = camera->pos;
+		}
 	}
 
+	if (!mainCameraObject())
+		createCamera();
 	if (!mainDirectionalLightObject())
 		createDirectionalLight();
 }
@@ -317,6 +392,35 @@ std::vector<GObjectID> Scene::getPickedObjectIDs() const
 		return obj->ID();
 		});
 	return res;
+}
+
+GObject* Scene::mainCameraObject() const
+{
+	for (const auto& obj : m_objects) {
+		if (obj && obj->ID().id == m_main_camera_object_id && obj->hasComponent<CameraComponent>())
+			return obj.get();
+	}
+
+	for (const auto& obj : m_objects) {
+		if (obj && obj->hasComponent<CameraComponent>())
+			return obj.get();
+	}
+	return nullptr;
+}
+
+CameraComponent& Scene::getMainCamera() const
+{
+	GObject* camera_object = mainCameraObject();
+	if (camera_object) {
+		if (auto* camera = camera_object->getComponent<CameraComponent>())
+			return *camera;
+	}
+
+	// 正常情况下 Scene 构造和项目读取都会保证主相机存在。
+	// 这里的 fallback 只是为了避免 release 环境崩掉，同时让 debug 尽早暴露问题。
+	assert(false && "Scene has no main CameraComponent");
+	static CameraComponent fallback_camera(nullptr);
+	return fallback_camera;
 }
 
 std::vector<std::shared_ptr<GObject>> Scene::directionalLightObjects() const
@@ -355,6 +459,8 @@ int Scene::pointLightCount() const
 
 void Scene::addObject(std::shared_ptr<GObject> obj)
 {
+	if (obj && obj->hasComponent<CameraComponent>() && m_main_camera_object_id == 0)
+		m_main_camera_object_id = obj->ID().id;
 	m_objects.push_back(std::shared_ptr<GObject>(obj));
 }
 

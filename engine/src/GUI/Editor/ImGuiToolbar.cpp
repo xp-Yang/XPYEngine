@@ -91,6 +91,15 @@ void ImGuiToolbar::renderGizmos()
         transform_component->translation = Vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
         transform_component->scale = Vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
         transform_component->rotation = Vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
+
+        if (auto* camera_component = object->getComponent<CameraComponent>())
+        {
+            // Main Camera 现在也是普通 GObject。Gizmo 操作改的是 Transform，
+            // 渲染读的是 CameraComponent，因此这里把位置同步回相机状态并刷新 view。
+            // 旋转同步后续可以再做成完整的 Transform -> camera direction/up 推导。
+            camera_component->pos = transform_component->translation;
+            camera_component->refreshView();
+        }
     }
 
     ImVec2 air_window_size = ImVec2(128, 128);

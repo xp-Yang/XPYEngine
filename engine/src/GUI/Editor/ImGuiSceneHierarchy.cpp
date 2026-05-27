@@ -252,20 +252,69 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         ImGui::Columns(1);
         ImGui::PopID();
     };
+    m_widget_creator[Meta::MetaTypeOf<CameraComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
+    {
+        auto& camera = inst.getValue<CameraComponent&>();
+        bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+        if (node_open)
+        {
+            bool view_changed = false;
+            bool projection_changed = false;
+
+            // 这里编辑的是 CameraComponent 的运行时相机状态。
+            // TransformComponent 只负责场景对象位置，所以 pos 被修改时要同步回 Transform。
+            view_changed |= DrawVecControl("pos", camera.pos, VecKind::VEC3);
+            view_changed |= DrawVecControl("direction", camera.direction, VecKind::VEC3);
+            view_changed |= DrawVecControl("upDirection", camera.upDirection, VecKind::VEC3);
+            projection_changed |= DrawFloatControl("fov", camera.fov, 0.01f, Math::deg2rad(0.01f), Math::deg2rad(135.0f));
+            projection_changed |= DrawFloatControl("nearPlane", camera.nearPlane, 0.01f, 0.001f, camera.farPlane);
+            projection_changed |= DrawFloatControl("farPlane", camera.farPlane, 1.0f, camera.nearPlane, 10000.0f);
+            projection_changed |= DrawFloatControl("aspectRatio", camera.aspectRatio, 0.01f, 0.1f, 10.0f);
+
+            if (view_changed)
+            {
+                camera.refreshView();
+                if (camera.parent_object)
+                {
+                    if (auto* transform = camera.parent_object->getComponent<TransformComponent>())
+                        transform->translation = camera.pos;
+                }
+            }
+            if (projection_changed)
+                camera.refreshProjection();
+
+            ImGui::TreePop();
+        }
+    };
     m_widget_creator[Meta::MetaTypeOf<TransformComponent>().typeName()] = [this, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
         bool node_open = false;
         node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
+            bool transform_changed = false;
             Meta::MetaType meta = inst.metaType();
             for (auto& prop : meta.properties())
             {
                 if (prop.isType<Vec3>()) {
                     if (prop.name == "scale")
-                        DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3, 1.0f);
+                        transform_changed |= DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3, 1.0f);
                     else
-                        DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3);
+                        transform_changed |= DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3);
+                }
+            }
+            if (transform_changed)
+            {
+                auto& transform = inst.getValue<TransformComponent&>();
+                if (transform.parent_object)
+                {
+                    if (auto* camera = transform.parent_object->getComponent<CameraComponent>())
+                    {
+                        // 在 Inspector 里直接改 Main Camera 的 Transform 时，
+                        // 也要把位置同步给 CameraComponent，否则渲染相机会停在旧位置。
+                        camera->pos = transform.translation;
+                        camera->refreshView();
+                    }
                 }
             }
             ImGui::TreePop();

@@ -10,6 +10,7 @@ public:
 	Scene();
 
 	GObject* createObject(const std::string& name);
+	GObject* createCamera(const std::string& name = "Main Camera");
 	GObject* loadModel(const std::string& filepath);
 	GObject* createDirectionalLight(const std::string& name = "Directional Light");
 	GObject* createPointLight(const std::string& name = "Point Light");
@@ -20,12 +21,13 @@ public:
 	const std::vector<std::shared_ptr<GObject>>& getPickedObjects() const { return m_picked_objects; }
 	std::vector<GObjectID> getPickedObjectIDs() const;
 	const std::vector<std::shared_ptr<GObject>>& getObjects() const { return m_objects; }
+	GObject* mainCameraObject() const;
 	std::vector<std::shared_ptr<GObject>> directionalLightObjects() const;
 	std::vector<std::shared_ptr<GObject>> pointLightObjects() const;
 	GObject* mainDirectionalLightObject() const;
 	int pointLightCount() const;
 	void addObject(std::shared_ptr<GObject> obj);
-	CameraComponent& getMainCamera() const { return *m_camera; }
+	CameraComponent& getMainCamera() const;
 
 public slots:
 	void onPickedChanged(std::vector<GObjectID> added, std::vector<GObjectID> removed);
@@ -37,7 +39,7 @@ protected:
 private:
 	std::vector<std::shared_ptr<GObject>> m_objects;
 	std::vector<std::shared_ptr<GObject>> m_picked_objects;
-	std::shared_ptr<CameraComponent> m_camera;
+	int m_main_camera_object_id{0};
 
 	std::string m_current_project_filepath;
 };

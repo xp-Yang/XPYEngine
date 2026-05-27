@@ -24,6 +24,7 @@ struct PointLightComponent : public LightComponent {
     std::array<Mat4, 6> lightViewMatrix(const Vec3& position) const
     {
         // 原 LightManager.hpp 里的 TODO：
+        // “这里up向量向下，因为cubeMap从内部采样，是反过来的”
         // “点阴影贴图 up 向量朝下，那么上下不也颠倒了吗？”
         //
         // 答案：不会在最终采样意义上颠倒。点光阴影写入的是 cubemap，

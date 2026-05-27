@@ -27,9 +27,9 @@ static void sync_camera_projection_to_content(const ImVec2& content_size)
     CameraComponent& camera = g_context.scene->getMainCamera();
     const float aspect_ratio = content_size.x / content_size.y;
     camera.aspectRatio = aspect_ratio;
-    camera.projection = camera.projection_mode == Projection::Perspective
-        ? Math::Perspective(camera.fov, aspect_ratio, camera.nearPlane, camera.farPlane)
-        : Math::Ortho(-15.0f * aspect_ratio, 15.0f * aspect_ratio, -15.0f, 15.0f, camera.nearPlane, camera.farPlane);
+    // MainCanvas 是相机投影宽高比的真实来源。相机成为 GObject 后，
+    // 投影矩阵仍由 CameraComponent 缓存，窗口尺寸变化时统一刷新即可。
+    camera.refreshProjection();
 }
 
 void MainCanvas::render()

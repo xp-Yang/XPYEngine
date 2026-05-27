@@ -60,6 +60,25 @@ struct CameraComponent : public Component
 	Mat4 view = Math::LookAt(pos, pos + direction, global_up);
 	float aspectRatio{16.0f / 9.0f}; // response on window size change, by sync_camera_projection_to_content()
 	Mat4 projection = projection_mode == Projection::Perspective ? Math::Perspective(fov, aspectRatio, nearPlane, farPlane) : Math::Ortho(-15.0f * aspectRatio, 15.0f * aspectRatio, -15.0f, 15.0f, nearPlane, farPlane);
+
+	// CameraComponent 现在和 LightComponent 一样挂在 GObject 上。
+	// TransformComponent 负责让相机成为普通场景对象，可以出现在层级面板、
+	// 被选中、被序列化；CameraComponent 负责保存真正用于渲染的相机状态。
+	// 这里仍然缓存 view/projection，是因为 RenderSystem、拾取射线和调试窗口
+	// 每帧都会读取它们，集中刷新比在各处临时拼矩阵更清楚。
+	void refreshView()
+	{
+		direction = Math::Normalize(direction);
+		upDirection = Math::Normalize(upDirection);
+		view = Math::LookAt(pos, pos + direction, upDirection);
+	}
+
+	void refreshProjection()
+	{
+		projection = projection_mode == Projection::Perspective
+			? Math::Perspective(fov, aspectRatio, nearPlane, farPlane)
+			: Math::Ortho(-15.0f * aspectRatio, 15.0f * aspectRatio, -15.0f, 15.0f, nearPlane, farPlane);
+	}
 };
 
 #endif // !CameraComponent_hpp

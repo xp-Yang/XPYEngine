@@ -70,6 +70,21 @@ struct DirectionalLightDTO
 	float aspect_ratio{16.0f / 9.0f};
 };
 
+struct CameraDTO
+{
+	int mode{0};
+	int projection_mode{0};
+	int zoom_mode{0};
+	float origin_fov{Math::deg2rad(45.0f)};
+	float fov{Math::deg2rad(45.0f)};
+	float near_plane{0.1f};
+	float far_plane{1000.0f};
+	float aspect_ratio{16.0f / 9.0f};
+	Vec3 position{0.0f, 30.0f, 30.0f};
+	Vec3 direction{Math::Normalize(Vec3(0.0f, -1.0f, -1.0f))};
+	Vec3 up_direction{Math::Normalize(Vec3(0.0f, 1.0f, 0.0f) - Math::Dot(Vec3(0.0f, 1.0f, 0.0f), direction) * direction)};
+};
+
 struct ObjectDTO
 {
 	std::string name;
@@ -83,6 +98,8 @@ struct ObjectDTO
 	PointLightDTO point_light;
 	bool has_directional_light{false};
 	DirectionalLightDTO directional_light;
+	bool has_camera{false};
+	CameraDTO camera;
 };
 
 struct ProjectDTO
