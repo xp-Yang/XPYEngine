@@ -95,7 +95,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         if (shadow_texture)
         {
             bindings.setMatrix("lightSpaceMatrix", 1, light_ref_matrix);
-            bindings.setTexture("shadow_map", 5, shadow_texture->id());
+            bindings.setTexture("shadow_map", 5, shadow_texture);
 
             std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
             for (int i = 0; i < cube_shadow_maps.size(); i++)
@@ -103,7 +103,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
                 if (!cube_shadow_maps[i])
                     continue;
                 std::string cube_map_id = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-                bindings.setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]->id());
+                bindings.setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]);
             }
         }
         m_command_buffer->setShaderResources(&bindings);

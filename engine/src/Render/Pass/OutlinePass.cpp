@@ -56,14 +56,14 @@ void OutlinePass::draw(RenderPassContext& context)
 
 
     RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
-    if (!target_framebuffer)
+    RhiTexture* obj_map = context.texture(RGResource::OutlineMaskColor);
+    RhiTexture* obj_depth_map = context.texture(RGResource::OutlineMaskDepth);
+    if (!target_framebuffer || !obj_map || !obj_depth_map)
         return;
     m_command_buffer->beginPass(target_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
-    auto source_map = mask_framebuffer->colorAttachmentAt(0)->texture()->id();
-    auto obj_depth_map = mask_framebuffer->depthAttachment()->texture()->id();
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::OutlineShader));
     ShaderResourceBindings outline_bindings;
-    outline_bindings.setTexture("objMap", 0, source_map);
+    outline_bindings.setTexture("objMap", 0, obj_map);
     outline_bindings.setTexture("objDepthMap", 1, obj_depth_map);
     m_command_buffer->setShaderResources(&outline_bindings);
     m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());

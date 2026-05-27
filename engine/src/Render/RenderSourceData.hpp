@@ -13,7 +13,8 @@ struct RenderTextureData {
     RenderTextureData(std::shared_ptr<Texture> texture_);
     RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_);
 
-    GL_HANDLE id;
+    RhiTexture* texture{ nullptr };
+    GL_HANDLE id{ 0 };
 
     static RenderTextureData& defaultTexture();
     static RenderTextureData& defaultCubeTexture();
@@ -22,19 +23,19 @@ struct RenderTextureData {
 struct RenderMaterialData {
     RenderMaterialData(std::shared_ptr<Material> material_);
 
-    GL_HANDLE albedo_map{ 0 };
-    GL_HANDLE metallic_map{ 0 };
-    GL_HANDLE roughness_map{ 0 };
-    GL_HANDLE ao_map{ 0 };
+    RhiTexture* albedo_map{ nullptr };
+    RhiTexture* metallic_map{ nullptr };
+    RhiTexture* roughness_map{ nullptr };
+    RhiTexture* ao_map{ nullptr };
     Vec3 base_color_factor{ 1.0f, 1.0f, 1.0f };
     float metallic_factor{ 0.0f };
     float roughness_factor{ 1.0f };
     float ao_factor{ 1.0f };
 
-    GL_HANDLE diffuse_map{ 0 };
-    GL_HANDLE specular_map{ 0 };
-    GL_HANDLE normal_map{ 0 };
-    GL_HANDLE height_map{ 0 };
+    RhiTexture* diffuse_map{ nullptr };
+    RhiTexture* specular_map{ nullptr };
+    RhiTexture* normal_map{ nullptr };
+    RhiTexture* height_map{ nullptr };
     Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
     Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
     float shininess{ 128.0f };
@@ -133,7 +134,7 @@ struct RenderMeshNode {
 };
 
 struct RenderSkyboxNode {
-    GL_HANDLE skybox_cube_map;
+    RhiTexture* skybox_cube_map{ nullptr };
 
     std::shared_ptr<RenderMeshData> mesh;
 };

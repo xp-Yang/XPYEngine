@@ -22,9 +22,8 @@ RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
         else if (texture_->channel_count == 4)
             format = RhiTexture::Format::RGBA8;
 
-        RhiTexture *texture = rhi->newTexture(format, Vec2(texture_->width, texture_->height), 1, RhiTexture::Flag::sRGB, data);
+        texture = rhi->newTexture(format, Vec2(texture_->width, texture_->height), 1, RhiTexture::Flag::sRGB, data);
         texture->create();
-
         id = texture->id();
     }
     else
@@ -39,7 +38,7 @@ RenderTextureData::RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_)
     if (cube_texture_->channel_count == 4)
         format = RhiTexture::Format::RGBA8;
 
-    RhiTexture* texture = Rhi::get()->newCubeTexture(format, Vec2(cube_texture_->width, cube_texture_->height), 1, RhiTexture::CubeMap, cube_texture_->datas);
+    texture = Rhi::get()->newCubeTexture(format, Vec2(cube_texture_->width, cube_texture_->height), 1, RhiTexture::CubeMap, cube_texture_->datas);
     texture->create();
     id = texture->id();
 }
@@ -173,37 +172,37 @@ RenderMaterialData::RenderMaterialData(std::shared_ptr<Material> material_)
     shininess = material_->shininess;
 
     // TODO 贴图更新了，texture数据的释放和加载
-    if (albedo_map == 0)
+    if (!albedo_map)
     {
-        albedo_map = RenderTextureData(material_->albedo_texture).id;
+        albedo_map = RenderTextureData(material_->albedo_texture).texture;
     }
-    if (metallic_map == 0)
+    if (!metallic_map)
     {
-        metallic_map = RenderTextureData(material_->metallic_texture).id;
+        metallic_map = RenderTextureData(material_->metallic_texture).texture;
     }
-    if (roughness_map == 0)
+    if (!roughness_map)
     {
-        roughness_map = RenderTextureData(material_->roughness_texture).id;
+        roughness_map = RenderTextureData(material_->roughness_texture).texture;
     }
-    if (ao_map == 0)
+    if (!ao_map)
     {
-        ao_map = RenderTextureData(material_->ao_texture).id;
+        ao_map = RenderTextureData(material_->ao_texture).texture;
     }
-    if (diffuse_map == 0)
+    if (!diffuse_map)
     {
-        diffuse_map = RenderTextureData(material_->diffuse_texture).id;
+        diffuse_map = RenderTextureData(material_->diffuse_texture).texture;
     }
-    if (specular_map == 0)
+    if (!specular_map)
     {
-        specular_map = RenderTextureData(material_->specular_texture).id;
+        specular_map = RenderTextureData(material_->specular_texture).texture;
     }
-    if (normal_map == 0)
+    if (!normal_map)
     {
-        normal_map = RenderTextureData(material_->normal_texture).id;
+        normal_map = RenderTextureData(material_->normal_texture).texture;
     }
-    if (height_map == 0)
+    if (!height_map)
     {
-        height_map = RenderTextureData(material_->height_texture).id;
+        height_map = RenderTextureData(material_->height_texture).texture;
     }
 }
 
@@ -220,45 +219,37 @@ void RenderMeshNode::updateRenderMaterialData(std::shared_ptr<Material> material
     material.shininess = material_->shininess;
 
     // TODO 贴图更新了，texture数据的释放和加载
-    if (material.albedo_map == 0)
+    if (!material.albedo_map)
     {
-        GL_HANDLE albedo_texture = RenderTextureData(material_->albedo_texture).id;
-        material.albedo_map = albedo_texture;
+        material.albedo_map = RenderTextureData(material_->albedo_texture).texture;
     }
-    if (material.metallic_map == 0)
+    if (!material.metallic_map)
     {
-        GL_HANDLE metallic_map = RenderTextureData(material_->metallic_texture).id;
-        material.metallic_map = metallic_map;
+        material.metallic_map = RenderTextureData(material_->metallic_texture).texture;
     }
-    if (material.roughness_map == 0)
+    if (!material.roughness_map)
     {
-        GL_HANDLE roughness_map = RenderTextureData(material_->roughness_texture).id;
-        material.roughness_map = roughness_map;
+        material.roughness_map = RenderTextureData(material_->roughness_texture).texture;
     }
-    if (material.ao_map == 0)
+    if (!material.ao_map)
     {
-        GL_HANDLE ao_map = RenderTextureData(material_->ao_texture).id;
-        material.ao_map = ao_map;
+        material.ao_map = RenderTextureData(material_->ao_texture).texture;
     }
 
-    if (material.diffuse_map == 0)
+    if (!material.diffuse_map)
     {
-        GL_HANDLE diffuse_map = RenderTextureData(material_->diffuse_texture).id;
-        material.diffuse_map = diffuse_map;
+        material.diffuse_map = RenderTextureData(material_->diffuse_texture).texture;
     }
-    if (material.specular_map == 0)
+    if (!material.specular_map)
     {
-        GL_HANDLE specular_map = RenderTextureData(material_->specular_texture).id;
-        material.specular_map = specular_map;
+        material.specular_map = RenderTextureData(material_->specular_texture).texture;
     }
-    if (material.normal_map == 0)
+    if (!material.normal_map)
     {
-        GL_HANDLE normal_map = RenderTextureData(material_->normal_texture).id;
-        material.normal_map = normal_map;
+        material.normal_map = RenderTextureData(material_->normal_texture).texture;
     }
-    if (material.height_map == 0)
+    if (!material.height_map)
     {
-        GL_HANDLE height_map = RenderTextureData(material_->height_texture).id;
-        material.height_map = height_map;
+        material.height_map = RenderTextureData(material_->height_texture).texture;
     }
 }

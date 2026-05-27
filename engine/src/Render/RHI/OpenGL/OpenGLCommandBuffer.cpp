@@ -107,13 +107,13 @@ void OpenGLCommandBuffer::setShaderResources(RhiShaderResourceBindings* bindings
             break;
         case RhiShaderResourceBindings::Texture2D:
             glActiveTexture(GL_TEXTURE0 + binding.texture_unit);
-            glBindTexture(GL_TEXTURE_2D, binding.texture_id);
+            glBindTexture(GL_TEXTURE_2D, binding.texture ? binding.texture->id() : 0);
             if (location != -1)
                 glUniform1i(location, binding.texture_unit);
             break;
         case RhiShaderResourceBindings::TextureCube:
             glActiveTexture(GL_TEXTURE0 + binding.texture_unit);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, binding.texture_id);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, binding.texture ? binding.texture->id() : 0);
             if (location != -1)
                 glUniform1i(location, binding.texture_unit);
             break;

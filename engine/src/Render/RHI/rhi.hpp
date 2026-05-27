@@ -380,7 +380,7 @@ public:
         int int_value{ 0 };
         float values[4]{ 0.f, 0.f, 0.f, 0.f };
         int texture_unit{ 0 };
-        GL_HANDLE texture_id{ 0 };
+        RhiTexture* texture{ nullptr };
         std::vector<Mat4> matrices;
     };
 
@@ -392,8 +392,10 @@ public:
     void setFloat4(const std::string& name, float value1, float value2, float value3, float value4);
     void setFloat4(const std::string& name, const Vec4& value);
     void setMatrix(const std::string& name, int count, const Mat4& mat_value);
-    void setTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id);
-    void setCubeTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id);
+    void setTexture(const std::string& name, int texture_unit, RhiTexture* texture);
+    void setTexture(const std::string& name, int texture_unit, RhiTexture& texture) { setTexture(name, texture_unit, &texture); }
+    void setCubeTexture(const std::string& name, int texture_unit, RhiTexture* texture);
+    void setCubeTexture(const std::string& name, int texture_unit, RhiTexture& texture) { setCubeTexture(name, texture_unit, &texture); }
 
     const std::vector<Binding>& bindings() const { return m_bindings; }
 

@@ -20,11 +20,9 @@ void BloomPass::extractBright(RenderPassContext& context)
         return;
     m_command_buffer->beginPass(framebuffer);
 
-    RhiTexture* lighted_texture = context.texture(RGResource::SceneColor);
-    GL_HANDLE lighted_map = lighted_texture ? lighted_texture->id() : 0;
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::ExtractBrightShader));
     ShaderResourceBindings bindings;
-    bindings.setTexture("Texture", 0, lighted_map);
+    bindings.setTexture("Texture", 0, context.texture(RGResource::SceneColor));
     m_command_buffer->setShaderResources(&bindings);
     m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
     m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
@@ -33,18 +31,19 @@ void BloomPass::extractBright(RenderPassContext& context)
 
 void BloomPass::blur(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
     RhiFrameBuffer* pingpong1_framebuffer = context.frameBufferOfTarget(RGTarget::BloomPingPong1);
     RhiFrameBuffer* pingpong2_framebuffer = context.frameBufferOfTarget(RGTarget::BloomPingPong2);
-    if (!framebuffer || !pingpong1_framebuffer || !pingpong2_framebuffer)
+    RhiTexture* bright_texture = context.texture(RGResource::BloomBrightColor);
+    RhiTexture* pingpong1_texture = context.texture(RGResource::BloomPingPong1Color);
+    RhiTexture* pingpong2_texture = context.texture(RGResource::BloomPingPong2Color);
+    if (!pingpong1_framebuffer || !pingpong2_framebuffer ||
+        !bright_texture || !pingpong1_texture || !pingpong2_texture)
         return;
 
     m_command_buffer->beginPass(pingpong1_framebuffer);
     m_command_buffer->endPass();
     m_command_buffer->beginPass(pingpong2_framebuffer);
     m_command_buffer->endPass();
-
-    GL_HANDLE bright_map = framebuffer->colorAttachmentAt(0)->texture()->id();
 
     bool horizontal = true;
     unsigned int amount = 16;
@@ -53,11 +52,10 @@ void BloomPass::blur(RenderPassContext& context)
         RhiFrameBuffer* target = horizontal ? pingpong1_framebuffer : pingpong2_framebuffer;
         m_command_buffer->beginPass(target, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
         m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::GaussianBlur));
-        GL_HANDLE map = horizontal ?
-            pingpong2_framebuffer->colorAttachmentAt(0)->texture()->id() :
-            pingpong1_framebuffer->colorAttachmentAt(0)->texture()->id();
+        RhiTexture* source_texture = (i == 0) ? bright_texture :
+            (horizontal ? pingpong2_texture : pingpong1_texture);
         ShaderResourceBindings bindings;
-        bindings.setTexture("image", 0, (i == 0) ? bright_map : map);
+        bindings.setTexture("image", 0, source_texture);
         bindings.setInt("horizontal", horizontal);
         m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
@@ -75,12 +73,9 @@ void BloomPass::writeToScene(RenderPassContext& context)
     RenderPipelineState state;
     state.depthWrite = false;
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::BloomShader, state));
-    RhiTexture* lighted_texture = context.texture(RGResource::SceneColor);
-    GL_HANDLE lighted_map = lighted_texture ? lighted_texture->id() : 0;
-    RhiTexture* blurred_bright_texture = context.texture(RGResource::BloomPingPong1Color);
     ShaderResourceBindings bindings;
-    bindings.setTexture("Texture", 0, lighted_map);
-    bindings.setTexture("bloomMap", 1, blurred_bright_texture->id());
+    bindings.setTexture("Texture", 0, context.texture(RGResource::SceneColor));
+    bindings.setTexture("bloomMap", 1, context.texture(RGResource::BloomPingPong1Color));
     m_command_buffer->setShaderResources(&bindings);
     m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
     m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));

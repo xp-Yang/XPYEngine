@@ -9,7 +9,7 @@ DeferredLightingPass::DeferredLightingPass()
 void DeferredLightingPass::draw(RenderPassContext& context)
 {
 	RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
-	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferPosition);
+	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferDepth);
 	if (!framebuffer || !gbuffer_framebuffer)
 		return;
 	// framebuffer clear color before gamma correction: Color4(0.046, 0.046, 0.046, 1.0)
@@ -19,23 +19,38 @@ void DeferredLightingPass::draw(RenderPassContext& context)
     const ShaderType lighting_shader = m_pbr ? ShaderType::DeferredLightingShader : ShaderType::DeferredLightingPhongShader;
 	m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(lighting_shader));
     ShaderResourceBindings bindings;
-	GL_HANDLE g_position_map = gbuffer_framebuffer->colorAttachmentAt(0)->texture()->id();
-	GL_HANDLE g_normal_map = gbuffer_framebuffer->colorAttachmentAt(1)->texture()->id();
+	RhiTexture* g_position_map = context.texture(RGResource::GBufferPosition);
+	RhiTexture* g_normal_map = context.texture(RGResource::GBufferNormal);
+	if (!g_position_map || !g_normal_map)
+	{
+		m_command_buffer->endPass();
+		return;
+	}
 	bindings.setTexture("gPosition", 0, g_position_map);
 	bindings.setTexture("gNormal", 1, g_normal_map);
 	if (m_pbr) {
-		GL_HANDLE g_albedo_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
-		GL_HANDLE g_metallic_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
-		GL_HANDLE g_roughness_map = gbuffer_framebuffer->colorAttachmentAt(4)->texture()->id();
-		GL_HANDLE g_ao_map = gbuffer_framebuffer->colorAttachmentAt(5)->texture()->id();
+		RhiTexture* g_albedo_map = context.texture(RGResource::GBufferAlbedo);
+		RhiTexture* g_metallic_map = context.texture(RGResource::GBufferMetallic);
+		RhiTexture* g_roughness_map = context.texture(RGResource::GBufferRoughness);
+		RhiTexture* g_ao_map = context.texture(RGResource::GBufferAO);
+		if (!g_albedo_map || !g_metallic_map || !g_roughness_map || !g_ao_map)
+		{
+			m_command_buffer->endPass();
+			return;
+		}
 		bindings.setTexture("gAlbedo", 2, g_albedo_map);
 		bindings.setTexture("gMetallic", 3, g_metallic_map);
 		bindings.setTexture("gRoughness", 4, g_roughness_map);
 		bindings.setTexture("gAo", 5, g_ao_map);
 	}
 	else {
-		GL_HANDLE g_diffuse_map = gbuffer_framebuffer->colorAttachmentAt(2)->texture()->id();
-		GL_HANDLE g_specular_map = gbuffer_framebuffer->colorAttachmentAt(3)->texture()->id();
+		RhiTexture* g_diffuse_map = context.texture(RGResource::GBufferDiffuse);
+		RhiTexture* g_specular_map = context.texture(RGResource::GBufferSpecular);
+		if (!g_diffuse_map || !g_specular_map)
+		{
+			m_command_buffer->endPass();
+			return;
+		}
 		bindings.setTexture("gDiffuse", 2, g_diffuse_map);
 		bindings.setTexture("gSpecular", 3, g_specular_map);
 	}
@@ -47,18 +62,19 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		bindings.setFloat3("directionalLight.color", render_directional_light_data.color);
 		if (dir_light_shadow_texture) {
 			bindings.setMatrix("lightSpaceMatrix", 1, render_directional_light_data.lightProjMatrix * render_directional_light_data.lightViewMatrix);
-			bindings.setTexture("shadow_map", 6, dir_light_shadow_texture->id());
+			bindings.setTexture("shadow_map", 6, dir_light_shadow_texture);
 		}
-	}
+    }
     std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
-    int point_light_size = std::min(MAX_CUBE_SHADOW_MAP_COUNT, cube_shadow_maps.size());
-    for (int i = 0; i < MAX_CUBE_SHADOW_MAP_COUNT; i++) {
-        GL_HANDLE cube_shadow_map_id =
+    const int max_cube_shadow_maps = static_cast<int>(MAX_CUBE_SHADOW_MAP_COUNT);
+    int point_light_size = std::min(max_cube_shadow_maps, static_cast<int>(cube_shadow_maps.size()));
+    for (int i = 0; i < max_cube_shadow_maps; i++) {
+        RhiTexture* cube_shadow_map =
             i < static_cast<int>(cube_shadow_maps.size()) && cube_shadow_maps[i]
-            ? cube_shadow_maps[i]->id()
-            : RenderTextureData::defaultCubeTexture().id;
+            ? cube_shadow_maps[i]
+            : RenderTextureData::defaultCubeTexture().texture;
         std::string cube_map_id_str = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-        bindings.setCubeTexture(cube_map_id_str, 7 + i, cube_shadow_map_id);
+        bindings.setCubeTexture(cube_map_id_str, 7 + i, cube_shadow_map);
     }
 
 	int point_light_idx = 0;

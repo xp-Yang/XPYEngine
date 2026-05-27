@@ -118,7 +118,7 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
             resource_dir + "/images/skybox/bottom.jpg",
             resource_dir + "/images/skybox/front.jpg",
             resource_dir + "/images/skybox/back.jpg");
-        m_render_source_data->render_skybox_node.skybox_cube_map = RenderTextureData(skybox_cube_texture).id;
+        m_render_source_data->render_skybox_node.skybox_cube_map = RenderTextureData(skybox_cube_texture).texture;
         m_render_source_data->render_skybox_node.mesh = std::make_shared<RenderMeshData>(skybox_mesh);
 
         m_initialized = true;

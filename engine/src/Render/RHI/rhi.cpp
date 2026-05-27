@@ -85,18 +85,18 @@ void RhiShaderResourceBindings::setMatrix(const std::string& name, int count, co
     binding.matrices.assign(&mat_value, &mat_value + std::max(count, 0));
 }
 
-void RhiShaderResourceBindings::setTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id)
+void RhiShaderResourceBindings::setTexture(const std::string& name, int texture_unit, RhiTexture* texture)
 {
     Binding& binding = upsert(name, Texture2D);
     binding.texture_unit = texture_unit;
-    binding.texture_id = texture_id;
+    binding.texture = texture;
 }
 
-void RhiShaderResourceBindings::setCubeTexture(const std::string& name, int texture_unit, GL_HANDLE texture_id)
+void RhiShaderResourceBindings::setCubeTexture(const std::string& name, int texture_unit, RhiTexture* texture)
 {
     Binding& binding = upsert(name, TextureCube);
     binding.texture_unit = texture_unit;
-    binding.texture_id = texture_id;
+    binding.texture = texture;
 }
 
 RhiShaderResourceBindings::Binding& RhiShaderResourceBindings::upsert(const std::string& name, Type type)
