@@ -3,7 +3,7 @@
 
 #include "Base/Math/Math.hpp"
 #include "Bone.hpp"
-#include "ResourceManager/ResourceImporter.hpp"
+#include "AssetManager/ModelImporter.hpp"
 
 struct AssimpNodeData
 {
@@ -18,7 +18,7 @@ class Animation
 public:
     Animation() = default;
 
-    Animation(const std::string& animationPath, ResourceImporter* model)
+    Animation(const std::string& animationPath, ModelImporter* model)
     {
         Assimp::Importer importer;
         const aiScene* scene = importer.ReadFile(animationPath, aiProcess_Triangulate);
@@ -59,7 +59,7 @@ public:
     }
 
 private:
-    void ReadMissingBones(const aiAnimation* animation, ResourceImporter& model)
+    void ReadMissingBones(const aiAnimation* animation, ModelImporter& model)
     {
         int size = animation->mNumChannels;
 

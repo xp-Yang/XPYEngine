@@ -1,35 +1,8 @@
-#include "Logical/Mesh.hpp"
+#include "AssetManager/MeshAlgorithm.hpp"
 
-#include "Base/Logger/Logger.hpp"
-
-Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<int> &indices)
-    : vertices(vertices), indices(indices)
-{
-    index_count = static_cast<int>(indices.size());
-}
-
-Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<int> &indices, std::shared_ptr<Material> material_)
-    : vertices(vertices), indices(indices), material(material_)
-{
-    index_count = static_cast<int>(indices.size());
-}
-
-void Mesh::reset()
-{
-    sub_mesh_idx = 0;
-    index_offset = 0;
-    index_count = 0;
-    vertices.clear();
-    indices.clear();
-    vertices.shrink_to_fit();
-    indices.shrink_to_fit();
-    material.reset();
-    translation = Vec3(0.0f);
-    rotation = Vec3(0.0f);
-    scale = Vec3(1.0f);
-}
-
-std::shared_ptr<Mesh> Mesh::create_cube_mesh()
+namespace MeshAlgorithm {
+    
+std::shared_ptr<Mesh> create_cube_mesh()
 {
     // float cubeVertices[] =
     //{
@@ -77,7 +50,7 @@ std::shared_ptr<Mesh> Mesh::create_cube_mesh()
     return create_cuboid_mesh(vertex_positions);
 }
 
-std::shared_ptr<Mesh> Mesh::create_cuboid_mesh(const std::array<Vec3, 8> vertex_positions)
+std::shared_ptr<Mesh> create_cuboid_mesh(const std::array<Vec3, 8> vertex_positions)
 {
     std::vector<Vertex> vertices(24);
 
@@ -242,7 +215,7 @@ static std::vector<Triangle> recursive_subdivide(const Triangle &triangle, int r
     return ret;
 }
 
-std::shared_ptr<Mesh> Mesh::create_icosphere_mesh(float radius, int regression_depth)
+std::shared_ptr<Mesh> create_icosphere_mesh(float radius, int regression_depth)
 {
     std::vector<Triangle> m_triangles;
     Vec3 m_center;
@@ -299,12 +272,12 @@ std::shared_ptr<Mesh> Mesh::create_icosphere_mesh(float radius, int regression_d
         indices.push_back(i);
     }
 
-    // Logger::info("Mesh::create_icosphere_mesh({}), time:{}", regression_depth, time);
+    // Logger::info("MeshAlgorithm::create_icosphere_mesh({}), time:{}", regression_depth, time);
 
     return std::make_shared<Mesh>(all_vertices, indices);
 }
 
-std::shared_ptr<Mesh> Mesh::create_quad_mesh(const Point3 &origin, const Vec3 &positive_dir_u, const Vec3 &positive_dir_v)
+std::shared_ptr<Mesh> create_quad_mesh(const Point3 &origin, const Vec3 &positive_dir_u, const Vec3 &positive_dir_v)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -346,7 +319,7 @@ std::shared_ptr<Mesh> Mesh::create_quad_mesh(const Point3 &origin, const Vec3 &p
     return std::make_shared<Mesh>(vertices, indices);
 }
 
-std::shared_ptr<Mesh> Mesh::create_complex_quad_mesh(const Vec2 &size)
+std::shared_ptr<Mesh> create_complex_quad_mesh(const Vec2 &size)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -380,7 +353,9 @@ std::shared_ptr<Mesh> Mesh::create_complex_quad_mesh(const Vec2 &size)
     return std::make_shared<Mesh>(vertices, indices);
 }
 
-std::shared_ptr<Mesh> Mesh::create_screen_mesh()
+std::shared_ptr<Mesh> create_screen_mesh()
 {
     return create_quad_mesh(Point3(-1.0f, -1.0f, 0.0f), Vec3(2.0f, 0.0f, 0.0f), Vec3(0.0f, 2.0f, 0.0f));
+}
+
 }

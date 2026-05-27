@@ -1,7 +1,7 @@
 #ifndef RenderPipelineLibrary_hpp
 #define RenderPipelineLibrary_hpp
 
-#include "Logical/Shader.hpp"
+#include "AssetManager/Shader.hpp"
 #include "Render/RHI/rhi.hpp"
 
 struct RenderPipelineState {

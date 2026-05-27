@@ -1,14 +1,14 @@
-#include "ResourceImporter.hpp"
+#include "AssetManager/ModelImporter.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include "Logical/Mesh.hpp"
+#include "AssetManager/Mesh.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 
-std::unordered_map<std::string, Assimp::Importer *> ResourceImporter::m_importers;
+std::unordered_map<std::string, Assimp::Importer *> ModelImporter::m_importers;
 
 static std::shared_ptr<Texture> textureOfUnknownType(aiMaterial* material, TextureType engine_type, const std::string& directory, bool gamma,
     std::initializer_list<const char*> keywords, std::initializer_list<const char*> rejected_keywords = {})
@@ -81,20 +81,20 @@ static Mat4 toMat4(const aiMatrix4x4 &mat)
     return res;
 }
 
-ResourceImporter::~ResourceImporter()
+ModelImporter::~ModelImporter()
 {
 }
 
-bool ResourceImporter::load(const std::string &file_path)
+bool ModelImporter::load(const std::string &file_path)
 {
     m_obj_filepath = file_path;
     m_directory = file_path.substr(0, file_path.find_last_of("/\\"));
     m_BoneInfoMap.clear();
     m_BoneCounter = 0;
 
-    if (ResourceImporter::m_importers.find(file_path) != ResourceImporter::m_importers.end())
+    if (ModelImporter::m_importers.find(file_path) != ModelImporter::m_importers.end())
     {
-        m_scene = ResourceImporter::m_importers.at(file_path)->GetScene();
+        m_scene = ModelImporter::m_importers.at(file_path)->GetScene();
     }
     else
     {
@@ -106,13 +106,13 @@ bool ResourceImporter::load(const std::string &file_path)
             delete importer;
             return false;
         }
-        ResourceImporter::m_importers.insert({file_path, importer});
+        ModelImporter::m_importers.insert({file_path, importer});
     }
 
     return true;
 }
 
-std::shared_ptr<Mesh> ResourceImporter::meshOfNode(int ai_mesh_idx)
+std::shared_ptr<Mesh> ModelImporter::meshOfNode(int ai_mesh_idx)
 {
     aiMesh *ai_mesh = m_scene->mMeshes[ai_mesh_idx];
     std::shared_ptr<Mesh> res = load_sub_mesh_data(ai_mesh);
@@ -122,7 +122,7 @@ std::shared_ptr<Mesh> ResourceImporter::meshOfNode(int ai_mesh_idx)
     return res;
 }
 
-std::shared_ptr<Material> ResourceImporter::materialOfNode(int ai_mesh_idx)
+std::shared_ptr<Material> ModelImporter::materialOfNode(int ai_mesh_idx)
 {
     auto ai_mesh = m_scene->mMeshes[ai_mesh_idx];
     assert(ai_mesh->mMaterialIndex >= 0);
@@ -131,7 +131,7 @@ std::shared_ptr<Material> ResourceImporter::materialOfNode(int ai_mesh_idx)
 }
 
 // TODO 可以这样吗？
-std::vector<int> ResourceImporter::getSubMeshesIds() const
+std::vector<int> ModelImporter::getSubMeshesIds() const
 {
     std::vector<int> res;
     for (int i = 0; i < m_scene->mNumMeshes; i++)
@@ -141,12 +141,12 @@ std::vector<int> ResourceImporter::getSubMeshesIds() const
     return res;
 }
 
-bool ResourceImporter::hasAnimation() const
+bool ModelImporter::hasAnimation() const
 {
     return m_scene && m_scene->mNumAnimations > 0;
 }
 
-std::vector<aiMesh *> ResourceImporter::collect_ai_meshes()
+std::vector<aiMesh *> ModelImporter::collect_ai_meshes()
 {
     std::vector<aiMesh *> res;
 
@@ -167,7 +167,7 @@ std::vector<aiMesh *> ResourceImporter::collect_ai_meshes()
     return res;
 }
 
-std::shared_ptr<Mesh> ResourceImporter::load_sub_mesh_data(aiMesh *mesh)
+std::shared_ptr<Mesh> ModelImporter::load_sub_mesh_data(aiMesh *mesh)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -217,7 +217,7 @@ std::shared_ptr<Mesh> ResourceImporter::load_sub_mesh_data(aiMesh *mesh)
     return std::make_shared<Mesh>(vertices, indices);
 }
 
-void ResourceImporter::setVertexBoneData(Vertex &vertex, int bone_id, float weight) const
+void ModelImporter::setVertexBoneData(Vertex &vertex, int bone_id, float weight) const
 {
     for (int i = 0; i < MAX_BONE_INFLUENCE; ++i)
     {
@@ -230,7 +230,7 @@ void ResourceImporter::setVertexBoneData(Vertex &vertex, int bone_id, float weig
     }
 }
 
-void ResourceImporter::extractBoneWeightForVertices(std::vector<Vertex> &vertices, aiMesh *mesh)
+void ModelImporter::extractBoneWeightForVertices(std::vector<Vertex> &vertices, aiMesh *mesh)
 {
     for (unsigned int bone_idx = 0; bone_idx < mesh->mNumBones; ++bone_idx)
     {
@@ -255,7 +255,7 @@ void ResourceImporter::extractBoneWeightForVertices(std::vector<Vertex> &vertice
     }
 }
 
-std::shared_ptr<Material> ResourceImporter::load_material(aiMaterial *material)
+std::shared_ptr<Material> ModelImporter::load_material(aiMaterial *material)
 {
     std::shared_ptr<Material> res = Material::create_complete_default_material();
 

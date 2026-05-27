@@ -2,65 +2,67 @@
 #include "Engine.hpp"
 #include "Logical/Framework/World/Scene.hpp"
 #include "Logical/Framework/Object/GObject.hpp"
-#include "Logical/Mesh.hpp"
-#include "Logical/Material.hpp"
+#include "AssetManager/Mesh.hpp"
+#include "AssetManager/Material.hpp"
 #include "Logical/Framework/Component/AnimationComponent.hpp"
 #include "Base/Logger/Logger.hpp"
 
-void Cubetest::init() {
+void Cubetest::init()
+{
 #if ENABLE_ECS
-	auto& world = ecs::World::get();
+	auto &world = ecs::World::get();
 	auto root_entity = world.create_entity();
 	world.addComponent<ecs::NameComponent>(root_entity).name = "Root";
 
-	//initMainCamera
+	// initMainCamera
 	auto camera = world.create_entity();
 	world.addComponent<ecs::NameComponent>(camera).name = "Main Camera";
-	auto& camera_component = world.addComponent<CameraComponent>(camera);
+	auto &camera_component = world.addComponent<CameraComponent>(camera);
 
-	//createSkybox
+	// createSkybox
 	auto skybox_entity = world.create_entity();
 	world.addComponent<ecs::NameComponent>(skybox_entity).name = "Skybox";
 	world.addComponent<ecs::TransformComponent>(skybox_entity);
-	auto& skybox_com = world.addComponent<ecs::SkyboxComponent>(skybox_entity);
+	auto &skybox_com = world.addComponent<ecs::SkyboxComponent>(skybox_entity);
 	skybox_com.cube_texture = CubeTexture(
-		RESOURCE_DIRECTORY + "/images/skybox/right.jpg",
-		RESOURCE_DIRECTORY + "/images/skybox/left.jpg",
-		RESOURCE_DIRECTORY + "/images/skybox/top.jpg",
-		RESOURCE_DIRECTORY + "/images/skybox/bottom.jpg",
-		RESOURCE_DIRECTORY + "/images/skybox/front.jpg",
-		RESOURCE_DIRECTORY + "/images/skybox/back.jpg");
+		ASSET_DIRECTORY + "/images/skybox/right.jpg",
+		ASSET_DIRECTORY + "/images/skybox/left.jpg",
+		ASSET_DIRECTORY + "/images/skybox/top.jpg",
+		ASSET_DIRECTORY + "/images/skybox/bottom.jpg",
+		ASSET_DIRECTORY + "/images/skybox/front.jpg",
+		ASSET_DIRECTORY + "/images/skybox/back.jpg");
 	SubMesh sub_mesh;
-	sub_mesh.mesh_file_ref = { MeshFileType::CustomCube, "" };
+	sub_mesh.mesh_file_ref = {MeshFileType::CustomCube, ""};
 	skybox_com.mesh = sub_mesh;
 
-	//createDirectionalLight
+	// createDirectionalLight
 	auto dir_light_entity = world.create_entity();
 	auto directional_light_node = GObject::create(nullptr, dir_light_entity);
 	world.addComponent<ecs::NameComponent>(dir_light_entity).name = "Directional Light";
-	auto& dir_light_properties = world.addComponent<ecs::DirectionalLightComponent>(dir_light_entity);
+	auto &dir_light_properties = world.addComponent<ecs::DirectionalLightComponent>(dir_light_entity);
 	dir_light_properties.luminousColor = Color4(2.0f);
-	dir_light_properties.direction = { 15.0f, -30.0f, 15.0f };
+	dir_light_properties.direction = {15.0f, -30.0f, 15.0f};
 
 	size_t point_lights_count = 2;
 	auto root_point_lights_entity = world.create_entity();
 	world.addComponent<ecs::NameComponent>(root_point_lights_entity).name = "Point Lights";
 	auto m_root_point_light_object = GObject::create(nullptr, root_point_lights_entity);
-	for (int i = 0; i < point_lights_count; i++) {
+	for (int i = 0; i < point_lights_count; i++)
+	{
 		auto point_light_entity = world.create_entity();
 		auto point_light_node = GObject::create(m_root_point_light_object, point_light_entity);
 		world.addComponent<ecs::NameComponent>(point_light_entity).name = std::string("Point Light ") + std::to_string(i);
-		auto& point_light_transform = world.addComponent<ecs::TransformComponent>(point_light_entity);
+		auto &point_light_transform = world.addComponent<ecs::TransformComponent>(point_light_entity);
 		double r1 = random(-15.0f, 15.0f);
 		double r2 = random(3.0f, 10.0f);
 		double r3 = random(-15.0f, 15.0f);
-		point_light_transform.translation = { r1, r2, r3 };
+		point_light_transform.translation = {r1, r2, r3};
 		point_light_transform.scale = Vec3(random(0.1f, 0.3f));
-		auto& point_light_com = world.addComponent<ecs::PointLightComponent>(point_light_entity);
+		auto &point_light_com = world.addComponent<ecs::PointLightComponent>(point_light_entity);
 		point_light_com.radius = (point_light_transform.scale[0]) * 100.0f;
-		point_light_com.luminousColor = i == 0 ? Color4(2.0f, 2.0f, 2.0f, 1.0f) : Color4{ randomUnit(), randomUnit(), randomUnit(), 1.0f };
+		point_light_com.luminousColor = i == 0 ? Color4(2.0f, 2.0f, 2.0f, 1.0f) : Color4{randomUnit(), randomUnit(), randomUnit(), 1.0f};
 		SubMesh sub_mesh;
-		sub_mesh.mesh_file_ref = { MeshFileType::CustomSphere, "" };
+		sub_mesh.mesh_file_ref = {MeshFileType::CustomSphere, ""};
 		point_light_com.mesh = sub_mesh;
 	}
 
@@ -75,22 +77,25 @@ void Cubetest::init() {
 
 		float space = 3.0f;
 		int i = 0;
-		for (auto sphere_obj : m_root_sphere_object->children()) {
-			auto& sphere_translation = world.getComponent<TransformComponent>(sphere_obj->entity())->translation;
+		for (auto sphere_obj : m_root_sphere_object->children())
+		{
+			auto &sphere_translation = world.getComponent<TransformComponent>(sphere_obj->entity())->translation;
 			int sequence = i / one_sequence_max_num;
-			if (sequence == sequences - 1) {
+			if (sequence == sequences - 1)
+			{
 				int j = i - sequence * one_sequence_max_num;
 				int col = j % cols;
 				int row = (j / cols) % rows;
-				sphere_translation = { space * col, 1.0f + space * row, space * sequence };
+				sphere_translation = {space * col, 1.0f + space * row, space * sequence};
 			}
-			else {
+			else
+			{
 				int col = i % max_cols;
 				int row = (i / max_cols) % max_rows;
-				sphere_translation = { space * col, 1.0f + space * row, space * sequence };
+				sphere_translation = {space * col, 1.0f + space * row, space * sequence};
 			}
-			//float theta = (2 * Core::MathConstant::PI / 25.0f) * m_test_sphere_count;
-			//sphere_translation = { 10.0f * cos(theta), 1.0f , 10.0f * sin(theta) };
+			// float theta = (2 * Core::MathConstant::PI / 25.0f) * m_test_sphere_count;
+			// sphere_translation = { 10.0f * cos(theta), 1.0f , 10.0f * sin(theta) };
 			i++;
 		}
 	};
@@ -99,39 +104,40 @@ void Cubetest::init() {
 	auto root_sphere_entity = world.create_entity();
 	world.addComponent<ecs::NameComponent>(root_sphere_entity).name = "Spheres";
 	m_root_sphere_object = GObject::create(nullptr, root_sphere_entity);
-	for (int i = 0; i < spheres_count; i++) {
+	for (int i = 0; i < spheres_count; i++)
+	{
 		auto sphere_entity = world.create_entity();
 		auto sphere_node = GObject::create(m_root_sphere_object, sphere_entity);
 		world.addComponent<ecs::NameComponent>(sphere_entity).name = std::string("Sphere") + std::to_string(i);
 		world.addComponent<TransformComponent>(sphere_entity);
 
-		auto& sphere_renderable = world.addComponent<ecs::RenderableComponent>(sphere_entity);
+		auto &sphere_renderable = world.addComponent<ecs::RenderableComponent>(sphere_entity);
 		SubMesh sub_mesh;
-		sub_mesh.mesh_file_ref = { MeshFileType::CustomSphere, "" };
+		sub_mesh.mesh_file_ref = {MeshFileType::CustomSphere, ""};
 		sub_mesh.material.albedo = Vec3(1.0f, 1.0f, 1.0f);
 		sub_mesh.material.metallic = 1.0;
 		sub_mesh.material.roughness = (1.0f / 64) * (i + 1);
 		sub_mesh.material.ao = 0.01;
 		sphere_renderable.sub_meshes.push_back(sub_mesh);
-		//world.addComponent<ExplosionComponent>(sphere_entity);
+		// world.addComponent<ExplosionComponent>(sphere_entity);
 
 		updateSpheresPosition(i);
 
-		//Meta::Serialization::Serializer::saveToJsonFile(asset_dir + "/sphere.json", world.getComponent<TransformComponent>(sphere_entity));
+		// Meta::Serialization::Serializer::saveToJsonFile(asset_dir + "/sphere.json", world.getComponent<TransformComponent>(sphere_entity));
 		////TransformComponent trans;
 		////Meta::Serialization::Serializer::loadFromJsonFile(asset_dir + "/sphere.json", &trans);
-		//Meta::Serialization::Serializer::write(world.getComponent<TransformComponent>(sphere_entity));
+		// Meta::Serialization::Serializer::write(world.getComponent<TransformComponent>(sphere_entity));
 	}
 
-	//createPlaneGround
+	// createPlaneGround
 	auto ground_entity = world.create_entity();
 	auto ground_node = GObject::create(nullptr, ground_entity);
 	world.addComponent<ecs::NameComponent>(ground_entity).name = "Gound";
-	auto& ground_transform = world.addComponent<ecs::TransformComponent>(ground_entity);
+	auto &ground_transform = world.addComponent<ecs::TransformComponent>(ground_entity);
 	ground_transform.scale = Vec3(1.0f);
-	auto& ground_renderable = world.addComponent<ecs::RenderableComponent>(ground_entity);
+	auto &ground_renderable = world.addComponent<ecs::RenderableComponent>(ground_entity);
 	SubMesh sub_mesh;
-	sub_mesh.mesh_file_ref = { MeshFileType::CustomGround, "" };
+	sub_mesh.mesh_file_ref = {MeshFileType::CustomGround, ""};
 	std::shared_ptr<Material> ground_material = Material::create_default_material();
 	sub_mesh.material.albedo = Vec3(1.0f, 1.0f, 1.0f);
 	sub_mesh.material.metallic = 0.0f;
@@ -139,34 +145,34 @@ void Cubetest::init() {
 	sub_mesh.material.ao = 0.01;
 	ground_renderable.sub_meshes.push_back(sub_mesh);
 
-	loadModel(RESOURCE_DIRECTORY + "/model/nanosuit/nanosuit.obj");
+	loadModel(ASSET_DIRECTORY + "/model/nanosuit/nanosuit.obj");
 
-	GObject* bunny_obj = loadModel(RESOURCE_DIRECTORY + "/model/bunny.obj");
+	GObject *bunny_obj = loadModel(ASSET_DIRECTORY + "/model/bunny.obj");
 	auto bunny_transform = world.getComponent<ecs::TransformComponent>(bunny_obj->entity());
 	bunny_transform->scale = Vec3(40.0f);
 	bunny_transform->translation = Vec3(-10.0f, 0.0f, 0.0f);
 
-	//loadModel(RESOURCE_DIRECTORY + "/model/dragon.obj");
+	// loadModel(ASSET_DIRECTORY + "/model/dragon.obj");
 
 #endif // ENABLE_ECS
 
-	auto& engine = Engine::get();
+	auto &engine = Engine::get();
 	auto scene = engine.Scene();
 
 	{
-		//GObject* plane_obj = GObject::create(nullptr, "Ground");
-		//MeshComponent& plane_mesh = plane_obj->addComponent<MeshComponent>();
-		//std::shared_ptr<Mesh> plane_sub_mesh = Mesh::create_complex_quad_mesh(Vec2(10.0f));
-		//std::shared_ptr<Material> plane_material = Material::create_complete_default_material();
-		//plane_sub_mesh->material = plane_material;
-		//plane_mesh.sub_meshes.push_back(plane_sub_mesh);
-		//TransformComponent& plane_transform = plane_obj->addComponent<TransformComponent>();
-		//plane_transform.scale = Vec3(50.0f, 1.f, 50.0f);
-		//scene->addObject(std::shared_ptr<GObject>(plane_obj));
+		// GObject* plane_obj = GObject::create(nullptr, "Ground");
+		// MeshComponent& plane_mesh = plane_obj->addComponent<MeshComponent>();
+		// std::shared_ptr<Mesh> plane_sub_mesh = Mesh::create_complex_quad_mesh(Vec2(10.0f));
+		// std::shared_ptr<Material> plane_material = Material::create_complete_default_material();
+		// plane_sub_mesh->material = plane_material;
+		// plane_mesh.sub_meshes.push_back(plane_sub_mesh);
+		// TransformComponent& plane_transform = plane_obj->addComponent<TransformComponent>();
+		// plane_transform.scale = Vec3(50.0f, 1.f, 50.0f);
+		// scene->addObject(std::shared_ptr<GObject>(plane_obj));
 
-		GObject* ground_obj = scene->loadModel(RESOURCE_DIRECTORY + "/model/basic/cube.obj");
-        ground_obj->setName("Ground");
-		TransformComponent* transform = ground_obj->getComponent<TransformComponent>();
+		GObject *ground_obj = scene->loadModel(ASSET_DIRECTORY + "/model/basic/cube.obj");
+		ground_obj->setName("Ground");
+		TransformComponent *transform = ground_obj->getComponent<TransformComponent>();
 		transform->scale = Vec3(30.0f, 0.001f, 30.0f);
 		std::shared_ptr<Material> ground_material = Material::create_complete_default_material();
 		ground_obj->getComponent<MeshComponent>()->sub_meshes[0]->material = ground_material;
@@ -177,7 +183,7 @@ void Cubetest::init() {
 	//	size_t row_count = std::sqrt(cubes_count);
 	//	size_t col_count = cubes_count / row_count;
 	//	for (int i = 0; i < cubes_count; i++) {
-	//		GObject* cube_obj = scene->loadModel(RESOURCE_DIRECTORY + "/model/basic/cube.obj");
+	//		GObject* cube_obj = scene->loadModel(ASSET_DIRECTORY + "/model/basic/cube.obj");
 	//		TransformComponent* transform = cube_obj->getComponent<TransformComponent>();
 	//		transform->translation = { 1.5f * (i % col_count), 0.5f + 1.5f * (i / row_count), 0.0f };
 	//		std::shared_ptr<Material> cube_material = Material::create_complete_default_material();
@@ -190,7 +196,7 @@ void Cubetest::init() {
 	//	size_t s_row_count = std::sqrt(spheres_count);
 	//	size_t s_col_count = spheres_count / s_row_count;
 	//	for (int i = 0; i < spheres_count; i++) {
-	//		GObject* sphere_obj = scene->loadModel(RESOURCE_DIRECTORY + "/model/basic/sphere.obj");
+	//		GObject* sphere_obj = scene->loadModel(ASSET_DIRECTORY + "/model/basic/sphere.obj");
 	//		TransformComponent* transform = sphere_obj->getComponent<TransformComponent>();
 	//		transform->translation = { 1.5f * (i % s_col_count), 0.5f + 1.5f * (i / s_row_count), 0.0f };
 	//		std::shared_ptr<Material> sphere_material = Material::create_complete_default_material();
@@ -199,25 +205,28 @@ void Cubetest::init() {
 	//}
 
 	{
-		//GObject* nano_suit = scene->loadModel(RESOURCE_DIRECTORY + "/model/nanosuit/nanosuit.obj");
-		//nano_suit->getComponent<TransformComponent>()->scale = Vec3(0.3f);
+		// GObject* nano_suit = scene->loadModel(ASSET_DIRECTORY + "/model/nanosuit/nanosuit.obj");
+		// nano_suit->getComponent<TransformComponent>()->scale = Vec3(0.3f);
 
 		// 骨骼动画冒烟测试：如果资源存在，会自动播放模型内的第一个动画 clip。
-		GObject* vampire = scene->loadModel(RESOURCE_DIRECTORY + "/model/vampire/dancing_vampire.dae");
-		if (vampire) {
+		GObject *vampire = scene->loadModel(ASSET_DIRECTORY + "/model/vampire/dancing_vampire.dae");
+		if (vampire)
+		{
 			vampire->setName("AnimatedVampire");
-			if (auto* animation = vampire->getComponent<AnimationComponent>()) {
+			if (auto *animation = vampire->getComponent<AnimationComponent>())
+			{
 				animation->speed = 1.0f;
 				animation->loop = true;
 				animation->playing = true;
 			}
 		}
-		else {
-			Logger::warn("Animated sample not loaded: {}", RESOURCE_DIRECTORY + std::string("/model/vampire/dancing_vampire.dae"));
+		else
+		{
+			Logger::warn("Animated sample not loaded: {}", ASSET_DIRECTORY + std::string("/model/vampire/dancing_vampire.dae"));
 		}
 
-		//GObject* bunny_obj = loadModel(RESOURCE_DIRECTORY + "/model/bunny.obj");
-		//auto bunny_transform = bunny_obj->getComponent<TransformComponent>();
-		//bunny_transform->scale = Vec3(75.0f);
+		// GObject* bunny_obj = loadModel(ASSET_DIRECTORY + "/model/bunny.obj");
+		// auto bunny_transform = bunny_obj->getComponent<TransformComponent>();
+		// bunny_transform->scale = Vec3(75.0f);
 	}
 }

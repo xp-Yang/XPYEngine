@@ -1,4 +1,4 @@
-#include "Logical/Shader.hpp"
+#include "AssetManager/Shader.hpp"
 
 #include <fstream>
 #include <memory>
@@ -173,65 +173,65 @@ Shader::Shader(const std::string &vs_filepath, const std::string &fs_filepath, c
     gsCode = g_parser.getProcessedSourceCode();
 }
 
-Shader Shader::create(const ShaderType& type)
+Shader Shader::create(const ShaderType &type)
 {
-    const std::string resource_dir = RESOURCE_DIR;
+    const std::string asset_dir = ASSET_DIR;
     switch (type)
     {
     case ShaderType::PristineGridShader:
-        return Shader{ resource_dir + "/shader/pristineGrid.vs", resource_dir + "/shader/pristineGrid.fs" };
+        return Shader{asset_dir + "/shader/pristineGrid.vs", asset_dir + "/shader/pristineGrid.fs"};
     case ShaderType::GBufferShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/gBuffer_pbr.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/gBuffer_pbr.fs"};
     case ShaderType::GBufferPhongShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/gBuffer_phong.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/gBuffer_phong.fs"};
     case ShaderType::DeferredLightingShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/deferredLighting_pbr.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/deferredLighting_pbr.fs"};
     case ShaderType::DeferredLightingPhongShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/deferredLighting_phong.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/deferredLighting_phong.fs"};
     case ShaderType::BlinnPhongShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/fowardLighting_phong.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/fowardLighting_phong.fs"};
     case ShaderType::PBRShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/fowardLighting_pbr.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/fowardLighting_pbr.fs"};
     case ShaderType::SingleColorShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/singleColor.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/singleColor.fs"};
     case ShaderType::SkyboxShader:
-        return Shader{ resource_dir + "/shader/skybox.vs", resource_dir + "/shader/skybox.fs" };
+        return Shader{asset_dir + "/shader/skybox.vs", asset_dir + "/shader/skybox.fs"};
     case ShaderType::NormalShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/normal.fs", resource_dir + "/shader/normal.gs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/normal.fs", asset_dir + "/shader/normal.gs"};
     case ShaderType::WireframeShader:
-        return Shader{ resource_dir + "/shader/wireframe2.vs", resource_dir + "/shader/wireframe2.fs" };
+        return Shader{asset_dir + "/shader/wireframe2.vs", asset_dir + "/shader/wireframe2.fs"};
     case ShaderType::CheckerboardShader:
-        return Shader{ resource_dir + "/shader/checkerboard.vs", resource_dir + "/shader/checkerboard.fs" };
+        return Shader{asset_dir + "/shader/checkerboard.vs", asset_dir + "/shader/checkerboard.fs"};
     case ShaderType::RayTracingShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/rayTracing.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/rayTracing.fs"};
     case ShaderType::BloomShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/bloom.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/bloom.fs"};
     case ShaderType::CubeMapShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/cubeMap.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/cubeMap.fs"};
     case ShaderType::ExtractBrightShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/extractBright.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/extractBright.fs"};
     case ShaderType::GaussianBlur:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/gaussianBlur.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/gaussianBlur.fs"};
     case ShaderType::OutlineShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/outline.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/outline.fs"};
     case ShaderType::InstancingShader:
-        return Shader{ resource_dir + "/shader/instancing.vs", resource_dir + "/shader/instancing.fs" };
+        return Shader{asset_dir + "/shader/instancing.vs", asset_dir + "/shader/instancing.fs"};
     case ShaderType::BillBoardShader:
-        return Shader{ resource_dir + "/shader/billBoard.vs", resource_dir + "/shader/billBoard.fs" };
+        return Shader{asset_dir + "/shader/billBoard.vs", asset_dir + "/shader/billBoard.fs"};
     case ShaderType::FXAAShader:
-        return Shader{ resource_dir + "/shader/screenQuad.vs", resource_dir + "/shader/fxaa.fs" };
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/fxaa.fs"};
     case ShaderType::DebugTexturePreviewShader:
-        return Shader{ resource_dir + "/shader/debugTexturePreview.vs", resource_dir + "/shader/debugTexturePreview.fs" };
+        return Shader{asset_dir + "/shader/debugTexturePreview.vs", asset_dir + "/shader/debugTexturePreview.fs"};
     case ShaderType::TransparentShader:
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/transparent.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/transparent.fs"};
     default:
         Logger::error("Unknown shader type.");
         assert(false);
-        return Shader{ resource_dir + "/shader/mesh.vs", resource_dir + "/shader/singleColor.fs" };
+        return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/singleColor.fs"};
     }
 }
 
-const Shader& Shader::get(const ShaderType& type)
+const Shader &Shader::get(const ShaderType &type)
 {
     static std::unordered_map<ShaderType, std::unique_ptr<Shader>> shader_cache;
 
@@ -240,7 +240,7 @@ const Shader& Shader::get(const ShaderType& type)
         return *it->second;
 
     auto shader = std::make_unique<Shader>(Shader::create(type));
-    const Shader& shader_ref = *shader;
+    const Shader &shader_ref = *shader;
     shader_cache.emplace(type, std::move(shader));
     return shader_ref;
 }

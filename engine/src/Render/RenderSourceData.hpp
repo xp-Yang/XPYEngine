@@ -2,8 +2,8 @@
 #define RenderSourceData_hpp
 
 #include "Base/Common.hpp"
-#include "Logical/Texture.hpp"
-#include "Logical/Mesh.hpp"
+#include "AssetManager/Texture.hpp"
+#include "AssetManager/Mesh.hpp"
 #include "Logical/Framework/Object/GObject.hpp"
 #include "Render/RHI/rhi.hpp"
 

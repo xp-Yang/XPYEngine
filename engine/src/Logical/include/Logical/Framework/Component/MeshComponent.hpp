@@ -2,7 +2,7 @@
 #define MeshComponent_hpp
 
 #include "Logical/Framework/Component/Component.hpp"
-#include "Logical/Mesh.hpp"
+#include "AssetManager/Mesh.hpp"
 
 struct MeshComponent : public Component {
 	MeshComponent(GObject* parent) : Component(parent) {}

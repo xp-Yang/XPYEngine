@@ -1,4 +1,4 @@
-#include "Logical/Texture.hpp"
+#include "AssetManager/Texture.hpp"
 #include "stb_image.h"
 #include <cassert>
 

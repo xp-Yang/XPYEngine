@@ -1,10 +1,10 @@
-#ifndef ResourceImporter_hpp
-#define ResourceImporter_hpp
+#ifndef ModelImporter_hpp
+#define ModelImporter_hpp
 
 // import files in formats other than XPYEngin Asset file
 
 #include "Base/Common.hpp"
-#include "Logical/Mesh.hpp"
+#include "AssetManager/Mesh.hpp"
 
 struct aiNode;
 struct aiScene;
@@ -25,10 +25,10 @@ struct BoneInfo
 	Mat4 offset;
 };
 
-class ResourceImporter {
+class ModelImporter {
 public:
-	ResourceImporter() = default;
-	~ResourceImporter();
+    ModelImporter() = default;
+	~ModelImporter();
 	bool load(const std::string& obj_file_path);
 	std::shared_ptr<Mesh> meshOfNode(int ai_mesh_idx);
 	std::shared_ptr<Material> materialOfNode(int ai_mesh_idx);

@@ -1,5 +1,5 @@
 #include "Engine.hpp"
-#include "GUI/Window.hpp"
+#include "Platform/Window.hpp"
 #include "Render/RenderSystem.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "GUI/Editor/ImGuiInput.hpp"

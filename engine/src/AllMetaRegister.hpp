@@ -2,17 +2,16 @@
 #define AllMetaRegister_hpp
 
 #include "Meta.hpp"
-#include "AllSerializer.hpp"
 
-#include "Logical/Mesh.hpp"
+#include "AssetManager/Mesh.hpp"
 
 #if ENABLE_ECS
 #include "Logical/Framework/ECS/Components.hpp"
 #endif
 
 #include "Logical/Framework/World/Scene.hpp"
-#include "Logical/Shader.hpp"
-#include "ResourceManager/DTO.hpp"
+#include "AssetManager/Shader.hpp"
+#include "AssetManager/DTO.hpp"
 
 namespace Meta {
 

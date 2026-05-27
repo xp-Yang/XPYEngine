@@ -9,6 +9,8 @@
 #include <Logical/Framework/World/Scene.hpp>
 #include <Logical/Animation/AnimationSystem.hpp>
 
+#include <AssetManager/MeshAlgorithm.hpp>
+
 #include "GlobalContext.hpp"
 
 RenderSystem::RenderSystem()
@@ -30,13 +32,13 @@ RenderParams &RenderSystem::renderParams()
     return m_render_params;
 }
 
-GL_HANDLE RenderSystem::renderGraphTextureOf(const std::string& resource_name)
+GL_HANDLE RenderSystem::renderGraphTextureOf(const std::string &resource_name)
 {
-    RhiTexture* texture = m_curr_path->renderGraphTextureOf(resource_name);
+    RhiTexture *texture = m_curr_path->renderGraphTextureOf(resource_name);
     return texture ? texture->id() : 0;
 }
 
-bool RenderSystem::readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4])
+bool RenderSystem::readRenderGraphPixelRGBAOf(const std::string &resource_name, int x, int y, unsigned char out_rgba[4])
 {
     return m_curr_path && m_curr_path->readRenderGraphPixelRGBAOf(resource_name, x, y, out_rgba);
 }
@@ -88,36 +90,36 @@ void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)
 
 void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
 {
-    const auto& main_dir_light = scene->getLightManager()->mainDirectionalLight();
-    const auto& point_lights = scene->getLightManager()->pointLights();
-    const auto& objects = scene->getObjects();
+    const auto &main_dir_light = scene->getLightManager()->mainDirectionalLight();
+    const auto &point_lights = scene->getLightManager()->pointLights();
+    const auto &objects = scene->getObjects();
 
     if (!m_initialized)
     {
         // 初始化 screen_quad mesh
         std::shared_ptr<Mesh> screen_quad_sub_mesh;
-        screen_quad_sub_mesh = Mesh::create_screen_mesh();
+        screen_quad_sub_mesh = MeshAlgorithm::create_screen_mesh();
         m_render_source_data->screen_quad = std::make_shared<RenderMeshData>(screen_quad_sub_mesh);
 
         // 初始化 定向光源
         m_render_source_data->render_directional_light_data_list.emplace_back(
-            RenderDirectionalLightData{ main_dir_light->luminousColor, main_dir_light->direction,
+            RenderDirectionalLightData{main_dir_light->luminousColor, main_dir_light->direction,
                                        main_dir_light->lightViewMatrix(), main_dir_light->lightProjMatrix()});
 
         // 初始化 render_point_light_inst_mesh
-         std::shared_ptr<Mesh> point_light_mesh = Mesh::create_icosphere_mesh(0.1f, 4);
-         m_render_source_data->render_point_light_inst_mesh = std::make_shared<RenderMeshData>(point_light_mesh);
+        std::shared_ptr<Mesh> point_light_mesh = MeshAlgorithm::create_icosphere_mesh(0.1f, 4);
+        m_render_source_data->render_point_light_inst_mesh = std::make_shared<RenderMeshData>(point_light_mesh);
 
         // 初始化 天空盒
-        std::shared_ptr<Mesh> skybox_mesh = Mesh::create_cube_mesh();
-        const std::string resource_dir = RESOURCE_DIR;
+        std::shared_ptr<Mesh> skybox_mesh = MeshAlgorithm::create_cube_mesh();
+        const std::string asset_dir = ASSET_DIR;
         std::shared_ptr<CubeTexture> skybox_cube_texture = std::make_shared<CubeTexture>(
-            resource_dir + "/images/skybox/right.jpg",
-            resource_dir + "/images/skybox/left.jpg",
-            resource_dir + "/images/skybox/top.jpg",
-            resource_dir + "/images/skybox/bottom.jpg",
-            resource_dir + "/images/skybox/front.jpg",
-            resource_dir + "/images/skybox/back.jpg");
+            asset_dir + "/images/skybox/right.jpg",
+            asset_dir + "/images/skybox/left.jpg",
+            asset_dir + "/images/skybox/top.jpg",
+            asset_dir + "/images/skybox/bottom.jpg",
+            asset_dir + "/images/skybox/front.jpg",
+            asset_dir + "/images/skybox/back.jpg");
         m_render_source_data->render_skybox_node.skybox_cube_map = RenderTextureData(skybox_cube_texture).texture;
         m_render_source_data->render_skybox_node.mesh = std::make_shared<RenderMeshData>(skybox_mesh);
 
@@ -125,7 +127,7 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
     }
 
     // 更新定向光源状态
-    auto& render_dir_lights = m_render_source_data->render_directional_light_data_list;
+    auto &render_dir_lights = m_render_source_data->render_directional_light_data_list;
     render_dir_lights[0].color = main_dir_light->luminousColor;
     render_dir_lights[0].direction = main_dir_light->direction;
     render_dir_lights[0].lightViewMatrix = main_dir_light->lightViewMatrix();
@@ -144,7 +146,7 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         point_light_inst_data.resize(point_lights.size());
         for (size_t i = 0; i < point_lights.size(); ++i)
         {
-            const auto& point_light = point_lights[i];
+            const auto &point_light = point_lights[i];
             point_light_inst_data[i].inst_matrix = Math::Translate(point_light->position);
             point_light_inst_data[i].inst_color = point_light->luminousColor;
         }
@@ -162,8 +164,8 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
 
         int point_light_id = point_light->ID().id;
         auto it = std::find_if(render_point_lights.begin(), render_point_lights.end(),
-            [&point_light_id](const RenderPointLightData& render_point_light_data)
-            {return render_point_light_data.id == point_light_id; });
+                               [&point_light_id](const RenderPointLightData &render_point_light_data)
+                               { return render_point_light_data.id == point_light_id; });
         if (it != render_point_lights.end())
         {
             auto &render_point_light = *it;
@@ -210,11 +212,10 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
             continue;
         }
 
-
-        const auto& sub_meshes = object->getComponent<MeshComponent>()->sub_meshes;
+        const auto &sub_meshes = object->getComponent<MeshComponent>()->sub_meshes;
         const Mat4 obj_transform = object->getComponent<TransformComponent>()->transform();
         const bool use_skinning = animation_system && animation_system->HasAnimation(object_id);
-        const std::vector<Mat4>* bone_matrices = use_skinning ? &animation_system->GetFinalBoneMatrices(object_id) : nullptr;
+        const std::vector<Mat4> *bone_matrices = use_skinning ? &animation_system->GetFinalBoneMatrices(object_id) : nullptr;
 
         std::unordered_set<int> alive_sub_mesh_ids;
         alive_sub_mesh_ids.reserve(sub_meshes.size());

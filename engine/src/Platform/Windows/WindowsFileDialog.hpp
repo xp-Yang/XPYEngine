@@ -1,7 +1,7 @@
 #ifndef WindowsFileDialog_hpp
 #define WindowsFileDialog_hpp
 
-#include "GUI/FileDialog.hpp"
+#include "Platform/FileDialog.hpp"
 
 class WindowsFileDialog : public FileDialog {
 public:

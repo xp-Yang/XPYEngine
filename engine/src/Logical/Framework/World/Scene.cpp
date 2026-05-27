@@ -6,8 +6,8 @@
 #include "Logical/Framework/Component/AnimationComponent.hpp"
 #include "Logical/Animation/Animation.hpp"
 
-#include "ResourceManager/DTO.hpp"
-#include "ResourceManager/ResourceImporter.hpp"
+#include "AssetManager/DTO.hpp"
+#include "AssetManager/ModelImporter.hpp"
 
 Scene::Scene()
 {
@@ -17,7 +17,7 @@ Scene::Scene()
 
 GObject* Scene::loadModel(const std::string& filepath)
 {
-	ResourceImporter model_importer;
+	ModelImporter model_importer;
 	if (!model_importer.load(filepath))
 		return nullptr;
 	std::vector<int> obj_sub_meshes_idx = model_importer.getSubMeshesIds();

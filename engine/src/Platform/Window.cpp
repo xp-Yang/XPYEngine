@@ -1,11 +1,11 @@
-#include "GUI/Window.hpp"
+#include "Platform/Window.hpp"
 
 #include <GLFW/glfw3.h>
-#include "GUI/FileDialog.hpp"
+#include "Platform/FileDialog.hpp"
 #ifdef _WIN32
-#include "GUI/Platform/Windows/WindowsFileDialog.hpp"
+#include "Platform/Windows/WindowsFileDialog.hpp"
 #elif defined(__APPLE__)
-#include "GUI/Platform/Mac/MacFileDialog.hpp"
+#include "Platform/Mac/MacFileDialog.hpp"
 #endif
 
 #include <assert.h>

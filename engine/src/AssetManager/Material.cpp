@@ -1,16 +1,16 @@
-#include "Logical/Material.hpp"
+#include "AssetManager/Material.hpp"
 
 #include <algorithm>
 #include <cmath>
 
 static std::shared_ptr<Texture> defaultWhiteTexture(TextureType type)
 {
-    return std::make_shared<Texture>(type, std::string(RESOURCE_DIR) + "/images/pure_white_map.png", false);
+    return std::make_shared<Texture>(type, std::string(ASSET_DIR) + "/images/pure_white_map.png", false);
 }
 
 std::shared_ptr<Material> Material::create_complete_default_material()
 {
-	auto default_material = std::make_shared<Material>();
+    auto default_material = std::make_shared<Material>();
     default_material->diffuse_texture = defaultWhiteTexture(TextureType::Diffuse);
     default_material->specular_texture = defaultWhiteTexture(TextureType::Specular);
     default_material->normal_texture = defaultWhiteTexture(TextureType::Normal);
@@ -23,7 +23,7 @@ std::shared_ptr<Material> Material::create_complete_default_material()
     default_material->roughness_factor = 1.0f;
     default_material->ao_factor = 1.0f;
     default_material->shininess = 128.0f;
-	return default_material;
+    return default_material;
 }
 
 void Material::fillPBRFromBlinnPhong()

@@ -45,7 +45,7 @@ RenderTextureData::RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_)
 
 RenderTextureData &RenderTextureData::defaultTexture()
 {
-    static std::shared_ptr<Texture> diffuse_texture = std::make_shared<Texture>(TextureType::Custom, std::string(RESOURCE_DIR) + "/images/default_map.png", false);
+    static std::shared_ptr<Texture> diffuse_texture = std::make_shared<Texture>(TextureType::Custom, std::string(ASSET_DIR) + "/images/default_map.png", false);
     static RenderTextureData texture(diffuse_texture);
     return texture;
 }
@@ -53,14 +53,15 @@ RenderTextureData &RenderTextureData::defaultTexture()
 RenderTextureData &RenderTextureData::defaultCubeTexture()
 {
     static std::shared_ptr<CubeTexture> cube_texture;
-    if (!cube_texture) {
+    if (!cube_texture)
+    {
         cube_texture = std::make_shared<CubeTexture>();
         cube_texture->width = 1;
         cube_texture->height = 1;
         cube_texture->channel_count = 3;
         static float neutral_depth = 1.0f;
-        std::array<unsigned char*, 6> cube_data{};
-        cube_texture->datas.fill(reinterpret_cast<unsigned char*>(&neutral_depth));
+        std::array<unsigned char *, 6> cube_data{};
+        cube_texture->datas.fill(reinterpret_cast<unsigned char *>(&neutral_depth));
     }
     static RenderTextureData texture(cube_texture);
     return texture;
@@ -90,11 +91,11 @@ RenderMeshData::RenderMeshData(std::shared_ptr<Mesh> mesh_data)
 
     m_vertex_layout = rhi->newVertexLayout(vbuf, ibuf);
     m_vertex_layout->setAttributes({
-        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                                  // position
-        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},           // normal
-        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},       // uv
-        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},          // bone ids
-        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)},     // bone weights
+        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                              // position
+        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},       // normal
+        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},   // uv
+        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},      // bone ids
+        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)}, // bone weights
     });
     m_vertex_layout->create();
     // glGenVertexArrays(1, &m_VAO);
@@ -127,21 +128,21 @@ void RenderMeshData::create_instancing(void *instancing_data, int instancing_dat
     m_instancing_buffer->update(instancing_data, instancing_data_size);
 
     m_vertex_layout->setAttributes({
-        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                                  // position
-        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},           // normal
-        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},       // uv
-        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},          // bone ids
-        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)},     // bone weights
-        {5, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 0},                                // 矩阵
-        {6, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), sizeof(Vec4)},                     
+        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                              // position
+        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},       // normal
+        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},   // uv
+        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},      // bone ids
+        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)}, // bone weights
+        {5, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 0},                            // 矩阵
+        {6, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), sizeof(Vec4)},
         {7, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 2 * sizeof(Vec4)},
         {8, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 3 * sizeof(Vec4)},
-        {9, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 4 * sizeof(Vec4)},                 // color
+        {9, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 4 * sizeof(Vec4)}, // color
     });
     m_vertex_layout->createInstancing(m_instancing_buffer, 5);
 }
 
-void RenderMeshData::update_instancing(void* instancing_data, int instancing_data_size)
+void RenderMeshData::update_instancing(void *instancing_data, int instancing_data_size)
 {
     if (instancing_data_size <= 0 || instancing_data == nullptr)
         return;

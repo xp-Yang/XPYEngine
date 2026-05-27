@@ -1,6 +1,6 @@
 #include "ImGuiInput.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
-#include "GUI/Window.hpp"
+#include "Platform/Window.hpp"
 #include "Render/Graph/RenderGraphPassNode.hpp"
 #include "Render/RenderSystem.hpp"
 #include "Logical/Framework/World/Scene.hpp"

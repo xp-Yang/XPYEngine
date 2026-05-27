@@ -15,8 +15,8 @@
 #include "GUI/Editor/ImGuiGlobalConsole.hpp"
 #include "GUI/Editor/ImGuiDebugWindow.hpp"
 
-#include "GUI/FileDialog.hpp"
-#include "GUI/Window.hpp"
+#include "Platform/FileDialog.hpp"
+#include "Platform/Window.hpp"
 #include "Render/RenderSystem.hpp"
 #include "Logical/Framework/World/Scene.hpp"
 #include "Base/Logger/Logger.hpp"
