@@ -6,14 +6,15 @@
 #include "Render/RHI/rhi.hpp"
 
 class Scene;
-class RenderSystem {
+class RenderSystem
+{
 public:
     RenderSystem();
-    RenderParams& renderParams();
+    RenderParams &renderParams();
     void onUpdate(std::shared_ptr<Scene> scene);
 
-    GL_HANDLE renderGraphTextureOf(const std::string& resource_name);
-    bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]);
+    GL_HANDLE renderGraphTextureOf(const std::string &resource_name);
+    bool readRenderGraphPixelRGBAOf(const std::string &resource_name, int x, int y, unsigned char out_rgba[4]);
 
     std::vector<std::string> renderGraphResourceNames() const;
     std::vector<RenderGraphResourceDebugInfo> renderGraphResourceDebugInfos() const;
@@ -35,7 +36,7 @@ private:
 
     std::shared_ptr<RenderSourceData> m_render_source_data;
 
-    bool m_initialized{ false };
+    bool m_initialized{false};
 };
 
 #endif // !RenderSystem_hpp

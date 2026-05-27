@@ -5,6 +5,7 @@
 #if !ENABLE_ECS
 #include "Logical/Framework/Component/CameraComponent.hpp"
 #include "Logical/Framework/Component/MeshComponent.hpp"
+#include "Logical/Framework/Component/LightComponent.hpp"
 #include "Logical/Framework/Component/AnimationComponent.hpp"
 #include "Logical/Framework/Component/TransformComponent.hpp"
 #include "Logical/Framework/Component/RigidComponent.hpp"

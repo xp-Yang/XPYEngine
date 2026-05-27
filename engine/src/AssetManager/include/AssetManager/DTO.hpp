@@ -57,6 +57,19 @@ struct SubMeshDTO
 	TransformDTO local_transform{};
 };
 
+struct PointLightDTO
+{
+	Color3 luminous_color{1.0f, 1.0f, 1.0f};
+	float radius{30.0f};
+};
+
+struct DirectionalLightDTO
+{
+	Color3 luminous_color{1.0f, 1.0f, 1.0f};
+	Vec3 direction{15.0f, -30.0f, 15.0f};
+	float aspect_ratio{16.0f / 9.0f};
+};
+
 struct ObjectDTO
 {
 	std::string name;
@@ -66,11 +79,15 @@ struct ObjectDTO
 	int file_type{static_cast<int>(FileType::OBJ)};
 	std::vector<SubMeshDTO> sub_meshes;
 	std::vector<MaterialDTO> materials;
+	bool has_point_light{false};
+	PointLightDTO point_light;
+	bool has_directional_light{false};
+	DirectionalLightDTO directional_light;
 };
 
 struct ProjectDTO
 {
-	int schema_version{3};
+	int schema_version{4};
 	std::string project_name{"XPYProject"};
 	std::vector<ObjectDTO> objects;
 };

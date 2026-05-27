@@ -118,6 +118,13 @@ inline void allMetaRegister()
 	registerClass<SubMeshDTO>("SubMeshDTO")
 		.registerProperty(&SubMeshDTO::sub_mesh_index, "index")
 		.registerProperty(&SubMeshDTO::local_transform, "local_transform");
+	registerClass<PointLightDTO>("PointLightDTO")
+		.registerProperty(&PointLightDTO::luminous_color, "luminous_color")
+		.registerProperty(&PointLightDTO::radius, "radius");
+	registerClass<DirectionalLightDTO>("DirectionalLightDTO")
+		.registerProperty(&DirectionalLightDTO::luminous_color, "luminous_color")
+		.registerProperty(&DirectionalLightDTO::direction, "direction")
+		.registerProperty(&DirectionalLightDTO::aspect_ratio, "aspect_ratio");
 	registerClass<ObjectDTO>("ObjectDTO")
 		.registerProperty(&ObjectDTO::name, "name")
 		.registerProperty(&ObjectDTO::visible, "visible")
@@ -125,7 +132,11 @@ inline void allMetaRegister()
 		.registerProperty(&ObjectDTO::filepath, "filepath")
 		.registerProperty(&ObjectDTO::file_type, "file_type")
 		.registerProperty(&ObjectDTO::sub_meshes, "sub_meshes")
-		.registerProperty(&ObjectDTO::materials, "materials");
+		.registerProperty(&ObjectDTO::materials, "materials")
+		.registerProperty(&ObjectDTO::has_point_light, "has_point_light")
+		.registerProperty(&ObjectDTO::point_light, "point_light")
+		.registerProperty(&ObjectDTO::has_directional_light, "has_directional_light")
+		.registerProperty(&ObjectDTO::directional_light, "directional_light");
 	registerClass<ProjectDTO>("ProjectDTO")
 		.registerProperty(&ProjectDTO::schema_version, "schema_version")
 		.registerProperty(&ProjectDTO::project_name, "project_name")
@@ -198,15 +209,17 @@ inline void allMetaRegister()
 		.registerProperty(&::AnimationComponent::playing, "playing");
 	registerClass<::RigidComponent>("RigidComponent");
 
-	registerClass<::DirectionalLight>("DirectionalLight")
-		.registerProperty(&::DirectionalLight::direction, "direction")
-		.registerProperty(&::DirectionalLight::aspectRatio, "aspectRatio")
-		.registerProperty(&::DirectionalLight::luminousColor, "luminousColor");
+	registerClass<::LightComponent>("LightComponent")
+		.registerProperty(&::LightComponent::luminousColor, "luminousColor");
 
-	registerClass<::PointLight>("PointLight")
-		.registerProperty(&::PointLight::radius, "radius")
-		.registerProperty(&::PointLight::position, "position")
-		.registerProperty(&::PointLight::luminousColor, "luminousColor");
+	registerClass<::PointLightComponent>("PointLightComponent")
+		.registerProperty(&::LightComponent::luminousColor, "luminousColor")
+		.registerProperty(&::PointLightComponent::radius, "radius");
+
+	registerClass<::DirectionalLightComponent>("DirectionalLightComponent")
+		.registerProperty(&::LightComponent::luminousColor, "luminousColor")
+		.registerProperty(&::DirectionalLightComponent::direction, "direction")
+		.registerProperty(&::DirectionalLightComponent::aspectRatio, "aspectRatio");
 #endif
 
 }

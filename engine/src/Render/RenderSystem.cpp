@@ -8,6 +8,8 @@
 
 #include <Logical/Framework/World/Scene.hpp>
 #include <Logical/Animation/AnimationSystem.hpp>
+#include <Logical/Framework/Component/LightComponent.hpp>
+#include <Logical/Framework/Component/TransformComponent.hpp>
 
 #include <AssetManager/MeshAlgorithm.hpp>
 
@@ -90,8 +92,8 @@ void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)
 
 void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
 {
-    const auto &main_dir_light = scene->getLightManager()->mainDirectionalLight();
-    const auto &point_lights = scene->getLightManager()->pointLights();
+    const auto directional_light_objects = scene->directionalLightObjects();
+    const auto point_light_objects = scene->pointLightObjects();
     const auto &objects = scene->getObjects();
 
     if (!m_initialized)
@@ -102,10 +104,6 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         m_render_source_data->screen_quad = std::make_shared<RenderMeshData>(screen_quad_sub_mesh);
 
         // 初始化 定向光源
-        m_render_source_data->render_directional_light_data_list.emplace_back(
-            RenderDirectionalLightData{main_dir_light->luminousColor, main_dir_light->direction,
-                                       main_dir_light->lightViewMatrix(), main_dir_light->lightProjMatrix()});
-
         // 初始化 render_point_light_inst_mesh
         std::shared_ptr<Mesh> point_light_mesh = MeshAlgorithm::create_icosphere_mesh(0.1f, 4);
         m_render_source_data->render_point_light_inst_mesh = std::make_shared<RenderMeshData>(point_light_mesh);
@@ -126,28 +124,60 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         m_initialized = true;
     }
 
-    // 更新定向光源状态
     auto &render_dir_lights = m_render_source_data->render_directional_light_data_list;
-    render_dir_lights[0].color = main_dir_light->luminousColor;
-    render_dir_lights[0].direction = main_dir_light->direction;
-    render_dir_lights[0].lightViewMatrix = main_dir_light->lightViewMatrix();
-    render_dir_lights[0].lightProjMatrix = main_dir_light->lightProjMatrix();
+    render_dir_lights.clear();
+    for (const auto &light_object : directional_light_objects)
+    {
+        if (!light_object || !light_object->visible())
+            continue;
+        const auto *directional_light = light_object->getComponent<DirectionalLightComponent>();
+        if (!directional_light)
+            continue;
+        render_dir_lights.emplace_back(RenderDirectionalLightData{
+            directional_light->luminousColor,
+            directional_light->direction,
+            directional_light->lightViewMatrix(),
+            directional_light->lightProjMatrix()});
+    }
+    if (render_dir_lights.empty())
+    {
+        DirectionalLightComponent fallback_light(nullptr);
+        fallback_light.luminousColor = Color3(0.0f);
+        render_dir_lights.emplace_back(RenderDirectionalLightData{
+            fallback_light.luminousColor,
+            fallback_light.direction,
+            fallback_light.lightViewMatrix(),
+            fallback_light.lightProjMatrix()});
+    }
 
-    // 更新点光源状态
     struct PointLightInstData
     {
         Mat4 inst_matrix;
         Color3 inst_color;
     };
-    m_render_source_data->point_light_inst_amount = point_lights.size();
-    if (m_render_source_data->render_point_light_inst_mesh && !point_lights.empty())
+
+    std::vector<std::shared_ptr<GObject>> active_point_light_objects;
+    active_point_light_objects.reserve(point_light_objects.size());
+    for (const auto &light_object : point_light_objects)
+    {
+        if (!light_object || !light_object->visible())
+            continue;
+        if (!light_object->getComponent<PointLightComponent>() || !light_object->getComponent<TransformComponent>())
+            continue;
+        active_point_light_objects.push_back(light_object);
+    }
+
+    m_render_source_data->point_light_inst_amount = static_cast<int>(active_point_light_objects.size());
+    if (m_render_source_data->render_point_light_inst_mesh && !active_point_light_objects.empty())
     {
         static std::vector<PointLightInstData> point_light_inst_data;
-        point_light_inst_data.resize(point_lights.size());
-        for (size_t i = 0; i < point_lights.size(); ++i)
+        point_light_inst_data.resize(active_point_light_objects.size());
+        for (size_t i = 0; i < active_point_light_objects.size(); ++i)
         {
-            const auto &point_light = point_lights[i];
-            point_light_inst_data[i].inst_matrix = Math::Translate(point_light->position);
+            const auto &light_object = active_point_light_objects[i];
+            const auto *transform = light_object->getComponent<TransformComponent>();
+            const auto *point_light = light_object->getComponent<PointLightComponent>();
+            point_light_inst_data[i].inst_matrix = Math::Translate(transform->translation);
             point_light_inst_data[i].inst_color = point_light->luminousColor;
         }
         m_render_source_data->render_point_light_inst_mesh->update_instancing(
@@ -156,37 +186,21 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
     }
 
     auto &render_point_lights = m_render_source_data->render_point_light_data_list;
-    std::unordered_set<int> alive_point_light_ids;
-    alive_point_light_ids.reserve(point_lights.size());
-    for (const auto &point_light : point_lights)
+    render_point_lights.clear();
+    render_point_lights.reserve(active_point_light_objects.size());
+    for (const auto &light_object : active_point_light_objects)
     {
-        alive_point_light_ids.insert(point_light->ID().id);
-
-        int point_light_id = point_light->ID().id;
-        auto it = std::find_if(render_point_lights.begin(), render_point_lights.end(),
-                               [&point_light_id](const RenderPointLightData &render_point_light_data)
-                               { return render_point_light_data.id == point_light_id; });
-        if (it != render_point_lights.end())
-        {
-            auto &render_point_light = *it;
-            render_point_light.color = point_light->luminousColor;
-            render_point_light.position = point_light->position;
-            render_point_light.radius = point_light->radius;
-            render_point_light.lightViewMatrix = point_light->lightViewMatrix();
-            render_point_light.lightProjMatrix = point_light->lightProjMatrix();
-        }
-        else
-        {
-            render_point_lights.emplace_back(
-                RenderPointLightData{point_light_id, point_light->luminousColor, point_light->position, point_light->radius,
-                                     point_light->lightViewMatrix(), point_light->lightProjMatrix()});
-        }
+        const auto *transform = light_object->getComponent<TransformComponent>();
+        const auto *point_light = light_object->getComponent<PointLightComponent>();
+        const Vec3 position = transform->translation;
+        render_point_lights.emplace_back(RenderPointLightData{
+            light_object->ID().id,
+            point_light->luminousColor,
+            position,
+            point_light->radius,
+            point_light->lightViewMatrix(position),
+            point_light->lightProjMatrix()});
     }
-    render_point_lights.erase(
-        std::remove_if(render_point_lights.begin(), render_point_lights.end(),
-                       [&alive_point_light_ids](const RenderPointLightData &render_point_light_data)
-                       { return alive_point_light_ids.find(render_point_light_data.id) == alive_point_light_ids.end(); }),
-        render_point_lights.end());
 
     // 更新objects对象状态
     m_render_source_data->has_transparent = false;
@@ -212,8 +226,22 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
             continue;
         }
 
-        const auto &sub_meshes = object->getComponent<MeshComponent>()->sub_meshes;
-        const Mat4 obj_transform = object->getComponent<TransformComponent>()->transform();
+        auto *mesh_component = object->getComponent<MeshComponent>();
+        auto *transform_component = object->getComponent<TransformComponent>();
+        if (!mesh_component || !transform_component)
+        {
+            for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
+            {
+                if (it->first.object_id.id == object_id)
+                    it = render_mesh_nodes.erase(it);
+                else
+                    ++it;
+            }
+            continue;
+        }
+
+        const auto &sub_meshes = mesh_component->sub_meshes;
+        const Mat4 obj_transform = transform_component->transform();
         const bool use_skinning = animation_system && animation_system->HasAnimation(object_id);
         const std::vector<Mat4> *bone_matrices = use_skinning ? &animation_system->GetFinalBoneMatrices(object_id) : nullptr;
 

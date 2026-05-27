@@ -101,9 +101,7 @@ Viewport ImGuiEditor::getMainViewport() const
 
 void ImGuiEditor::popUpMenu()
 {
-    ContextType context = g_context.scene->getPickedObjects().empty() ? 
-        (g_context.scene->getPickedLight().get() == nullptr ? ContextType::Void : ContextType::Light) :
-        ContextType::Object;
+    ContextType context = g_context.scene->getPickedObjects().empty() ? ContextType::Void : ContextType::Object;
     m_context_menu->popUp(context);
 }
 

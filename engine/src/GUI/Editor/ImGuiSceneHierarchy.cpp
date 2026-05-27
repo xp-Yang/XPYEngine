@@ -371,46 +371,26 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<DirectionalLight>().typeName()] = [this, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<PointLightComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        auto& light = inst.getValue<DirectionalLight&>();
-        LightID id = light.ID();
-        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
-
-        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-        bool node_open = TreeNodeExWithTitleFont(display_text.c_str(), node_flags);
+        auto& light = inst.getValue<PointLightComponent&>();
+        bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
-            for (auto& prop : inst.metaType().properties())
-            {
-                if (prop.name == "luminousColor") {
-                    DrawVecControl(prop.name, prop.getValue(inst), VecKind::COLOR3, 1.0f);
-                }
-                else {
-                    auto inst_ = prop.getValue(inst);
-                    if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
-                        m_widget_creator[inst_.typeName()](prop.name, inst_);
-                }
-            }
+            DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
+            DrawFloatControl("radius", light.radius, 0.1f, 0.01f, 1000.0f);
             ImGui::TreePop();
         }
     };
-    m_widget_creator[Meta::MetaTypeOf<PointLight>().typeName()] = [this, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
+    m_widget_creator[Meta::MetaTypeOf<DirectionalLightComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        auto& light = inst.getValue<PointLight&>();
-        LightID id = light.ID();
-        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
-
-        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
-        bool node_open = TreeNodeExWithTitleFont(display_text.c_str(), node_flags);
+        auto& light = inst.getValue<DirectionalLightComponent&>();
+        bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
-            for (auto& prop : inst.metaType().properties())
-            {
-                auto inst_ = prop.getValue(inst);
-                if (m_widget_creator.find(inst_.typeName()) != m_widget_creator.end())
-                    m_widget_creator[inst_.typeName()](prop.name, inst_);
-            }
+            DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
+            DrawVecControl("direction", light.direction, VecKind::VEC3);
+            DrawFloatControl("aspectRatio", light.aspectRatio, 0.01f, 0.1f, 10.0f);
             ImGui::TreePop();
         }
     };
@@ -466,18 +446,6 @@ void ImGuiSceneHierarchy::render()
     if (ImGui::Begin(("Scene Hierarchy"), nullptr, ImGuiWindowFlags_NoCollapse))
     {
         ImGuiWindow *scene_hierarchy_window = ImGui::GetCurrentWindow();
-
-        const std::vector<std::shared_ptr<Light>> &lights = g_context.scene->getLightManager()->lights();
-        for (int i = 0; i < lights.size(); i++)
-        {
-            auto light = lights[i];
-            std::string child_name = light->name();
-            Meta::Instance inst{*light};
-            if (child_name == "Point Light")
-                m_widget_creator[Meta::MetaTypeOf<PointLight>().typeName()](child_name, inst);
-            if (child_name == "Directional Light")
-                m_widget_creator[Meta::MetaTypeOf<DirectionalLight>().typeName()](child_name, inst);
-        }
 
         const std::vector<std::shared_ptr<GObject>> &objects = g_context.scene->getObjects();
         for (int i = 0; i < objects.size(); i++)

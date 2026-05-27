@@ -118,16 +118,15 @@ void ImGuiGlobalConsole::render() {
     separator();
 
     ImGui::Text("Add/Delete point light:");
-    auto light_manager = g_context.scene->getLightManager();
-    int point_light_count = light_manager ? light_manager->pointLights().size() : 0;
+    int point_light_count = g_context.scene ? g_context.scene->pointLightCount() : 0;
     float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushButtonRepeat(true);
-    if (ImGui::Button("+##pointLight") && light_manager) {
-        light_manager->addPointLight();
+    if (ImGui::Button("+##pointLight") && g_context.scene) {
+        g_context.scene->createPointLight();
     }
     ImGui::SameLine(0.0f, spacing);
-    if (ImGui::Button("-##pointLight") && light_manager) {
-        light_manager->removeLastPointLight();
+    if (ImGui::Button("-##pointLight") && g_context.scene) {
+        g_context.scene->removeLastPointLight();
     }
     ImGui::PopButtonRepeat();
     ImGui::SameLine();

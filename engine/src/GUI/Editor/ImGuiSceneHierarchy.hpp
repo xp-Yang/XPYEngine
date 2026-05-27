@@ -4,7 +4,6 @@
 #include "Base/Common.hpp"
 
 class GObject;
-class Light;
 class ImGuiEditor;
 class ImGuiSceneHierarchy {
 public:

@@ -2,6 +2,7 @@
 
 #include "Logical/Framework/Component/CameraComponent.hpp"
 #include "Logical/Framework/Component/MeshComponent.hpp"
+#include "Logical/Framework/Component/LightComponent.hpp"
 #include "Logical/Framework/Component/TransformComponent.hpp"
 #include "Logical/Framework/Component/AnimationComponent.hpp"
 #include "Logical/Animation/Animation.hpp"
@@ -11,8 +12,63 @@
 
 Scene::Scene()
 {
-	m_light_manager = std::make_shared<LightManager>();
 	m_camera = std::make_shared<CameraComponent>(nullptr);
+	createDirectionalLight();
+}
+
+GObject* Scene::createObject(const std::string& name)
+{
+	auto obj = GObject::create(nullptr, name);
+	obj->addComponent<TransformComponent>();
+	m_objects.push_back(std::shared_ptr<GObject>(obj));
+	return obj;
+}
+
+GObject* Scene::createDirectionalLight(const std::string& name)
+{
+	GObject* obj = createObject(name);
+	auto& light = obj->addComponent<DirectionalLightComponent>();
+	light.luminousColor = Color3(1.0f);
+	light.direction = { 15.0f, -30.0f, 15.0f };
+	return obj;
+}
+
+GObject* Scene::createPointLight(const std::string& name)
+{
+	GObject* obj = createObject(name);
+	auto& transform = *obj->getComponent<TransformComponent>();
+	transform.translation = {
+		static_cast<float>(Math::random(-15.0f, 15.0f)),
+		static_cast<float>(Math::random(1.0f, 30.0f)),
+		static_cast<float>(Math::random(-15.0f, 15.0f))
+	};
+
+	auto& light = obj->addComponent<PointLightComponent>();
+	light.radius = 30.0f;
+	light.luminousColor = Color3(
+		static_cast<float>(Math::randomUnit()),
+		static_cast<float>(Math::randomUnit()),
+		static_cast<float>(Math::randomUnit()));
+	return obj;
+}
+
+void Scene::removeLastPointLight()
+{
+	for (auto it = m_objects.end(); it != m_objects.begin();)
+	{
+		--it;
+		if (!(*it) || !(*it)->hasComponent<PointLightComponent>())
+			continue;
+
+		const GObjectID removed_id = (*it)->ID();
+		m_objects.erase(it);
+		m_picked_objects.erase(std::remove_if(m_picked_objects.begin(), m_picked_objects.end(),
+			[removed_id](const std::shared_ptr<GObject>& obj)
+			{
+				return obj && obj->ID() == removed_id;
+			}), m_picked_objects.end());
+		return;
+	}
 }
 
 GObject* Scene::loadModel(const std::string& filepath)
@@ -63,7 +119,7 @@ GObject* Scene::loadModel(const std::string& filepath)
 ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 {
 	ProjectDTO dto;
-	dto.schema_version = 1;
+	dto.schema_version = 4;
     dto.project_name = PathService::getFileName(project_filepath);
 	const std::string project_dir = PathService::getDirectory(project_filepath);
 
@@ -72,7 +128,9 @@ ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 		GObject& obj = *obj_sp;
 		const TransformComponent* tc = obj.getComponent<TransformComponent>();
 		const MeshComponent* mc = obj.getComponent<MeshComponent>();
-		if (!mc || mc->source_filepath.empty()) continue;
+		const PointLightComponent* point_light = obj.getComponent<PointLightComponent>();
+		const DirectionalLightComponent* directional_light = obj.getComponent<DirectionalLightComponent>();
+		if (!mc && !point_light && !directional_light) continue;
 
 		ObjectDTO obj_dto;
 		obj_dto.name = obj.name();
@@ -80,42 +138,58 @@ ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 		obj_dto.transform.translation = tc ? tc->translation : Vec3(0.0f);
 		obj_dto.transform.rotation = tc ? tc->rotation : Vec3(0.0f);
 		obj_dto.transform.scale = tc ? tc->scale : Vec3(1.0f);
-		obj_dto.filepath = PathService::tryMakeRelative(project_dir, mc->source_filepath);
-		obj_dto.file_type = static_cast<int>(FileType::OBJ);
+		if (mc && !mc->source_filepath.empty()) {
+			obj_dto.filepath = PathService::tryMakeRelative(project_dir, mc->source_filepath);
+			obj_dto.file_type = static_cast<int>(FileType::OBJ);
+		}
 
-		for (const auto& sub : mc->sub_meshes) {
-			if (!sub) continue;
+		if (point_light) {
+			obj_dto.has_point_light = true;
+			obj_dto.point_light.luminous_color = point_light->luminousColor;
+			obj_dto.point_light.radius = point_light->radius;
+		}
+		if (directional_light) {
+			obj_dto.has_directional_light = true;
+			obj_dto.directional_light.luminous_color = directional_light->luminousColor;
+			obj_dto.directional_light.direction = directional_light->direction;
+			obj_dto.directional_light.aspect_ratio = directional_light->aspectRatio;
+		}
 
-			SubMeshDTO sm;
-			sm.sub_mesh_index = sub->sub_mesh_idx;
-			sm.local_transform.translation = sub->translation;
-			sm.local_transform.rotation = sub->rotation;
-			sm.local_transform.scale = sub->scale;
-			obj_dto.sub_meshes.push_back(std::move(sm));
+		if (mc) {
+			for (const auto& sub : mc->sub_meshes) {
+				if (!sub) continue;
 
-			MaterialDTO mat_dto;
-			if (sub->material) {
-				mat_dto.alpha = sub->material->alpha;
-				mat_dto.base_color_factor = sub->material->base_color_factor;
-				mat_dto.metallic_factor = sub->material->metallic_factor;
-				mat_dto.roughness_factor = sub->material->roughness_factor;
-				mat_dto.ao_factor = sub->material->ao_factor;
-				mat_dto.diffuse_factor = sub->material->diffuse_factor;
-				mat_dto.specular_factor = sub->material->specular_factor;
-				mat_dto.shininess = sub->material->shininess;
-				auto rel = [&project_dir](const std::shared_ptr<Texture>& t) {
-					return t ? PathService::tryMakeRelative(project_dir, t->texture_filepath) : std::string();
-				};
-				mat_dto.textures.diffuse = rel(sub->material->diffuse_texture);
-				mat_dto.textures.specular = rel(sub->material->specular_texture);
-				mat_dto.textures.normal = rel(sub->material->normal_texture);
-				mat_dto.textures.height = rel(sub->material->height_texture);
-				mat_dto.textures.albedo = rel(sub->material->albedo_texture);
-				mat_dto.textures.metallic = rel(sub->material->metallic_texture);
-				mat_dto.textures.roughness = rel(sub->material->roughness_texture);
-				mat_dto.textures.ao = rel(sub->material->ao_texture);
+				SubMeshDTO sm;
+				sm.sub_mesh_index = sub->sub_mesh_idx;
+				sm.local_transform.translation = sub->translation;
+				sm.local_transform.rotation = sub->rotation;
+				sm.local_transform.scale = sub->scale;
+				obj_dto.sub_meshes.push_back(std::move(sm));
+
+				MaterialDTO mat_dto;
+				if (sub->material) {
+					mat_dto.alpha = sub->material->alpha;
+					mat_dto.base_color_factor = sub->material->base_color_factor;
+					mat_dto.metallic_factor = sub->material->metallic_factor;
+					mat_dto.roughness_factor = sub->material->roughness_factor;
+					mat_dto.ao_factor = sub->material->ao_factor;
+					mat_dto.diffuse_factor = sub->material->diffuse_factor;
+					mat_dto.specular_factor = sub->material->specular_factor;
+					mat_dto.shininess = sub->material->shininess;
+					auto rel = [&project_dir](const std::shared_ptr<Texture>& t) {
+						return t ? PathService::tryMakeRelative(project_dir, t->texture_filepath) : std::string();
+					};
+					mat_dto.textures.diffuse = rel(sub->material->diffuse_texture);
+					mat_dto.textures.specular = rel(sub->material->specular_texture);
+					mat_dto.textures.normal = rel(sub->material->normal_texture);
+					mat_dto.textures.height = rel(sub->material->height_texture);
+					mat_dto.textures.albedo = rel(sub->material->albedo_texture);
+					mat_dto.textures.metallic = rel(sub->material->metallic_texture);
+					mat_dto.textures.roughness = rel(sub->material->roughness_texture);
+					mat_dto.textures.ao = rel(sub->material->ao_texture);
+				}
+				obj_dto.materials.push_back(std::move(mat_dto));
 			}
-			obj_dto.materials.push_back(std::move(mat_dto));
 		}
 		dto.objects.push_back(std::move(obj_dto));
 	}
@@ -133,12 +207,16 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 	const std::string project_dir = PathService::getDirectory(this->m_current_project_filepath);
 
 	for (const auto& obj_dto : dto.objects) {
-		if (obj_dto.filepath.empty()) continue;
-		const std::string model_abs = PathService::join(project_dir, obj_dto.filepath);
 		const FileType ft = static_cast<FileType>(obj_dto.file_type);
 		GObject* obj = nullptr;
-		if (ft == FileType::OBJ || ft == FileType::None)
+		std::string model_abs;
+		if (!obj_dto.filepath.empty()) {
+			model_abs = PathService::join(project_dir, obj_dto.filepath);
+		}
+		if (!model_abs.empty() && (ft == FileType::OBJ || ft == FileType::None))
 			obj = this->loadModel(model_abs);
+		if (!obj && (obj_dto.has_point_light || obj_dto.has_directional_light))
+			obj = this->createObject(obj_dto.name.empty() ? "Light" : obj_dto.name);
 		if (!obj) continue;
 
 		obj->setName(obj_dto.name.empty() ? obj->name() : obj_dto.name);
@@ -194,7 +272,25 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 				sub->material->markDirty();
 			}
 		}
+		if (obj_dto.has_point_light) {
+			auto* point_light = obj->getComponent<PointLightComponent>();
+			if (!point_light)
+				point_light = &obj->addComponent<PointLightComponent>();
+			point_light->luminousColor = obj_dto.point_light.luminous_color;
+			point_light->radius = obj_dto.point_light.radius;
+		}
+		if (obj_dto.has_directional_light) {
+			auto* directional_light = obj->getComponent<DirectionalLightComponent>();
+			if (!directional_light)
+				directional_light = &obj->addComponent<DirectionalLightComponent>();
+			directional_light->luminousColor = obj_dto.directional_light.luminous_color;
+			directional_light->direction = obj_dto.directional_light.direction;
+			directional_light->aspectRatio = obj_dto.directional_light.aspect_ratio;
+		}
 	}
+
+	if (!mainDirectionalLightObject())
+		createDirectionalLight();
 }
 
 bool Scene::loadProject(const std::string& project_filepath, bool clear_old)
@@ -223,6 +319,40 @@ std::vector<GObjectID> Scene::getPickedObjectIDs() const
 	return res;
 }
 
+std::vector<std::shared_ptr<GObject>> Scene::directionalLightObjects() const
+{
+	std::vector<std::shared_ptr<GObject>> res;
+	for (const auto& obj : m_objects) {
+		if (obj && obj->hasComponent<DirectionalLightComponent>())
+			res.push_back(obj);
+	}
+	return res;
+}
+
+std::vector<std::shared_ptr<GObject>> Scene::pointLightObjects() const
+{
+	std::vector<std::shared_ptr<GObject>> res;
+	for (const auto& obj : m_objects) {
+		if (obj && obj->hasComponent<PointLightComponent>())
+			res.push_back(obj);
+	}
+	return res;
+}
+
+GObject* Scene::mainDirectionalLightObject() const
+{
+	for (const auto& obj : m_objects) {
+		if (obj && obj->hasComponent<DirectionalLightComponent>())
+			return obj.get();
+	}
+	return nullptr;
+}
+
+int Scene::pointLightCount() const
+{
+	return static_cast<int>(pointLightObjects().size());
+}
+
 void Scene::addObject(std::shared_ptr<GObject> obj)
 {
 	m_objects.push_back(std::shared_ptr<GObject>(obj));
@@ -230,7 +360,6 @@ void Scene::addObject(std::shared_ptr<GObject> obj)
 
 void Scene::onPickedChanged(std::vector<GObjectID> added, std::vector<GObjectID> removed)
 {
-	m_picked_light.reset();
 	m_picked_objects.erase(std::remove_if(m_picked_objects.begin(), m_picked_objects.end(), [removed](const std::shared_ptr<GObject>& obj) {
 		return std::find(removed.begin(), removed.end(), obj->ID()) != removed.end();
 		}), m_picked_objects.end());
@@ -239,19 +368,5 @@ void Scene::onPickedChanged(std::vector<GObjectID> added, std::vector<GObjectID>
 			m_picked_objects.push_back(obj);
 			Logger::debug("Scene::onPickedChanged(), added obj: {} {}", obj->ID().id, obj->name());
 		}
-	}
-}
-
-void Scene::onPickedChanged(LightID light_id)
-{
-	m_picked_light.reset();
-	m_picked_objects.clear();
-	const std::vector<std::shared_ptr<Light>>& lights = m_light_manager->lights();
-	auto it = std::find_if(lights.begin(), lights.end(), [light_id](const std::shared_ptr<Light>& light) {
-		return light->ID() == light_id;
-		});
-	if (it != lights.end()) {
-		m_picked_light = *it;
-		Logger::debug("Scene::onPickedChanged(), light: {} {}", m_picked_light->ID().id, m_picked_light->name());
 	}
 }
