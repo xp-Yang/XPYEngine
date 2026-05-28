@@ -2,6 +2,9 @@
 #define RenderPassContext_hpp
 
 #include "Render/Graph/RenderGraph.hpp"
+#include "Render/RenderBuiltinResources.hpp"
+#include "Render/RenderFrameData.hpp"
+#include "Render/RenderScene.hpp"
 
 #include <string>
 #include <vector>
@@ -9,9 +12,16 @@
 // Pass 执行上下文：RenderGraph 在执行时注入，用于 pass 按资源名访问纹理和 FBO。
 class RenderPassContext {
 public:
-    RenderPassContext(RenderGraph& graph, const RenderGraphPassNode& node, RenderSourceData& render_source_data);
+    RenderPassContext(
+        RenderGraph& graph,
+        const RenderGraphPassNode& node,
+        RenderScene& render_scene,
+        RenderFrameData& frame_data,
+        RenderBuiltinResources& builtin_resources);
 
-    RenderSourceData& renderSourceData() const;
+    RenderScene& renderScene() const;
+    RenderFrameData& frameData() const;
+    RenderBuiltinResources& builtinResources() const;
     RhiTexture* texture(const std::string& resource_name) const;
     RhiFrameBuffer* frameBuffer(const std::string& resource_name) const;
     RhiFrameBuffer* frameBufferOfTarget(const std::string& target_name) const;
@@ -24,7 +34,9 @@ public:
 private:
     RenderGraph* m_graph{ nullptr };
     const RenderGraphPassNode* m_node{ nullptr };
-    RenderSourceData* m_render_source_data{ nullptr };
+    RenderScene* m_render_scene{ nullptr };
+    RenderFrameData* m_frame_data{ nullptr };
+    RenderBuiltinResources* m_builtin_resources{ nullptr };
 };
 
 #endif // !RenderPassContext_hpp

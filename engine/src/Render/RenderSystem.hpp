@@ -3,6 +3,9 @@
 
 #include "RenderParams.hpp"
 #include "Path/RenderPath.hpp"
+#include "Render/RenderBuiltinResources.hpp"
+#include "Render/RenderFrameData.hpp"
+#include "Render/RenderScene.hpp"
 #include "Render/RHI/rhi.hpp"
 
 class Scene;
@@ -25,7 +28,12 @@ public:
     void rebuildRenderTargets();
 
 protected:
-    void updateRenderSourceData(std::shared_ptr<Scene> scene);
+    void initializeRenderResources();
+    void syncRenderSceneChanges(Scene& scene);
+    void rebuildRenderSceneFromScene(Scene& scene);
+    void rebuildObjectRenderProxy(GObject& object);
+    void updateSkinnedMeshSections();
+    void buildRenderFrameData(Scene& scene);
 
 private:
     RenderParams m_render_params;
@@ -34,7 +42,9 @@ private:
     std::shared_ptr<RenderPath> m_deferred_path;
     std::shared_ptr<RenderPath> m_curr_path;
 
-    std::shared_ptr<RenderSourceData> m_render_source_data;
+    RenderScene m_render_scene;
+    RenderFrameData m_frame_data;
+    RenderBuiltinResources m_builtin_resources;
 
     bool m_initialized{false};
 };

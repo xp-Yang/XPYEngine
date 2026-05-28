@@ -96,7 +96,7 @@ void RenderGraph::compile()
     ensureRenderTargets();
 }
 
-void RenderGraph::execute(RenderSourceData& render_source_data)
+void RenderGraph::execute(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
 {
     for (RenderGraphPassNode* node : m_ordered_nodes)
     {
@@ -113,7 +113,7 @@ void RenderGraph::execute(RenderSourceData& render_source_data)
         if (node->m_setup)
             node->m_setup(*node->m_pass);
 
-        RenderPassContext context(*this, *node, render_source_data);
+        RenderPassContext context(*this, *node, render_scene, frame_data, builtin_resources);
         node->m_pass->draw(context);
     }
 }

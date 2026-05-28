@@ -1,8 +1,9 @@
 #include "ImGuiToolbar.hpp"
 #include "ImGuiCanvas.hpp"
 #include "AssetManager/Texture.hpp"
+#include "Logical/Framework/World/RenderDirty.hpp"
 #include "Logical/Framework/World/Scene.hpp"
-#include "Render/RenderSourceData.hpp"
+#include "Render/RenderScene.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -85,13 +86,16 @@ void ImGuiToolbar::renderGizmos()
         if (!transform_component)
             continue;
         Mat4 model_matrix = transform_component->transform();
-        ImGuizmo::Manipulate((float *)(&camera.view), (float *)(&camera.projection), imguizmo_operation, ImGuizmo::LOCAL, (float *)(&model_matrix), NULL, NULL, NULL, NULL);
+        const bool manipulated = ImGuizmo::Manipulate((float *)(&camera.view), (float *)(&camera.projection), imguizmo_operation, ImGuizmo::LOCAL, (float *)(&model_matrix), NULL, NULL, NULL, NULL);
+        if (!manipulated)
+            continue;
         float matrixTranslation[3], matrixRotation[3], matrixScale[3];
         ImGuizmo::DecomposeMatrixToComponents((float *)&model_matrix, matrixTranslation, matrixRotation, matrixScale);
         transform_component->translation = Vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
         transform_component->scale = Vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
         transform_component->rotation = Vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
 
+        RenderDirtyFlags dirty_flags = RenderDirtyFlagBit(RenderDirtyFlag::Transform);
         if (auto* camera_component = object->getComponent<CameraComponent>())
         {
             // Main Camera 现在也是普通 GObject。Gizmo 操作改的是 Transform，
@@ -99,7 +103,9 @@ void ImGuiToolbar::renderGizmos()
             // 旋转同步后续可以再做成完整的 Transform -> camera direction/up 推导。
             camera_component->pos = transform_component->translation;
             camera_component->refreshView();
+            dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Camera);
         }
+        object->markRenderDirty(dirty_flags);
     }
 
     ImVec2 air_window_size = ImVec2(128, 128);

@@ -17,11 +17,13 @@ void PickingPass::draw(RenderPassContext& context)
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::SingleColorShader));
     ShaderResourceBindings bindings;
 
-    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-    bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+    bindings.setMatrix("view", 1, context.frameData().view_matrix);
+    bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
 
-    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
-        const auto& render_node = pair.second;
+    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections()) {
+        if (!render_node)
+            continue;
+
         bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty()) {
             int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
@@ -32,7 +34,7 @@ void PickingPass::draw(RenderPassContext& context)
             bindings.setInt("bone_count", 0);
         }
         bindings.setMatrix("model", 1, render_node->model_matrix);
-        int id = render_node->node_id.object_id * PickingColorIDFactor;
+        int id = render_node->section_id.object_id * PickingColorIDFactor;
         int r = (id & 0x000000FF) >> 0;
         int g = (id & 0x0000FF00) >> 8;
         int b = (id & 0x00FF0000) >> 16;

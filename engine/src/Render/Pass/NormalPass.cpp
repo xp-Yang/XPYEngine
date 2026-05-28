@@ -20,11 +20,13 @@ void NormalPass::draw(RenderPassContext& context)
 
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::NormalShader));
     ShaderResourceBindings bindings;
-    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-    bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-    bindings.setMatrix("projectionView", 1, context.renderSourceData().proj_matrix * context.renderSourceData().view_matrix);
-    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
-        const auto& render_node = pair.second;
+    bindings.setMatrix("view", 1, context.frameData().view_matrix);
+    bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
+    bindings.setMatrix("projectionView", 1, context.frameData().proj_matrix * context.frameData().view_matrix);
+    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections()) {
+        if (!render_node)
+            continue;
+
         bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty())
         {

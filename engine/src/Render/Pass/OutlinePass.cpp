@@ -13,24 +13,26 @@ void OutlinePass::draw(RenderPassContext& context)
         return;
     m_command_buffer->beginPass(mask_framebuffer);
 
-    if (context.renderSourceData().picked_ids.empty()) {
+    if (context.frameData().picked_ids.empty()) {
         m_command_buffer->endPass();
         return;
     }
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::SingleColorShader));
     ShaderResourceBindings bindings;
-    for (auto picked_id : context.renderSourceData().picked_ids) {
+    for (auto picked_id : context.frameData().picked_ids) {
         // render the picked one
-        bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-        bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+        bindings.setMatrix("view", 1, context.frameData().view_matrix);
+        bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
 
-        auto it = std::find_if(context.renderSourceData().render_mesh_nodes.begin(), context.renderSourceData().render_mesh_nodes.end(),
-            [picked_id](const std::pair<const RenderMeshNodeID, std::shared_ptr<RenderMeshNode>>& pair) {
-                return pair.second->node_id.object_id == picked_id;
-            }
-        );
-        if (it != context.renderSourceData().render_mesh_nodes.end()) {
-            const auto& render_node = it->second;
+        const RenderObjectProxy* object_proxy = context.renderScene().objectProxy(picked_id.id);
+        if (!object_proxy)
+            continue;
+
+        for (const auto& mesh_section : object_proxy->meshSections()) {
+            const RenderMeshSection* render_node = mesh_section.get();
+            if (!render_node || !render_node->visible)
+                continue;
+
             bindings.setBool("useSkinning", render_node->use_skinning);
             if (render_node->use_skinning && !render_node->bone_matrices.empty()) {
                 int bone_count = std::min((int)render_node->bone_matrices.size(), MAX_BONE_PALETTE_SIZE);
@@ -66,7 +68,7 @@ void OutlinePass::draw(RenderPassContext& context)
     outline_bindings.setTexture("objMap", 0, obj_map);
     outline_bindings.setTexture("objDepthMap", 1, obj_depth_map);
     m_command_buffer->setShaderResources(&outline_bindings);
-    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
     m_command_buffer->endPass();
 }

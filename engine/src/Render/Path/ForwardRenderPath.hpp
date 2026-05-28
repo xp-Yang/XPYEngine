@@ -6,7 +6,7 @@
 class ForwardRenderPath : public RenderPath {
 public:
     ForwardRenderPath(RenderSystem* render_system);
-    void render(RenderSourceData& render_source_data) override;
+    void render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources) override;
     void resizeRenderTargets(const Vec2& pixel_size) override;
     RhiTexture* renderGraphTextureOf(const std::string& resource_name) override;
     bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) override;

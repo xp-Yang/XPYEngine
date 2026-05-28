@@ -4,8 +4,9 @@
 #include <imgui_internal.h>
 
 #include "GUI/Editor/ImGuiEditor.hpp"
+#include "Logical/Framework/World/RenderDirty.hpp"
 #include "Logical/Framework/World/Scene.hpp"
-#include "Render/RenderSourceData.hpp"
+#include "Render/RenderScene.hpp"
 #include "GlobalContext.hpp"
 
 ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
@@ -260,6 +261,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         {
             bool view_changed = false;
             bool projection_changed = false;
+            RenderDirtyFlags dirty_flags = RenderDirtyFlagBit(RenderDirtyFlag::None);
 
             // 这里编辑的是 CameraComponent 的运行时相机状态。
             // TransformComponent 只负责场景对象位置，所以 pos 被修改时要同步回 Transform。
@@ -278,10 +280,17 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 {
                     if (auto* transform = camera.parent_object->getComponent<TransformComponent>())
                         transform->translation = camera.pos;
+                    dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Transform);
                 }
             }
             if (projection_changed)
                 camera.refreshProjection();
+            if (view_changed || projection_changed)
+            {
+                dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Camera);
+                if (camera.parent_object)
+                    camera.parent_object->markRenderDirty(dirty_flags);
+            }
 
             ImGui::TreePop();
         }
@@ -308,13 +317,16 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 auto& transform = inst.getValue<TransformComponent&>();
                 if (transform.parent_object)
                 {
+                    RenderDirtyFlags dirty_flags = RenderDirtyFlagBit(RenderDirtyFlag::Transform);
                     if (auto* camera = transform.parent_object->getComponent<CameraComponent>())
                     {
                         // 在 Inspector 里直接改 Main Camera 的 Transform 时，
                         // 也要把位置同步给 CameraComponent，否则渲染相机会停在旧位置。
                         camera->pos = transform.translation;
                         camera->refreshView();
+                        dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Camera);
                     }
+                    transform.parent_object->markRenderDirty(dirty_flags);
                 }
             }
             ImGui::TreePop();
@@ -322,8 +334,9 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     };
     m_widget_creator[Meta::MetaTypeOf<MeshComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, DrawTexturePreview, columnWidth, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        auto DrawSubMeshControl = [DrawTexturePreview, DrawFloatControl, DrawVecControl, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh)
+        auto DrawSubMeshControl = [DrawTexturePreview, DrawFloatControl, DrawVecControl, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh) -> RenderDirtyFlags
         {
+            RenderDirtyFlags dirty_flags = RenderDirtyFlagBit(RenderDirtyFlag::None);
             ImGui::PushID(label.c_str());
             if (TreeNodeExWithTitleFont(label.c_str(), ImGuiTreeNodeFlags_SpanFullWidth)) {
                 ImGui::Columns(2, nullptr, false);
@@ -339,9 +352,12 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
                 if (TreeNodeExWithTitleFont(("Local Transform##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
                 {
-                    DrawVecControl("translation", sub_mesh.translation, VecKind::VEC3);
-                    DrawVecControl("rotation", sub_mesh.rotation, VecKind::VEC3);
-                    DrawVecControl("scale", sub_mesh.scale, VecKind::VEC3, 1.0f);
+                    bool local_transform_changed = false;
+                    local_transform_changed |= DrawVecControl("translation", sub_mesh.translation, VecKind::VEC3);
+                    local_transform_changed |= DrawVecControl("rotation", sub_mesh.rotation, VecKind::VEC3);
+                    local_transform_changed |= DrawVecControl("scale", sub_mesh.scale, VecKind::VEC3, 1.0f);
+                    if (local_transform_changed)
+                        dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Mesh);
                     ImGui::TreePop();
                 }
 
@@ -358,7 +374,10 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                         material_changed |= DrawFloatControl("shininess", sub_mesh.material->shininess, 1.0f, 1.0f, 1024.0f);
                         material_changed |= DrawFloatControl("alpha", sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f);
                         if (material_changed)
+                        {
                             sub_mesh.material->markDirty();
+                            dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Material);
+                        }
 
                         DrawTexturePreview("albedo", sub_mesh.material->albedo_texture);
                         DrawTexturePreview("metallic", sub_mesh.material->metallic_texture);
@@ -380,6 +399,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 ImGui::TreePop();
             }
             ImGui::PopID();
+            return dirty_flags;
         };
 
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings;
@@ -391,10 +411,13 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             {
                 if (prop.name == "sub_meshes") {
                     MeshComponent& mc = inst.getValue<MeshComponent&>();
+                    RenderDirtyFlags dirty_flags = RenderDirtyFlagBit(RenderDirtyFlag::None);
                     for (auto& sub_mesh : mc.sub_meshes)
                     {
-                        DrawSubMeshControl(std::string("SubMesh id ") + std::to_string(sub_mesh->sub_mesh_idx), *sub_mesh);
+                        dirty_flags |= DrawSubMeshControl(std::string("SubMesh id ") + std::to_string(sub_mesh->sub_mesh_idx), *sub_mesh);
                     }
+                    if (dirty_flags != RenderDirtyFlagBit(RenderDirtyFlag::None) && mc.parent_object)
+                        mc.parent_object->markRenderDirty(dirty_flags);
                 }
                 else if (m_widget_creator.find(prop.type_name) != m_widget_creator.end())
                     m_widget_creator[prop.type_name](prop.name, prop.getValue(inst));
@@ -426,8 +449,11 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
-            DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
-            DrawFloatControl("radius", light.radius, 0.1f, 0.01f, 1000.0f);
+            bool light_changed = false;
+            light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
+            light_changed |= DrawFloatControl("radius", light.radius, 0.1f, 0.01f, 1000.0f);
+            if (light_changed && light.parent_object)
+                light.parent_object->markRenderDirty(RenderDirtyFlagBit(RenderDirtyFlag::Light));
             ImGui::TreePop();
         }
     };
@@ -437,9 +463,12 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
-            DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
-            DrawVecControl("direction", light.direction, VecKind::VEC3);
-            DrawFloatControl("aspectRatio", light.aspectRatio, 0.01f, 0.1f, 10.0f);
+            bool light_changed = false;
+            light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
+            light_changed |= DrawVecControl("direction", light.direction, VecKind::VEC3);
+            light_changed |= DrawFloatControl("aspectRatio", light.aspectRatio, 0.01f, 0.1f, 10.0f);
+            if (light_changed && light.parent_object)
+                light.parent_object->markRenderDirty(RenderDirtyFlagBit(RenderDirtyFlag::Light));
             ImGui::TreePop();
         }
     };

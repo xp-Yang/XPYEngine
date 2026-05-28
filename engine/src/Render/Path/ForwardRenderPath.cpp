@@ -27,7 +27,7 @@ void ForwardRenderPath::resizeRenderTargets(const Vec2& pixel_size)
     m_render_graph.setFrameSize(pixel_size);
 }
 
-void ForwardRenderPath::render(RenderSourceData& render_source_data)
+void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
 {
     const auto& render_params = ref_render_system->renderParams();
     auto pass = [this](RenderPass::Type type) -> RenderPass*
@@ -83,7 +83,7 @@ void ForwardRenderPath::render(RenderSourceData& render_source_data)
     m_render_graph.markOutput(RGResource::SceneColor);
 
     m_render_graph.compile();
-    m_render_graph.execute(render_source_data);
+    m_render_graph.execute(render_scene, frame_data, builtin_resources);
 }
 
 RhiTexture* ForwardRenderPath::renderGraphTextureOf(const std::string& resource_name)

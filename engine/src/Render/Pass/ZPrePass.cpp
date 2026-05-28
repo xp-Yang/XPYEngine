@@ -15,11 +15,10 @@ void ZPrePass::draw(RenderPassContext& context)
 
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::SingleColorShader));
     ShaderResourceBindings bindings;
-    Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
-    Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
-    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
-        const auto& render_node = pair.second;
-        if (render_node->material.alpha != 1.0f)
+    Mat4 light_view = context.frameData().directional_lights.front().lightViewMatrix;
+    Mat4 light_proj = context.frameData().directional_lights.front().lightProjMatrix;
+    for (const RenderMeshSection* render_node : context.renderScene().opaqueMeshSections()) {
+        if (!render_node)
             continue;
         bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty()) {

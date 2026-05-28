@@ -7,6 +7,7 @@
 #include "Path/RayTracingRenderPath.hpp"
 
 #include <Logical/Framework/World/Scene.hpp>
+#include <Logical/Framework/World/RenderDirty.hpp>
 #include <Logical/Animation/AnimationSystem.hpp>
 #include <Logical/Framework/Component/LightComponent.hpp>
 #include <Logical/Framework/Component/TransformComponent.hpp>
@@ -18,8 +19,6 @@
 RenderSystem::RenderSystem()
 {
     Rhi::create();
-
-    m_render_source_data = std::make_shared<RenderSourceData>();
 
     m_forward_path = std::make_shared<ForwardRenderPath>(this);
     m_deferred_path = std::make_shared<DeferredRenderPath>(this);
@@ -86,51 +85,190 @@ void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)
         break;
     }
 
-    updateRenderSourceData(scene);
-    m_curr_path->render(*m_render_source_data);
+    initializeRenderResources();
+    syncRenderSceneChanges(*scene);
+    updateSkinnedMeshSections();
+    buildRenderFrameData(*scene);
+    m_curr_path->render(m_render_scene, m_frame_data, m_builtin_resources);
 }
 
-void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
+void RenderSystem::initializeRenderResources()
 {
-    const auto directional_light_objects = scene->directionalLightObjects();
-    const auto point_light_objects = scene->pointLightObjects();
-    const auto &objects = scene->getObjects();
+    if (m_initialized)
+        return;
 
-    if (!m_initialized)
+    std::shared_ptr<Mesh> screen_quad_sub_mesh = MeshAlgorithm::create_screen_mesh();
+    m_builtin_resources.screen_quad = std::make_shared<RenderMeshResource>(screen_quad_sub_mesh);
+
+    std::shared_ptr<Mesh> point_light_mesh = MeshAlgorithm::create_icosphere_mesh(0.1f, 4);
+    m_builtin_resources.point_light_inst_mesh = std::make_shared<RenderMeshResource>(point_light_mesh);
+
+    std::shared_ptr<Mesh> skybox_mesh = MeshAlgorithm::create_cube_mesh();
+    const std::string asset_dir = ASSET_DIR;
+    std::shared_ptr<CubeTexture> skybox_cube_texture = std::make_shared<CubeTexture>(
+        asset_dir + "/images/skybox/right.jpg",
+        asset_dir + "/images/skybox/left.jpg",
+        asset_dir + "/images/skybox/top.jpg",
+        asset_dir + "/images/skybox/bottom.jpg",
+        asset_dir + "/images/skybox/front.jpg",
+        asset_dir + "/images/skybox/back.jpg");
+    m_render_scene.skybox().skybox_cube_map = RenderTextureData(skybox_cube_texture).texture;
+    m_render_scene.skybox().mesh = std::make_shared<RenderMeshResource>(skybox_mesh);
+
+    m_initialized = true;
+}
+
+void RenderSystem::syncRenderSceneChanges(Scene& scene)
+{
+    const auto changes = scene.consumeRenderChanges();
+    bool section_lists_dirty = false;
+
+    for (const RenderSceneChange& change : changes)
     {
-        // 初始化 screen_quad mesh
-        std::shared_ptr<Mesh> screen_quad_sub_mesh;
-        screen_quad_sub_mesh = MeshAlgorithm::create_screen_mesh();
-        m_render_source_data->screen_quad = std::make_shared<RenderMeshData>(screen_quad_sub_mesh);
+        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::FullResync))
+        {
+            rebuildRenderSceneFromScene(scene);
+            return;
+        }
 
-        // 初始化 定向光源
-        // 初始化 render_point_light_inst_mesh
-        std::shared_ptr<Mesh> point_light_mesh = MeshAlgorithm::create_icosphere_mesh(0.1f, 4);
-        m_render_source_data->render_point_light_inst_mesh = std::make_shared<RenderMeshData>(point_light_mesh);
+        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Removed))
+        {
+            m_render_scene.removeObjectProxy(change.object_id);
+            section_lists_dirty = true;
+            continue;
+        }
 
-        // 初始化 天空盒
-        std::shared_ptr<Mesh> skybox_mesh = MeshAlgorithm::create_cube_mesh();
-        const std::string asset_dir = ASSET_DIR;
-        std::shared_ptr<CubeTexture> skybox_cube_texture = std::make_shared<CubeTexture>(
-            asset_dir + "/images/skybox/right.jpg",
-            asset_dir + "/images/skybox/left.jpg",
-            asset_dir + "/images/skybox/top.jpg",
-            asset_dir + "/images/skybox/bottom.jpg",
-            asset_dir + "/images/skybox/front.jpg",
-            asset_dir + "/images/skybox/back.jpg");
-        m_render_source_data->render_skybox_node.skybox_cube_map = RenderTextureData(skybox_cube_texture).texture;
-        m_render_source_data->render_skybox_node.mesh = std::make_shared<RenderMeshData>(skybox_mesh);
+        GObject* object = scene.objectOf(change.object_id);
+        if (!object)
+        {
+            m_render_scene.removeObjectProxy(change.object_id);
+            section_lists_dirty = true;
+            continue;
+        }
 
-        m_initialized = true;
+        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Created) ||
+            HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Mesh))
+        {
+            rebuildObjectRenderProxy(*object);
+            section_lists_dirty = true;
+            continue;
+        }
+
+        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Visibility))
+        {
+            m_render_scene.setObjectVisible(change.object_id, object->visible());
+            section_lists_dirty = true;
+        }
+
+        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Transform))
+        {
+            if (auto* transform = object->getComponent<TransformComponent>())
+                m_render_scene.updateObjectTransform(change.object_id, transform->transform());
+        }
+
+        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Material))
+        {
+            m_render_scene.updateObjectMaterials(*object);
+            section_lists_dirty = true;
+        }
     }
 
-    auto &render_dir_lights = m_render_source_data->render_directional_light_data_list;
-    render_dir_lights.clear();
-    for (const auto &light_object : directional_light_objects)
+    if (section_lists_dirty)
+        m_render_scene.rebuildMeshSectionLists();
+}
+
+void RenderSystem::rebuildRenderSceneFromScene(Scene& scene)
+{
+    m_render_scene.clearObjectProxies();
+    for (const auto& object : scene.getObjects())
     {
+        if (object)
+            rebuildObjectRenderProxy(*object);
+    }
+    m_render_scene.rebuildMeshSectionLists();
+}
+
+void RenderSystem::rebuildObjectRenderProxy(GObject& object)
+{
+    const int object_id = object.ID().id;
+    auto* mesh_component = object.getComponent<MeshComponent>();
+    auto* transform_component = object.getComponent<TransformComponent>();
+    if (!mesh_component || !transform_component)
+    {
+        m_render_scene.removeObjectProxy(object_id);
+        return;
+    }
+
+    m_render_scene.removeObjectProxy(object_id);
+
+    const Mat4 obj_transform = transform_component->transform();
+    const bool use_skinning = g_context.animation_system && g_context.animation_system->HasAnimation(object_id);
+    const std::vector<Mat4>* bone_matrices = use_skinning ? &g_context.animation_system->GetFinalBoneMatrices(object_id) : nullptr;
+
+    for (const auto& sub_mesh : mesh_component->sub_meshes)
+    {
+        if (!sub_mesh || !sub_mesh->material)
+            continue;
+
+        const Mat4 sub_mesh_transform = Math::composeMatrix(sub_mesh->scale, sub_mesh->rotation, sub_mesh->translation);
+        const RenderMeshSectionID section_id(object.ID(), sub_mesh->sub_mesh_idx);
+        auto render_section = std::make_unique<RenderMeshSection>(
+            section_id,
+            RenderMeshResource(sub_mesh),
+            RenderMaterialResource(sub_mesh->material),
+            obj_transform * sub_mesh_transform,
+            sub_mesh->index_offset,
+            sub_mesh->index_count);
+        render_section->local_matrix = sub_mesh_transform;
+        render_section->visible = object.visible();
+        render_section->use_skinning = use_skinning;
+        if (bone_matrices)
+            render_section->bone_matrices = *bone_matrices;
+        m_render_scene.addMeshSection(section_id, std::move(render_section));
+    }
+
+    if (RenderObjectProxy* object_proxy = m_render_scene.objectProxy(object_id))
+    {
+        object_proxy->setVisible(object.visible());
+        object_proxy->setModelMatrix(obj_transform);
+    }
+}
+
+void RenderSystem::updateSkinnedMeshSections()
+{
+    auto* animation_system = g_context.animation_system.get();
+    if (!animation_system)
+        return;
+
+    for (RenderMeshSection* section : m_render_scene.skinnedMeshSections())
+    {
+        if (!section)
+            continue;
+
+        const int object_id = section->section_id.object_id.id;
+        if (!animation_system->HasAnimation(object_id))
+        {
+            section->use_skinning = false;
+            section->bone_matrices.clear();
+            continue;
+        }
+
+        section->use_skinning = true;
+        section->bone_matrices = animation_system->GetFinalBoneMatrices(object_id);
+    }
+}
+
+void RenderSystem::buildRenderFrameData(Scene& scene)
+{
+    m_frame_data.reset();
+
+    auto& render_dir_lights = m_frame_data.directional_lights;
+    for (const GObjectID& light_id : scene.directionalLightObjectIDs())
+    {
+        GObject* light_object = scene.objectOf(light_id);
         if (!light_object || !light_object->visible())
             continue;
-        const auto *directional_light = light_object->getComponent<DirectionalLightComponent>();
+        const auto* directional_light = light_object->getComponent<DirectionalLightComponent>();
         if (!directional_light)
             continue;
         render_dir_lights.emplace_back(RenderDirectionalLightData{
@@ -156,10 +294,11 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         Color3 inst_color;
     };
 
-    std::vector<std::shared_ptr<GObject>> active_point_light_objects;
-    active_point_light_objects.reserve(point_light_objects.size());
-    for (const auto &light_object : point_light_objects)
+    std::vector<GObject*> active_point_light_objects;
+    active_point_light_objects.reserve(scene.pointLightObjectIDs().size());
+    for (const GObjectID& light_id : scene.pointLightObjectIDs())
     {
+        GObject* light_object = scene.objectOf(light_id);
         if (!light_object || !light_object->visible())
             continue;
         if (!light_object->getComponent<PointLightComponent>() || !light_object->getComponent<TransformComponent>())
@@ -167,31 +306,30 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
         active_point_light_objects.push_back(light_object);
     }
 
-    m_render_source_data->point_light_inst_amount = static_cast<int>(active_point_light_objects.size());
-    if (m_render_source_data->render_point_light_inst_mesh && !active_point_light_objects.empty())
+    m_frame_data.point_light_inst_amount = static_cast<int>(active_point_light_objects.size());
+    if (m_builtin_resources.point_light_inst_mesh && !active_point_light_objects.empty())
     {
         static std::vector<PointLightInstData> point_light_inst_data;
         point_light_inst_data.resize(active_point_light_objects.size());
         for (size_t i = 0; i < active_point_light_objects.size(); ++i)
         {
-            const auto &light_object = active_point_light_objects[i];
-            const auto *transform = light_object->getComponent<TransformComponent>();
-            const auto *point_light = light_object->getComponent<PointLightComponent>();
+            auto* light_object = active_point_light_objects[i];
+            const auto* transform = light_object->getComponent<TransformComponent>();
+            const auto* point_light = light_object->getComponent<PointLightComponent>();
             point_light_inst_data[i].inst_matrix = Math::Translate(transform->translation);
             point_light_inst_data[i].inst_color = point_light->luminousColor;
         }
-        m_render_source_data->render_point_light_inst_mesh->update_instancing(
+        m_builtin_resources.point_light_inst_mesh->update_instancing(
             point_light_inst_data.data(),
             static_cast<int>(point_light_inst_data.size() * sizeof(PointLightInstData)));
     }
 
-    auto &render_point_lights = m_render_source_data->render_point_light_data_list;
-    render_point_lights.clear();
+    auto& render_point_lights = m_frame_data.point_lights;
     render_point_lights.reserve(active_point_light_objects.size());
-    for (const auto &light_object : active_point_light_objects)
+    for (auto* light_object : active_point_light_objects)
     {
-        const auto *transform = light_object->getComponent<TransformComponent>();
-        const auto *point_light = light_object->getComponent<PointLightComponent>();
+        const auto* transform = light_object->getComponent<TransformComponent>();
+        const auto* point_light = light_object->getComponent<PointLightComponent>();
         const Vec3 position = transform->translation;
         render_point_lights.emplace_back(RenderPointLightData{
             light_object->ID().id,
@@ -202,127 +340,22 @@ void RenderSystem::updateRenderSourceData(std::shared_ptr<Scene> scene)
             point_light->lightProjMatrix()});
     }
 
-    // 更新objects对象状态
-    m_render_source_data->has_transparent = false;
-    std::unordered_set<int> alive_object_ids;
-    alive_object_ids.reserve(objects.size());
-    auto &render_mesh_nodes = m_render_source_data->render_mesh_nodes;
-    auto *animation_system = g_context.animation_system.get();
-    for (const auto &object : objects)
+    for (const auto& object : scene.getPickedObjects())
     {
-        const int object_id = object->ID().id;
-        alive_object_ids.insert(object_id);
-
-        const bool visible = object->visible();
-        if (!visible)
-        {
-            for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
-            {
-                if (it->first.object_id.id == object_id)
-                    it = render_mesh_nodes.erase(it);
-                else
-                    ++it;
-            }
-            continue;
-        }
-
-        auto *mesh_component = object->getComponent<MeshComponent>();
-        auto *transform_component = object->getComponent<TransformComponent>();
-        if (!mesh_component || !transform_component)
-        {
-            for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
-            {
-                if (it->first.object_id.id == object_id)
-                    it = render_mesh_nodes.erase(it);
-                else
-                    ++it;
-            }
-            continue;
-        }
-
-        const auto &sub_meshes = mesh_component->sub_meshes;
-        const Mat4 obj_transform = transform_component->transform();
-        const bool use_skinning = animation_system && animation_system->HasAnimation(object_id);
-        const std::vector<Mat4> *bone_matrices = use_skinning ? &animation_system->GetFinalBoneMatrices(object_id) : nullptr;
-
-        std::unordered_set<int> alive_sub_mesh_ids;
-        alive_sub_mesh_ids.reserve(sub_meshes.size());
-        for (const auto &sub_mesh : sub_meshes)
-        {
-            if (sub_mesh->material->alpha != 1.0f)
-                m_render_source_data->has_transparent = true;
-            alive_sub_mesh_ids.insert(sub_mesh->sub_mesh_idx);
-            Mat4 sub_mesh_transform = Math::composeMatrix(sub_mesh->scale, sub_mesh->rotation, sub_mesh->translation);
-            auto render_mesh_mode_id = RenderMeshNodeID(object->ID(), sub_mesh->sub_mesh_idx);
-            auto it = render_mesh_nodes.find(render_mesh_mode_id);
-            if (it != render_mesh_nodes.end())
-            {
-                auto &render_node = *(it->second);
-                render_node.model_matrix = (obj_transform * sub_mesh_transform);
-                render_node.source_index_offset = sub_mesh->index_offset;
-                render_node.source_index_count = sub_mesh->index_count;
-                render_node.updateRenderMaterialData(sub_mesh->material);
-                render_node.use_skinning = use_skinning;
-                if (bone_matrices)
-                    render_node.bone_matrices = *bone_matrices;
-                else
-                    render_node.bone_matrices.clear();
-            }
-            else
-            {
-                auto render_node = std::make_shared<RenderMeshNode>(
-                    render_mesh_mode_id,
-                    RenderMeshData(sub_mesh),
-                    RenderMaterialData(sub_mesh->material),
-                    obj_transform * sub_mesh_transform,
-                    sub_mesh->index_offset,
-                    sub_mesh->index_count);
-                render_node->use_skinning = use_skinning;
-                if (bone_matrices)
-                    render_node->bone_matrices = *bone_matrices;
-                render_mesh_nodes.emplace(render_mesh_mode_id, render_node);
-            }
-        }
-        // Remove not alive sub_mesh
-        for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
-        {
-            if (it->first.object_id.id == object_id &&
-                alive_sub_mesh_ids.find(it->first.sub_mesh_idx) == alive_sub_mesh_ids.end())
-            {
-                it = render_mesh_nodes.erase(it);
-            }
-            else
-                ++it;
-        }
-    }
-    // Remove not alive object
-    for (auto it = render_mesh_nodes.begin(); it != render_mesh_nodes.end();)
-    {
-        if (alive_object_ids.find(it->first.object_id.id) == alive_object_ids.end())
-            it = render_mesh_nodes.erase(it);
-        else
-            ++it;
+        if (object)
+            m_frame_data.picked_ids.push_back(object->ID());
     }
 
-    // 更新picked对象
-    m_render_source_data->picked_ids.clear();
-    for (const auto &object : scene->getPickedObjects())
-    {
-        m_render_source_data->picked_ids.push_back(object->ID());
-    }
+    CameraComponent& camera = scene.getMainCamera();
+    m_frame_data.camera_position = camera.pos;
+    m_frame_data.view_matrix = camera.view;
+    m_frame_data.proj_matrix = camera.projection;
 
-    // 更新相机状态
-    CameraComponent &camera = scene->getMainCamera();
-    m_render_source_data->camera_position = camera.pos;
-    m_render_source_data->view_matrix = camera.view;
-    m_render_source_data->proj_matrix = camera.projection;
-
-    // 没什么用
-    if (!m_render_source_data->render_camera)
-        m_render_source_data->render_camera = std::make_shared<RenderCameraData>();
-    m_render_source_data->render_camera->fov = camera.fov;
-    m_render_source_data->render_camera->pos = camera.pos;
-    m_render_source_data->render_camera->direction = camera.direction;
-    m_render_source_data->render_camera->upDirection = camera.upDirection;
-    m_render_source_data->render_camera->rightDirection = camera.getRightDirection();
+    if (!m_frame_data.render_camera)
+        m_frame_data.render_camera = std::make_shared<RenderCameraData>();
+    m_frame_data.render_camera->fov = camera.fov;
+    m_frame_data.render_camera->pos = camera.pos;
+    m_frame_data.render_camera->direction = camera.direction;
+    m_frame_data.render_camera->upDirection = camera.upDirection;
+    m_frame_data.render_camera->rightDirection = camera.getRightDirection();
 }

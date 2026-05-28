@@ -12,6 +12,20 @@
 
 #include <cassert>
 
+namespace
+{
+void addUniqueID(std::vector<GObjectID>& ids, GObjectID id)
+{
+	if (std::find(ids.begin(), ids.end(), id) == ids.end())
+		ids.push_back(id);
+}
+
+void removeID(std::vector<GObjectID>& ids, GObjectID id)
+{
+	ids.erase(std::remove(ids.begin(), ids.end(), id), ids.end());
+}
+}
+
 Scene::Scene()
 {
 	createCamera();
@@ -23,7 +37,7 @@ GObject* Scene::createObject(const std::string& name, bool with_transform)
 	auto obj = GObject::create(nullptr, name);
 	if (with_transform)
 		obj->addComponent<TransformComponent>();
-	m_objects.push_back(std::shared_ptr<GObject>(obj));
+	registerObject(std::shared_ptr<GObject>(obj));
 	return obj;
 }
 
@@ -42,6 +56,9 @@ GObject* Scene::createCamera(const std::string& name)
 		transform->translation = camera.pos;
 
 	m_main_camera_object_id = obj->ID().id;
+	obj->markRenderDirty(
+		RenderDirtyFlagBit(RenderDirtyFlag::Transform) |
+		RenderDirtyFlagBit(RenderDirtyFlag::Camera));
 	return obj;
 }
 
@@ -51,6 +68,7 @@ GObject* Scene::createDirectionalLight(const std::string& name)
 	auto& light = obj->addComponent<DirectionalLightComponent>();
 	light.luminousColor = Color3(1.0f);
 	light.direction = { 15.0f, -30.0f, 15.0f };
+	obj->markRenderDirty(RenderDirtyFlagBit(RenderDirtyFlag::Light));
 	return obj;
 }
 
@@ -63,6 +81,7 @@ GObject* Scene::createPointLight(const std::string& name)
 		static_cast<float>(Math::random(1.0f, 30.0f)),
 		static_cast<float>(Math::random(-15.0f, 15.0f))
 	};
+	obj->markRenderDirty(RenderDirtyFlagBit(RenderDirtyFlag::Transform));
 
 	auto& light = obj->addComponent<PointLightComponent>();
 	light.radius = 30.0f;
@@ -70,6 +89,7 @@ GObject* Scene::createPointLight(const std::string& name)
 		static_cast<float>(Math::randomUnit()),
 		static_cast<float>(Math::randomUnit()),
 		static_cast<float>(Math::randomUnit()));
+	obj->markRenderDirty(RenderDirtyFlagBit(RenderDirtyFlag::Light));
 	return obj;
 }
 
@@ -81,13 +101,7 @@ void Scene::removeLastPointLight()
 		if (!(*it) || !(*it)->hasComponent<PointLightComponent>())
 			continue;
 
-		const GObjectID removed_id = (*it)->ID();
-		m_objects.erase(it);
-		m_picked_objects.erase(std::remove_if(m_picked_objects.begin(), m_picked_objects.end(),
-			[removed_id](const std::shared_ptr<GObject>& obj)
-			{
-				return obj && obj->ID() == removed_id;
-			}), m_picked_objects.end());
+		removeObject((*it)->ID());
 		return;
 	}
 }
@@ -130,7 +144,7 @@ GObject* Scene::loadModel(const std::string& filepath)
 		animation.clip_path = filepath;
 		animation.clip = std::make_shared<Animation>(filepath, &model_importer);
 	}
-	m_objects.push_back(std::shared_ptr<GObject>(res));
+	registerObject(std::shared_ptr<GObject>(res));
 #endif
 
 	return res;
@@ -246,11 +260,15 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 			}
 		}
         this->m_objects.clear();
+		this->m_object_by_id.clear();
+		this->m_directional_light_object_ids.clear();
+		this->m_point_light_object_ids.clear();
 		if (main_camera_object)
-			this->m_objects.push_back(main_camera_object);
+			registerObject(main_camera_object, false);
 		else
 			createCamera();
         this->m_picked_objects.clear();
+		markFullRenderResync();
     }
 
 	const std::string project_dir = PathService::getDirectory(this->m_current_project_filepath);
@@ -360,6 +378,17 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 			if (auto* transform = obj->getComponent<TransformComponent>())
 				transform->translation = camera->pos;
 		}
+
+		RenderDirtyFlags object_dirty =
+			RenderDirtyFlagBit(RenderDirtyFlag::Visibility) |
+			RenderDirtyFlagBit(RenderDirtyFlag::Transform);
+		if (obj->hasComponent<MeshComponent>())
+			object_dirty |= RenderDirtyFlagBit(RenderDirtyFlag::Mesh) | RenderDirtyFlagBit(RenderDirtyFlag::Material);
+		if (obj->hasComponent<PointLightComponent>() || obj->hasComponent<DirectionalLightComponent>())
+			object_dirty |= RenderDirtyFlagBit(RenderDirtyFlag::Light);
+		if (obj->hasComponent<CameraComponent>())
+			object_dirty |= RenderDirtyFlagBit(RenderDirtyFlag::Camera);
+		obj->markRenderDirty(object_dirty);
 	}
 
 	if (!mainCameraObject())
@@ -383,6 +412,122 @@ bool Scene::saveProject(const std::string& project_filepath)
 	ProjectDTO dto = buildProjectDTOFromScene(m_current_project_filepath);
 	Meta::Serialization::Serializer::saveToJsonFile(project_filepath, dto);
 	return true;
+}
+
+void Scene::registerObject(const std::shared_ptr<GObject>& obj, bool mark_created)
+{
+	if (!obj)
+		return;
+
+	m_objects.push_back(obj);
+	m_object_by_id[obj->ID().id] = obj;
+	refreshRenderObjectCaches(obj->ID());
+
+	if (m_render_signal_bound_object_ids.insert(obj->ID().id).second)
+	{
+		connect(obj.get(), &obj->renderDirty, this, &Scene::onObjectRenderDirty);
+	}
+
+	if (mark_created)
+		markRenderDirty(obj->ID(), RenderDirtyFlagBit(RenderDirtyFlag::Created));
+}
+
+void Scene::unregisterObject(GObjectID id)
+{
+	m_object_by_id.erase(id.id);
+	removeID(m_directional_light_object_ids, id);
+	removeID(m_point_light_object_ids, id);
+	if (m_main_camera_object_id == id.id)
+		m_main_camera_object_id = 0;
+}
+
+void Scene::refreshRenderObjectCaches(GObjectID id)
+{
+	GObject* object = objectOf(id);
+	if (!object)
+	{
+		removeID(m_directional_light_object_ids, id);
+		removeID(m_point_light_object_ids, id);
+		return;
+	}
+
+	if (object->hasComponent<DirectionalLightComponent>())
+		addUniqueID(m_directional_light_object_ids, id);
+	else
+		removeID(m_directional_light_object_ids, id);
+
+	if (object->hasComponent<PointLightComponent>())
+		addUniqueID(m_point_light_object_ids, id);
+	else
+		removeID(m_point_light_object_ids, id);
+
+	if (object->hasComponent<CameraComponent>() && m_main_camera_object_id == 0)
+		m_main_camera_object_id = id.id;
+}
+
+GObject* Scene::objectOf(GObjectID id) const
+{
+	return objectOf(id.id);
+}
+
+GObject* Scene::objectOf(int id) const
+{
+	auto it = m_object_by_id.find(id);
+	return it == m_object_by_id.end() ? nullptr : it->second.get();
+}
+
+void Scene::removeObject(GObjectID id)
+{
+	m_objects.erase(std::remove_if(m_objects.begin(), m_objects.end(),
+		[id](const std::shared_ptr<GObject>& obj)
+		{
+			return obj && obj->ID() == id;
+		}), m_objects.end());
+	m_picked_objects.erase(std::remove_if(m_picked_objects.begin(), m_picked_objects.end(),
+		[id](const std::shared_ptr<GObject>& obj)
+		{
+			return obj && obj->ID() == id;
+		}), m_picked_objects.end());
+	unregisterObject(id);
+	markRenderDirty(id, RenderDirtyFlagBit(RenderDirtyFlag::Removed));
+}
+
+void Scene::markRenderDirty(GObjectID object_id, RenderDirtyFlags flags)
+{
+	if (HasRenderDirtyFlag(flags, RenderDirtyFlag::FullResync))
+	{
+		markFullRenderResync();
+		return;
+	}
+	if (flags == RenderDirtyFlagBit(RenderDirtyFlag::None))
+		return;
+
+	auto& change = m_pending_render_changes[object_id.id];
+	change.object_id = object_id.id;
+	change.flags |= flags;
+}
+
+void Scene::markFullRenderResync()
+{
+	m_full_render_resync = true;
+	m_pending_render_changes.clear();
+}
+
+std::vector<RenderSceneChange> Scene::consumeRenderChanges()
+{
+	if (m_full_render_resync)
+	{
+		m_full_render_resync = false;
+		m_pending_render_changes.clear();
+		return { RenderSceneChange{ 0, RenderDirtyFlagBit(RenderDirtyFlag::FullResync) } };
+	}
+
+	std::vector<RenderSceneChange> changes;
+	changes.reserve(m_pending_render_changes.size());
+	for (const auto& pair : m_pending_render_changes)
+		changes.push_back(pair.second);
+	m_pending_render_changes.clear();
+	return changes;
 }
 
 std::vector<GObjectID> Scene::getPickedObjectIDs() const
@@ -426,9 +571,10 @@ CameraComponent& Scene::getMainCamera() const
 std::vector<std::shared_ptr<GObject>> Scene::directionalLightObjects() const
 {
 	std::vector<std::shared_ptr<GObject>> res;
-	for (const auto& obj : m_objects) {
-		if (obj && obj->hasComponent<DirectionalLightComponent>())
-			res.push_back(obj);
+	for (const GObjectID& id : m_directional_light_object_ids) {
+		auto it = m_object_by_id.find(id.id);
+		if (it != m_object_by_id.end() && it->second)
+			res.push_back(it->second);
 	}
 	return res;
 }
@@ -436,32 +582,32 @@ std::vector<std::shared_ptr<GObject>> Scene::directionalLightObjects() const
 std::vector<std::shared_ptr<GObject>> Scene::pointLightObjects() const
 {
 	std::vector<std::shared_ptr<GObject>> res;
-	for (const auto& obj : m_objects) {
-		if (obj && obj->hasComponent<PointLightComponent>())
-			res.push_back(obj);
+	for (const GObjectID& id : m_point_light_object_ids) {
+		auto it = m_object_by_id.find(id.id);
+		if (it != m_object_by_id.end() && it->second)
+			res.push_back(it->second);
 	}
 	return res;
 }
 
 GObject* Scene::mainDirectionalLightObject() const
 {
-	for (const auto& obj : m_objects) {
-		if (obj && obj->hasComponent<DirectionalLightComponent>())
-			return obj.get();
-	}
+	for (const GObjectID& id : m_directional_light_object_ids)
+		if (GObject* object = objectOf(id))
+			return object;
 	return nullptr;
 }
 
 int Scene::pointLightCount() const
 {
-	return static_cast<int>(pointLightObjects().size());
+	return static_cast<int>(m_point_light_object_ids.size());
 }
 
 void Scene::addObject(std::shared_ptr<GObject> obj)
 {
 	if (obj && obj->hasComponent<CameraComponent>() && m_main_camera_object_id == 0)
 		m_main_camera_object_id = obj->ID().id;
-	m_objects.push_back(std::shared_ptr<GObject>(obj));
+	registerObject(obj);
 }
 
 void Scene::onPickedChanged(std::vector<GObjectID> added, std::vector<GObjectID> removed)
@@ -475,4 +621,10 @@ void Scene::onPickedChanged(std::vector<GObjectID> added, std::vector<GObjectID>
 			Logger::debug("Scene::onPickedChanged(), added obj: {} {}", obj->ID().id, obj->name());
 		}
 	}
+}
+
+void Scene::onObjectRenderDirty(GObjectID object_id, RenderDirtyFlags flags)
+{
+	refreshRenderObjectCaches(object_id);
+	markRenderDirty(object_id, flags);
 }

@@ -10,7 +10,7 @@ RayTracingRenderPath::RayTracingRenderPath()
     m_final_pass = std::make_unique<FinalPass>();
 }
 
-void RayTracingRenderPath::render(RenderSourceData& render_source_data)
+void RayTracingRenderPath::render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
 {
     m_render_graph.reset();
 
@@ -26,7 +26,7 @@ void RayTracingRenderPath::render(RenderSourceData& render_source_data)
 
     m_render_graph.markOutput(RGResource::SceneColor);
     m_render_graph.compile();
-    m_render_graph.execute(render_source_data);
+    m_render_graph.execute(render_scene, frame_data, builtin_resources);
 }
 
 void RayTracingRenderPath::resizeRenderTargets(const Vec2 &pixel_size)

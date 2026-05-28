@@ -25,16 +25,16 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     // framebuffer clear color before gamma correction: Color4(0.046, 0.046, 0.046, 1.0)
     m_command_buffer->beginPass(framebuffer, Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
 
-    Mat4 light_ref_matrix = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix *
-                            context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
-    Vec3 light_direction = context.renderSourceData().render_directional_light_data_list.front().direction;
-    Vec3 light_color = context.renderSourceData().render_directional_light_data_list.front().color;
+    Mat4 light_ref_matrix = context.frameData().directional_lights.front().lightProjMatrix *
+                            context.frameData().directional_lights.front().lightViewMatrix;
+    Vec3 light_direction = context.frameData().directional_lights.front().direction;
+    Vec3 light_color = context.frameData().directional_lights.front().color;
 
     const ShaderType shader_type = m_pbr ? ShaderType::PBRShader : ShaderType::BlinnPhongShader;
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(shader_type));
     ShaderResourceBindings bindings;
     int k = 0;
-    for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
+    for (const auto &render_point_light_data : context.frameData().point_lights)
     {
         if (k > MAX_CUBE_SHADOW_MAP_COUNT)
             break;
@@ -45,10 +45,12 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         k++;
     }
     bindings.setInt("point_lights_size", k);
-    for (const auto &pair : context.renderSourceData().render_mesh_nodes)
+    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections())
     {
-        const auto &render_node = pair.second;
-        auto &material = render_node->material;
+        if (!render_node)
+            continue;
+
+        const auto &material = render_node->material;
         if (m_pbr)
         {
             bindings.setFloat3("base_color_factor", material.base_color_factor);
@@ -84,9 +86,9 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         }
 
         bindings.setMatrix("model", 1, render_node->model_matrix);
-        bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-        bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-        bindings.setFloat3("cameraPos", context.renderSourceData().camera_position);
+        bindings.setMatrix("view", 1, context.frameData().view_matrix);
+        bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
+        bindings.setFloat3("cameraPos", context.frameData().camera_position);
 
         bindings.setFloat3("directionalLight.direction", light_direction);
         bindings.setFloat3("directionalLight.color", light_color);

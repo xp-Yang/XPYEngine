@@ -20,10 +20,12 @@ void WireFramePass::draw(RenderPassContext& context)
 
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::WireframeShader));
     ShaderResourceBindings bindings;
-    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-    bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
-        const auto& render_node = pair.second;
+    bindings.setMatrix("view", 1, context.frameData().view_matrix);
+    bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
+    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections()) {
+        if (!render_node)
+            continue;
+
         bindings.setMatrix("model", 1, render_node->model_matrix);
         m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());

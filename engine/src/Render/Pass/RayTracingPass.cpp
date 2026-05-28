@@ -13,7 +13,7 @@ void RayTracingPass::draw(RenderPassContext& context)
 		return;
 	m_command_buffer->beginPass(framebuffer);
 
-	auto camera = context.renderSourceData().render_camera;
+	auto camera = context.frameData().render_camera;
 
 	{
 		m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::RayTracingShader));
@@ -38,8 +38,8 @@ void RayTracingPass::draw(RenderPassContext& context)
 		bindings.setFloat("randOrigin", 674764.0f * (Math::randomUnit() + 1.0f));
         m_command_buffer->setShaderResources(&bindings);
 		// render to framebuffer
-		m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-		m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+		m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+		m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
 	}
 
 	m_command_buffer->endPass();

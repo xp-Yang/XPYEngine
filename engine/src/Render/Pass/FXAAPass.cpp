@@ -21,7 +21,7 @@ void FXAAPass::draw(RenderPassContext& context)
     ShaderResourceBindings bindings;
     bindings.setTexture("mainTexture", 0, color_map);
     m_command_buffer->setShaderResources(&bindings);
-    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
     m_command_buffer->endPass();
 }

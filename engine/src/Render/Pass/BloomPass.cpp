@@ -24,8 +24,8 @@ void BloomPass::extractBright(RenderPassContext& context)
     ShaderResourceBindings bindings;
     bindings.setTexture("Texture", 0, context.texture(RGResource::SceneColor));
     m_command_buffer->setShaderResources(&bindings);
-    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
     m_command_buffer->endPass();
 }
 
@@ -58,8 +58,8 @@ void BloomPass::blur(RenderPassContext& context)
         bindings.setTexture("image", 0, source_texture);
         bindings.setInt("horizontal", horizontal);
         m_command_buffer->setShaderResources(&bindings);
-        m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-        m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+        m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+        m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
         m_command_buffer->endPass();
         horizontal = !horizontal;
     }
@@ -77,7 +77,7 @@ void BloomPass::writeToScene(RenderPassContext& context)
     bindings.setTexture("Texture", 0, context.texture(RGResource::SceneColor));
     bindings.setTexture("bloomMap", 1, context.texture(RGResource::BloomPingPong1Color));
     m_command_buffer->setShaderResources(&bindings);
-    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
     m_command_buffer->endPass();
 }

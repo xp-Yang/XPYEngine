@@ -22,11 +22,13 @@ void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
 
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::SingleColorShader));
     ShaderResourceBindings bindings;
-    Mat4 light_view = context.renderSourceData().render_directional_light_data_list.front().lightViewMatrix;
-    Mat4 light_proj = context.renderSourceData().render_directional_light_data_list.front().lightProjMatrix;
-    for (const auto &pair : context.renderSourceData().render_mesh_nodes)
+    Mat4 light_view = context.frameData().directional_lights.front().lightViewMatrix;
+    Mat4 light_proj = context.frameData().directional_lights.front().lightProjMatrix;
+    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections())
     {
-        const auto &render_node = pair.second;
+        if (!render_node)
+            continue;
+
         bindings.setBool("useSkinning", render_node->use_skinning);
         if (render_node->use_skinning && !render_node->bone_matrices.empty())
         {
@@ -55,7 +57,7 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
     std::vector<Mat4> light_proj;
     std::vector<Vec3> light_pos;
     std::vector<float> light_radius;
-    for (const auto &render_point_light_data : context.renderSourceData().render_point_light_data_list)
+    for (const auto &render_point_light_data : context.frameData().point_lights)
     {
         light_view.push_back(render_point_light_data.lightViewMatrix);
         light_proj.push_back(render_point_light_data.lightProjMatrix);
@@ -63,9 +65,9 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
         light_radius.push_back(render_point_light_data.radius);
     }
 
-    context.ensureCubeShadowMapsCount(std::min(MAX_CUBE_SHADOW_MAP_COUNT, context.renderSourceData().render_point_light_data_list.size()));
+    context.ensureCubeShadowMapsCount(std::min(MAX_CUBE_SHADOW_MAP_COUNT, context.frameData().point_lights.size()));
 
-    for (int cube_map_id = 0; cube_map_id < context.renderSourceData().render_point_light_data_list.size(); cube_map_id++)
+    for (int cube_map_id = 0; cube_map_id < context.frameData().point_lights.size(); cube_map_id++)
     {
         for (int i = 0; i < 6; i++)
         {
@@ -78,9 +80,11 @@ void ShadowPass::drawPointLightShadowMap(RenderPassContext& context)
             m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::CubeMapShader));
             ShaderResourceBindings bindings;
 
-            for (const auto &pair : context.renderSourceData().render_mesh_nodes)
+            for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections())
             {
-                const auto &render_node = pair.second;
+                if (!render_node)
+                    continue;
+
                 bindings.setBool("useSkinning", render_node->use_skinning);
                 if (render_node->use_skinning && !render_node->bone_matrices.empty())
                 {

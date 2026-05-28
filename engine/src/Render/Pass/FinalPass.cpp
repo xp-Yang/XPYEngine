@@ -25,11 +25,11 @@ void FinalPass::draw(RenderPassContext& context)
     state.depthWrite = false;
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::PristineGridShader, state));
     ShaderResourceBindings bindings;
-    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-    bindings.setMatrix("proj", 1, context.renderSourceData().proj_matrix);
+    bindings.setMatrix("view", 1, context.frameData().view_matrix);
+    bindings.setMatrix("proj", 1, context.frameData().proj_matrix);
     m_command_buffer->setShaderResources(&bindings);
-    m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-    m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+    m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+    m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
     m_command_buffer->endPass();
 
 

@@ -56,8 +56,8 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	}
 
 	RhiTexture* dir_light_shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
-	bindings.setFloat3("cameraPos", context.renderSourceData().camera_position);
-	for (const auto& render_directional_light_data : context.renderSourceData().render_directional_light_data_list) {
+	bindings.setFloat3("cameraPos", context.frameData().camera_position);
+	for (const auto& render_directional_light_data : context.frameData().directional_lights) {
 		bindings.setFloat3("directionalLight.direction", render_directional_light_data.direction);
 		bindings.setFloat3("directionalLight.color", render_directional_light_data.color);
 		if (dir_light_shadow_texture) {
@@ -78,7 +78,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
     }
 
 	int point_light_idx = 0;
-	for (const auto& render_point_light_data : context.renderSourceData().render_point_light_data_list) {
+	for (const auto& render_point_light_data : context.frameData().point_lights) {
 		std::string light_id = std::string("pointLights[") + std::to_string(point_light_idx) + "]";
 		bindings.setFloat3(light_id + ".position", render_point_light_data.position);
 		bindings.setFloat3(light_id + ".color", render_point_light_data.color);
@@ -87,25 +87,25 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	}
 	bindings.setInt("point_lights_size", point_light_size);
     m_command_buffer->setShaderResources(&bindings);
-	m_command_buffer->setVertexInput(context.renderSourceData().screen_quad->vertexLayout());
-	m_command_buffer->drawIndexed(static_cast<int>(context.renderSourceData().screen_quad->indicesCount()));
+	m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
+	m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
 	m_command_buffer->endPass();
 
 	m_command_buffer->blit(gbuffer_framebuffer, framebuffer, RhiTexture::Format::DEPTH);
 
 	// instancing lights
-    if (context.renderSourceData().render_point_light_inst_mesh && context.renderSourceData().point_light_inst_amount > 0)
+    if (context.builtinResources().point_light_inst_mesh && context.frameData().point_light_inst_amount > 0)
     {
         m_command_buffer->beginPass(framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
         m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(ShaderType::InstancingShader));
         ShaderResourceBindings instancing_bindings;
-        instancing_bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-        instancing_bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
+        instancing_bindings.setMatrix("view", 1, context.frameData().view_matrix);
+        instancing_bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
         m_command_buffer->setShaderResources(&instancing_bindings);
-        m_command_buffer->setVertexInput(context.renderSourceData().render_point_light_inst_mesh->vertexLayout());
+        m_command_buffer->setVertexInput(context.builtinResources().point_light_inst_mesh->vertexLayout());
         m_command_buffer->drawIndexed(
-            static_cast<int>(context.renderSourceData().render_point_light_inst_mesh->indicesCount()),
-            context.renderSourceData().point_light_inst_amount);
+            static_cast<int>(context.builtinResources().point_light_inst_mesh->indicesCount()),
+            context.frameData().point_light_inst_amount);
         m_command_buffer->endPass();
     }
 }

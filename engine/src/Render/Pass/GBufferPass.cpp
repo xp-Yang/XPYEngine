@@ -16,11 +16,10 @@ void GBufferPass::draw(RenderPassContext& context)
     const ShaderType shader_type = m_pbr ? ShaderType::GBufferShader : ShaderType::GBufferPhongShader;
     m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(shader_type));
     ShaderResourceBindings bindings;
-    bindings.setMatrix("view", 1, context.renderSourceData().view_matrix);
-    bindings.setMatrix("projection", 1, context.renderSourceData().proj_matrix);
-    for (const auto& pair : context.renderSourceData().render_mesh_nodes) {
-        const auto& render_node = pair.second;
-        if (render_node->material.alpha != 1.0f)
+    bindings.setMatrix("view", 1, context.frameData().view_matrix);
+    bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
+    for (const RenderMeshSection* render_node : context.renderScene().opaqueMeshSections()) {
+        if (!render_node)
             continue;
 
         bindings.setBool("useSkinning", render_node->use_skinning);
@@ -36,7 +35,7 @@ void GBufferPass::draw(RenderPassContext& context)
         }
 
         bindings.setMatrix("model", 1, render_node->model_matrix);
-        auto& material = render_node->material;
+        const auto& material = render_node->material;
         if (m_pbr) {
             bindings.setFloat3("base_color_factor", material.base_color_factor);
             bindings.setFloat("metallic_factor", material.metallic_factor);

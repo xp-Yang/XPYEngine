@@ -1,6 +1,8 @@
 #ifndef GObject_hpp
 #define GObject_hpp
 
+#include "Base/Signal/Signal.hpp"
+#include "Logical/Framework/World/RenderDirty.hpp"
 #include "Logical/Framework/World/IDAllocator.hpp"
 #if !ENABLE_ECS
 #include "Logical/Framework/Component/CameraComponent.hpp"
@@ -12,6 +14,8 @@
 #else
 #include "Logical/Framework/ECS/Components.hpp"
 #endif
+
+#include <type_traits>
 
 namespace Meta {
 	namespace Registration {
@@ -46,7 +50,21 @@ public:
 	const std::string& name() const { return m_name; }
 	void setName(const std::string& name) { m_name = name; }
 	bool visible() const { return m_visible; }
-	void setVisible(bool visible) { m_visible = visible; }
+	void setVisible(bool visible) {
+		if (m_visible == visible)
+			return;
+		m_visible = visible;
+		markRenderDirty(RenderDirtyFlagBit(RenderDirtyFlag::Visibility));
+	}
+
+	void markRenderDirty(RenderDirtyFlags flags) {
+		if (flags != RenderDirtyFlagBit(RenderDirtyFlag::None))
+			emit renderDirty(m_id, flags);
+	}
+
+	// TODO: Third round: wrap TransformComponent / LightComponent / CameraComponent
+	// writes in setters or markDirty() helpers so editor and runtime code do not
+	// manually emit render dirty flags after mutating component fields.
 
 	const std::vector<std::shared_ptr<Component>>& getComponents() const { return m_components; }
 
@@ -54,6 +72,7 @@ public:
 	T& addComponent() {
 		auto com = std::make_shared<T>(this);
 		m_components.push_back(com);
+		markRenderDirty(renderDirtyFlagsForComponent<T>());
 		return *com;
 	}
 
@@ -80,12 +99,31 @@ public:
 
 	virtual void tick(float delta_time);
 
+signals:
+	Signal<GObjectID, RenderDirtyFlags> renderDirty;
+
 protected:
 	GObject(GObject* parent, const std::string& name) : m_parent(parent), m_name(name) { if (parent) parent->append(this); }
 	GObject(const GObject&) = delete;
 	GObject& operator=(const GObject&) = delete;
 
 	friend void Meta::Registration::allMetaRegister();
+
+	template<typename T>
+	RenderDirtyFlags renderDirtyFlagsForComponent() const {
+		if constexpr (std::is_same_v<T, TransformComponent>)
+			return RenderDirtyFlagBit(RenderDirtyFlag::Transform);
+		else if constexpr (std::is_same_v<T, MeshComponent>)
+			return RenderDirtyFlagBit(RenderDirtyFlag::Mesh);
+		else if constexpr (std::is_base_of_v<LightComponent, T>)
+			return RenderDirtyFlagBit(RenderDirtyFlag::Light);
+		else if constexpr (std::is_same_v<T, CameraComponent>)
+			return RenderDirtyFlagBit(RenderDirtyFlag::Camera);
+		else if constexpr (std::is_same_v<T, AnimationComponent>)
+			return RenderDirtyFlagBit(RenderDirtyFlag::Mesh);
+		else
+			return RenderDirtyFlagBit(RenderDirtyFlag::None);
+	}
 
 	GObject* m_parent;
 	std::vector<GObject*> m_children;

@@ -43,7 +43,7 @@ void DeferredRenderPath::resizeRenderTargets(const Vec2& pixel_size)
     m_render_graph.setFrameSize(pixel_size);
 }
 
-void DeferredRenderPath::render(RenderSourceData& render_source_data)
+void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
 {
     const auto& render_params = ref_render_system->renderParams();
     const bool checkerboard_enabled = render_params.effect_params.checkerboard;
@@ -125,12 +125,12 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
         .modify(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
-        .setEnabled(render_source_data.has_transparent)
+        .setEnabled(render_scene.hasTransparent())
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth);
 
     m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
-        .setEnabled(!render_source_data.picked_ids.empty())
+        .setEnabled(!frame_data.picked_ids.empty())
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
@@ -183,7 +183,7 @@ void DeferredRenderPath::render(RenderSourceData& render_source_data)
 
     // TODO 不必每帧都重新compile?
     m_render_graph.compile();
-    m_render_graph.execute(render_source_data);
+    m_render_graph.execute(render_scene, frame_data, builtin_resources);
 }
 
 RhiTexture* DeferredRenderPath::renderGraphTextureOf(const std::string& resource_name)

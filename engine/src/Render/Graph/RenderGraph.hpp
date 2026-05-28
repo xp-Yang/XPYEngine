@@ -5,6 +5,9 @@
 
 class RenderPassContext;
 class RenderGraphDumper;
+class RenderScene;
+struct RenderFrameData;
+struct RenderBuiltinResources;
 
 // RenderGraphRenderTarget key
 struct TargetKey {
@@ -44,7 +47,7 @@ public:
     RenderGraphPassNode& addPass(RenderPass::Type type, RenderPass* pass);
     void markOutput(const RGResourceName& resource_name);
     void compile();
-    void execute(RenderSourceData& render_source_data);
+    void execute(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources);
 
     // 查询接口
     RhiTexture* textureOf(const RGResourceName& resource_name) const;

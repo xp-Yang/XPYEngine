@@ -1,15 +1,32 @@
 #include "RenderPassContext.hpp"
 
-RenderPassContext::RenderPassContext(RenderGraph& graph, const RenderGraphPassNode& node, RenderSourceData& render_source_data)
+RenderPassContext::RenderPassContext(
+    RenderGraph& graph,
+    const RenderGraphPassNode& node,
+    RenderScene& render_scene,
+    RenderFrameData& frame_data,
+    RenderBuiltinResources& builtin_resources)
     : m_graph(&graph)
     , m_node(&node)
-    , m_render_source_data(&render_source_data)
+    , m_render_scene(&render_scene)
+    , m_frame_data(&frame_data)
+    , m_builtin_resources(&builtin_resources)
 {
 }
 
-RenderSourceData& RenderPassContext::renderSourceData() const
+RenderScene& RenderPassContext::renderScene() const
 {
-    return *m_render_source_data;
+    return *m_render_scene;
+}
+
+RenderFrameData& RenderPassContext::frameData() const
+{
+    return *m_frame_data;
+}
+
+RenderBuiltinResources& RenderPassContext::builtinResources() const
+{
+    return *m_builtin_resources;
 }
 
 RhiTexture* RenderPassContext::texture(const std::string& resource_name) const

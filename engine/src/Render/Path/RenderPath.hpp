@@ -5,6 +5,9 @@
 #include "Render/Pass/RenderPass.hpp"
 #include "Render/Graph/RenderGraph.hpp"
 #include "Render/Graph/RenderGraphDebugInfo.hpp"
+#include "Render/RenderBuiltinResources.hpp"
+#include "Render/RenderFrameData.hpp"
+#include "Render/RenderScene.hpp"
 
 #include <string>
 #include <vector>
@@ -13,7 +16,7 @@
 class RenderSystem;
 class RenderPath {
 public:
-    virtual void render(RenderSourceData& render_source_data) = 0;
+    virtual void render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources) = 0;
 
     virtual RhiTexture* renderGraphTextureOf(const std::string& resource_name) { return nullptr; }
     virtual bool readRenderGraphPixelRGBAOf(const std::string& resource_name, int x, int y, unsigned char out_rgba[4]) { return false; }
