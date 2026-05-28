@@ -15,4 +15,9 @@ protected:
 	static inline int global_id = 0;
 };
 
+class GObjectID : public IDAllocator<GObjectID> {
+public:
+    GObjectID() = default;
+};
+
 #endif

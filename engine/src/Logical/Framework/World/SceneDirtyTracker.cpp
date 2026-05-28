@@ -1,6 +1,6 @@
 #include "Logical/Framework/World/SceneDirtyTracker.hpp"
 
-void SceneDirtyTracker::markDirty(GObjectID object_id, SceneDirtyFlags flags)
+void SceneDirtyTracker::markDirty(int object_id, SceneDirtyFlags flags)
 {
 	if (HasSceneDirtyFlag(flags, SceneDirtyFlag::FullResync))
 	{
@@ -10,8 +10,8 @@ void SceneDirtyTracker::markDirty(GObjectID object_id, SceneDirtyFlags flags)
 	if (flags == SceneDirtyFlagBit(SceneDirtyFlag::None))
 		return;
 
-	auto& change = m_pending_changes[object_id.id];
-	change.object_id = object_id.id;
+	auto& change = m_pending_changes[object_id];
+	change.object_id = object_id;
 	change.flags |= flags;
 }
 

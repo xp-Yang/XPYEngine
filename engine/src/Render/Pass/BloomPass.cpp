@@ -129,7 +129,7 @@ void BloomPass::downsample(RenderPassContext& context)
 
         ShaderResourceBindings bindings;
         bindings.setTexture("source", 0, src_texture);
-        bindings.setFloat3("texelSize", Vec3(1.0f / src_size.x, 1.0f / src_size.y, 0.0f));
+        bindings.setFloat2("texelSize", Vec2(1.0f / src_size.x, 1.0f / src_size.y));
         bindings.setBool("applyThreshold", i == 0);
         bindings.setFloat("threshold", m_params.threshold);
         bindings.setFloat("softKnee", m_params.softKnee);
@@ -168,7 +168,7 @@ void BloomPass::upsample(RenderPassContext& context)
         ShaderResourceBindings bindings;
         bindings.setTexture("source", 0, src.texture);
         bindings.setTexture("destination", 1, dst.texture);
-        bindings.setFloat3("texelSize", Vec3(1.0f / src.size.x, 1.0f / src.size.y, 0.0f));
+        bindings.setFloat2("texelSize", Vec2(1.0f / src.size.x, 1.0f / src.size.y));
         bindings.setFloat("blendFactor", 0.7f);
         m_command_buffer->setShaderResources(&bindings);
 

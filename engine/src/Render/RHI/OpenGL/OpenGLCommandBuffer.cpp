@@ -90,6 +90,10 @@ void OpenGLCommandBuffer::setShaderResources(RhiShaderResourceBindings* bindings
             if (location != -1)
                 glUniform1f(location, binding.values[0]);
             break;
+        case RhiShaderResourceBindings::Float2:
+            if (location != -1)
+                glUniform2f(location, binding.values[0], binding.values[1]);
+            break;
         case RhiShaderResourceBindings::Float3:
             if (location != -1)
                 glUniform3f(location, binding.values[0], binding.values[1], binding.values[2]);

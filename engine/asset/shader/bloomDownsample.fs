@@ -39,15 +39,13 @@ vec3 downsample13Tap(vec2 uv, vec2 ts)
     return result;
 }
 
-// Soft knee threshold: smooth transition around the cutoff instead of hard step.
+// Soft knee threshold via smoothstep: avoids division by brightness which
+// amplifies float16 quantization into visible banding on smooth gradients.
 vec3 applyBrightnessThreshold(vec3 color, float thresh, float knee)
 {
     float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    float soft = brightness - thresh + knee;
-    soft = clamp(soft, 0.0, 2.0 * knee);
-    soft = soft * soft / (4.0 * knee + 1e-5);
-    float contribution = max(soft, brightness - thresh) / max(brightness, 1e-5);
-    return color * max(contribution, 0.0);
+    float weight = smoothstep(thresh - knee, thresh + knee, brightness);
+    return color * weight;
 }
 
 void main()

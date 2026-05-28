@@ -57,6 +57,18 @@ void RhiShaderResourceBindings::setFloat(const std::string& name, float value)
     binding.values[0] = value;
 }
 
+void RhiShaderResourceBindings::setFloat2(const std::string& name, float x, float y)
+{
+    Binding& binding = upsert(name, Float2);
+    binding.values[0] = x;
+    binding.values[1] = y;
+}
+
+void RhiShaderResourceBindings::setFloat2(const std::string& name, const Vec2& value)
+{
+    setFloat2(name, value.x, value.y);
+}
+
 void RhiShaderResourceBindings::setFloat3(const std::string& name, const Vec3& value)
 {
     Binding& binding = upsert(name, Float3);

@@ -14,7 +14,7 @@ struct SceneChange {
 
 class SceneDirtyTracker {
 public:
-	void markDirty(GObjectID object_id, SceneDirtyFlags flags);
+	void markDirty(int object_id, SceneDirtyFlags flags);
 	void markFullResync();
 	std::vector<SceneChange> consumeChanges();
 

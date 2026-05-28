@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+// TODO
+// 先做 Object 粒度，不做 subMesh 粒度。Material 先按 Object 合并即可。
 enum class SceneDirtyFlag : uint32_t {
     None       = 0,
     Created    = 1 << 0,

@@ -366,6 +366,7 @@ public:
         Bool,
         Int,
         Float,
+        Float2,
         Float3,
         Float4,
         Matrix,
@@ -388,6 +389,8 @@ public:
     void setBool(const std::string& name, bool value);
     void setInt(const std::string& name, int value);
     void setFloat(const std::string& name, float value);
+    void setFloat2(const std::string& name, float x, float y);
+    void setFloat2(const std::string& name, const Vec2& value);
     void setFloat3(const std::string& name, const Vec3& value);
     void setFloat4(const std::string& name, float value1, float value2, float value3, float value4);
     void setFloat4(const std::string& name, const Vec4& value);
