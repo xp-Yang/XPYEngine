@@ -376,37 +376,6 @@ void renderRenderGraphExecution(RenderSystem* render_system)
     ImGui::End();
 }
 
-void renderMainCameraInfo()
-{
-    ImGui::Begin("Main Camera Info", nullptr, ImGuiWindowFlags_NoCollapse);
-
-    if (!g_context.scene)
-    {
-        ImGui::TextDisabled("Scene unavailable");
-        ImGui::End();
-        return;
-    }
-
-    auto& camera = g_context.scene->getMainCamera();
-    ImGui::NewLine();
-    ImGui::TextUnformatted("view matrix:");
-    const std::string view = Utils::mat4ToStr(camera.view);
-    ImGui::TextUnformatted(view.c_str());
-    ImGui::NewLine();
-    ImGui::TextUnformatted("inverse view matrix:");
-    const std::string inverse_view = Utils::mat4ToStr(Math::Inverse(camera.view));
-    ImGui::TextUnformatted(inverse_view.c_str());
-    ImGui::NewLine();
-    ImGui::TextUnformatted("camera position:");
-    const std::string camera_pos = Utils::vec3ToStr(camera.pos);
-    ImGui::TextUnformatted(camera_pos.c_str());
-    ImGui::NewLine();
-    ImGui::TextUnformatted("camera direction:");
-    const std::string camera_dir = Utils::vec3ToStr(camera.direction);
-    ImGui::TextUnformatted(camera_dir.c_str());
-    ImGui::End();
-}
-
 } // namespace
 
 ImGuiDebugWindow::ImGuiDebugWindow(ImGuiEditor* parent)
@@ -440,5 +409,4 @@ void ImGuiDebugWindow::render()
     renderRenderGraphResources(render_system, viewer_state.selected_resource, viewer_state.open, viewer_state.depth_min, viewer_state.depth_max);
     renderRenderGraphResourceViewer(render_system, viewer_state.selected_resource, viewer_state.open, viewer_state.depth_min, viewer_state.depth_max);
     renderRenderGraphExecution(render_system);
-    renderMainCameraInfo();
 }
