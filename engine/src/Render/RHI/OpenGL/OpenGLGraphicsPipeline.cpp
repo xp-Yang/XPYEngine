@@ -154,9 +154,21 @@ void OpenGLGraphicsPipeline::destroy()
 {
     if (m_program != 0)
     {
+        m_uniform_cache.clear();
         glDeleteProgram(m_program);
         m_program = 0;
     }
+}
+
+GLint OpenGLGraphicsPipeline::uniformLocation(const std::string& name)
+{
+    auto it = m_uniform_cache.find(name);
+    if (it != m_uniform_cache.end())
+        return it->second;
+
+    const GLint loc = glGetUniformLocation(m_program, name.c_str());
+    m_uniform_cache.emplace(name, loc);
+    return loc;
 }
 
 bool OpenGLGraphicsPipeline::create()

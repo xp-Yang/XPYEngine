@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Logical/Framework/World/Scene.hpp"
+#include "Render/RHI/OpenGL/OpenGLGraphicsPipeline.hpp"
 #include "Render/RenderPipelineLibrary.hpp"
 #include "Render/RenderSystem.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
@@ -115,10 +116,11 @@ public:
         glUseProgram(preview_pipeline->id());
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, source_texture);
-        glUniform1i(glGetUniformLocation(preview_pipeline->id(), "debugTexture"), 0);
-        glUniform1i(glGetUniformLocation(preview_pipeline->id(), "remapDepth"), remap_depth ? 1 : 0);
-        glUniform1f(glGetUniformLocation(preview_pipeline->id(), "depthMin"), depth_min);
-        glUniform1f(glGetUniformLocation(preview_pipeline->id(), "depthMax"), depth_max);
+        auto* gl_pipeline = static_cast<OpenGLGraphicsPipeline*>(preview_pipeline);
+        glUniform1i(gl_pipeline->uniformLocation("debugTexture"), 0);
+        glUniform1i(gl_pipeline->uniformLocation("remapDepth"), remap_depth ? 1 : 0);
+        glUniform1f(gl_pipeline->uniformLocation("depthMin"), depth_min);
+        glUniform1f(gl_pipeline->uniformLocation("depthMax"), depth_max);
 
         glBindVertexArray(m_vertex_array);
         glDrawArrays(GL_TRIANGLES, 0, 3);

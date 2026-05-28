@@ -3,6 +3,9 @@
 
 #include "Render/RHI/OpenGL/rhi_opengl.hpp"
 
+#include <string>
+#include <unordered_map>
+
 // OpenGL 版本的 GraphicsPipeline。
 //
 // 在 Vulkan/Metal 里 pipeline 通常是真正的 native pipeline object；OpenGL 没有
@@ -21,6 +24,8 @@ public:
     GL_HANDLE program() const { return m_program; }
     GLenum drawMode() const { return m_draw_mode; }
 
+    GLint uniformLocation(const std::string& name);
+
     // 绑定 pipeline 并把 RHI 描述转换成 OpenGL 状态。
     // 这是“固定状态集中化”的关键：pass 不再到处手动开关 GL_BLEND/GL_DEPTH_TEST。
     void bind();
@@ -33,6 +38,7 @@ private:
     GL_HANDLE m_program{ 0 };
     GLenum m_draw_mode{ GL_TRIANGLES };
     int m_stencil_ref{ 0 };
+    std::unordered_map<std::string, GLint> m_uniform_cache;
 };
 
 #endif // !OpenGLGraphicsPipeline_hpp

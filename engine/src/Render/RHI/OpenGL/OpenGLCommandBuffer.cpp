@@ -75,10 +75,9 @@ void OpenGLCommandBuffer::setShaderResources(RhiShaderResourceBindings* bindings
     if (!bindings)
         return;
 
-    const GL_HANDLE program = m_current_pipeline->program();
     for (const RhiShaderResourceBindings::Binding& binding : bindings->bindings())
     {
-        const GLint location = glGetUniformLocation(program, binding.name.c_str());
+        const GLint location = m_current_pipeline->uniformLocation(binding.name);
         switch (binding.type)
         {
         case RhiShaderResourceBindings::Bool:
