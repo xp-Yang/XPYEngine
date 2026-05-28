@@ -7,7 +7,7 @@
 #include "Path/RayTracingRenderPath.hpp"
 
 #include <Logical/Framework/World/Scene.hpp>
-#include <Logical/Framework/World/RenderDirty.hpp>
+#include <Logical/Framework/World/SceneDirty.hpp>
 #include <Logical/Animation/AnimationSystem.hpp>
 #include <Logical/Framework/Component/LightComponent.hpp>
 #include <Logical/Framework/Component/TransformComponent.hpp>
@@ -120,18 +120,18 @@ void RenderSystem::initializeRenderResources()
 
 void RenderSystem::syncRenderSceneChanges(Scene& scene)
 {
-    const auto changes = scene.consumeRenderChanges();
+    const auto changes = scene.consumeChanges();
     bool section_lists_dirty = false;
 
-    for (const RenderSceneChange& change : changes)
+    for (const SceneChange& change : changes)
     {
-        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::FullResync))
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::FullResync))
         {
             rebuildRenderSceneFromScene(scene);
             return;
         }
 
-        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Removed))
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Removed))
         {
             m_render_scene.removeObjectProxy(change.object_id);
             section_lists_dirty = true;
@@ -146,27 +146,27 @@ void RenderSystem::syncRenderSceneChanges(Scene& scene)
             continue;
         }
 
-        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Created) ||
-            HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Mesh))
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Created) ||
+            HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Mesh))
         {
             rebuildObjectRenderProxy(*object);
             section_lists_dirty = true;
             continue;
         }
 
-        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Visibility))
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Visibility))
         {
             m_render_scene.setObjectVisible(change.object_id, object->visible());
             section_lists_dirty = true;
         }
 
-        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Transform))
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Transform))
         {
             if (auto* transform = object->getComponent<TransformComponent>())
                 m_render_scene.updateObjectTransform(change.object_id, transform->transform());
         }
 
-        if (HasRenderDirtyFlag(change.flags, RenderDirtyFlag::Material))
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Material))
         {
             m_render_scene.updateObjectMaterials(*object);
             section_lists_dirty = true;

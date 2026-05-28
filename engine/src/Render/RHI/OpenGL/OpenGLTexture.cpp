@@ -24,7 +24,6 @@ void OpenGLTexture::destroy()
 	}
 }
 
-namespace {
 struct TextureFormatDesc {
     GLenum internal_format{ GL_RGBA };
     GLenum format{ GL_RGBA };
@@ -34,7 +33,7 @@ struct TextureFormatDesc {
     bool is_depth{ false };
 };
 
-bool getTextureFormatDesc(RhiTexture::Format format, TextureFormatDesc& desc)
+static bool getTextureFormatDesc(RhiTexture::Format format, TextureFormatDesc& desc)
 {
     switch (format)
     {
@@ -62,7 +61,6 @@ bool getTextureFormatDesc(RhiTexture::Format format, TextureFormatDesc& desc)
     default:
         return false;
     }
-}
 }
 
 bool OpenGLTexture::create()

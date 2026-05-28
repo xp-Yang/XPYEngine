@@ -1,7 +1,7 @@
 #include "ImGuiToolbar.hpp"
 #include "ImGuiCanvas.hpp"
 #include "AssetManager/Texture.hpp"
-#include "Logical/Framework/World/RenderDirty.hpp"
+#include "Logical/Framework/World/SceneDirty.hpp"
 #include "Logical/Framework/World/Scene.hpp"
 #include "Render/RenderScene.hpp"
 
@@ -95,7 +95,7 @@ void ImGuiToolbar::renderGizmos()
         transform_component->scale = Vec3(matrixScale[0], matrixScale[1], matrixScale[2]);
         transform_component->rotation = Vec3(matrixRotation[0], matrixRotation[1], matrixRotation[2]);
 
-        RenderDirtyFlags dirty_flags = RenderDirtyFlagBit(RenderDirtyFlag::Transform);
+        SceneDirtyFlags dirty_flags = SceneDirtyFlagBit(SceneDirtyFlag::Transform);
         if (auto* camera_component = object->getComponent<CameraComponent>())
         {
             // Main Camera 现在也是普通 GObject。Gizmo 操作改的是 Transform，
@@ -103,9 +103,9 @@ void ImGuiToolbar::renderGizmos()
             // 旋转同步后续可以再做成完整的 Transform -> camera direction/up 推导。
             camera_component->pos = transform_component->translation;
             camera_component->refreshView();
-            dirty_flags |= RenderDirtyFlagBit(RenderDirtyFlag::Camera);
+            dirty_flags |= SceneDirtyFlagBit(SceneDirtyFlag::Camera);
         }
-        object->markRenderDirty(dirty_flags);
+        object->markDirty(dirty_flags);
     }
 
     ImVec2 air_window_size = ImVec2(128, 128);
