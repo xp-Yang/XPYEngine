@@ -1,8 +1,9 @@
 #ifndef ImGuiEditor_hpp
 #define ImGuiEditor_hpp
 
-#include "GUI/Viewport.hpp"
+#include "Base/Math/Rect.hpp"
 #include <functional>
+#include <memory>
 #include <string>
 
 class MainCanvas;
@@ -19,7 +20,7 @@ public:
 	void onUpdate();
 	void beginFrame();
 	void endFrame();
-	Viewport getMainViewport() const;
+	IntRect mainCanvasRect() const;
 	void popUpMenu();
 	void setExternalOpenFileHandler(ExternalOpenFileHandler handler);
 

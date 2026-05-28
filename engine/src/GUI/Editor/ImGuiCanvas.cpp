@@ -58,7 +58,7 @@ void MainCanvas::render()
             ImGui::CaptureMouseFromApp(false);
         ImGui::SetCursorScreenPos(content_pos);
         ImGui::Text("FPS %.1f", io.Framerate);
-        setViewPort({ (int)content_pos.x, (int)content_pos.y, (int)content_size.x, (int)content_size.y });
+        setCanvasRect({ (int)content_pos.x, (int)content_pos.y, (int)content_size.x, (int)content_size.y });
 
         m_toolbar->render();
     }

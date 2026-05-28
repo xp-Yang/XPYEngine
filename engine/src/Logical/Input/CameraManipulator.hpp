@@ -1,9 +1,9 @@
 #ifndef CameraManipulator_hpp
 #define CameraManipulator_hpp
 
+#include "Base/Math/Rect.hpp"
 #include "Base/Math/Math.hpp"
 #include "Logical/Input/InputEnums.hpp"
-#include "GUI/Viewport.hpp"
 
 #if ENABLE_ECS
 namespace ecs {
@@ -16,7 +16,7 @@ struct CameraComponent;
 class CameraManipulator{
 public:
 	CameraManipulator(CameraComponent& camera_);
-	void syncContext(const Viewport& viewport);
+	void syncContext(const IntRect& view_rect);
 	void onUpdate();
 	void onKeyUpdate(int key, float frame_time);
 	void onMouseUpdate(double delta_x, double delta_y, MouseButton mouse_button);
@@ -36,7 +36,7 @@ protected:
 	CameraComponent& camera;
 #endif
 
-	Viewport m_viewport;
+	IntRect m_view_rect;
 
 	float m_goal_fov;
 

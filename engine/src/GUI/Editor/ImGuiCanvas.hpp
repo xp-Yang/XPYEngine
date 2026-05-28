@@ -2,7 +2,7 @@
 #define ImGuiCanvas_hpp
 
 #include "Base/Common.hpp"
-#include "GUI/Viewport.hpp"
+#include "Base/Math/Rect.hpp"
 
 struct ImGuiWindow;
 
@@ -15,15 +15,15 @@ class ImGuiCanvas {
 public:
     ImGuiCanvas(ImGuiEditor* parent) : m_parent(parent) {}
     virtual void render() = 0;
-    void setViewPort(const Viewport& viewport) { m_viewport = viewport; }
-    Viewport getViewport() const { return m_viewport; }
+    void setCanvasRect(const IntRect& canvas_rect) { m_canvas_rect = canvas_rect; }
+    IntRect canvasRect() const { return m_canvas_rect; }
     CanvasType type() const { return m_type; }
     ImGuiEditor* parent() const { return m_parent; }
     ImGuiWindow* getImGuiWindow() const { return m_imgui_window; }
 
 protected:
     CanvasType m_type;
-    Viewport m_viewport;
+    IntRect m_canvas_rect;
 
     ImGuiEditor* m_parent{ nullptr };
     ImGuiWindow* m_imgui_window{ nullptr };

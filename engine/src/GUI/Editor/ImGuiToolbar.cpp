@@ -28,11 +28,11 @@ void ImGuiToolbar::render()
 
 void ImGuiToolbar::renderToolbar()
 {
-    auto main_viewport = m_parent->getViewport();
+    auto main_canvas_rect = m_parent->canvasRect();
     ImGuiStyle &style = ImGui::GetStyle();
     ImVec2 button_size = ImVec2(40, 40);
     ImVec2 toolbar_size = ImVec2(3 * button_size.x + 4 * style.ItemSpacing.x, button_size.y + 2 * style.ItemSpacing.x);
-    ImVec2 toolbar_pos = ImVec2(main_viewport.width / 2.f - toolbar_size.x / 2.0f, 0.0f);
+    ImVec2 toolbar_pos = ImVec2(main_canvas_rect.width / 2.f - toolbar_size.x / 2.0f, 0.0f);
 
     ImVec2 toolbar_screen_pos = ImGui::GetWindowPos() + ImGui::GetWindowContentRegionMin() + toolbar_pos;
     ImGui::RenderFrame(toolbar_screen_pos,
@@ -71,11 +71,11 @@ void ImGuiToolbar::renderGizmos()
         break;
     }
 
-    auto main_viewport = m_parent->getViewport();
+    auto main_canvas_rect = m_parent->canvasRect();
 
     ImGuizmo::SetOrthographic(true);
     ImGuizmo::SetDrawlist();
-    ImGuizmo::SetRect(main_viewport.x, main_viewport.y, main_viewport.width, main_viewport.height);
+    ImGuizmo::SetRect(main_canvas_rect.x, main_canvas_rect.y, main_canvas_rect.width, main_canvas_rect.height);
 
     auto &camera = ref_scene->getMainCamera();
 
@@ -103,7 +103,7 @@ void ImGuiToolbar::renderGizmos()
     }
 
     ImVec2 air_window_size = ImVec2(128, 128);
-    ImVec2 air_window_pos = ImVec2(main_viewport.x, main_viewport.y);
+    ImVec2 air_window_pos = ImVec2(main_canvas_rect.x, main_canvas_rect.y);
     float camDistance = 8.f;
     ImGuizmo::ViewManipulate((float *)(&camera.view), camDistance, air_window_pos, air_window_size, 0x10101010);
 
@@ -129,11 +129,10 @@ void ImGuiToolbar::renderGizmos()
 
     if (camera)
     {
-        Viewport viewport = getMainViewport().value_or(Viewport());
-        viewport.transToScreenCoordinates();
+        IntRect canvas_rect = m_parent->canvasRect();
         ImVec2 air_window_size = ImVec2(128, 128);
         float camDistance = 8.f;
-        ImGuizmo::ViewManipulate((float *)(&camera->view), camDistance, ImVec2(viewport.x + viewport.width - air_window_size.x, viewport.y), air_window_size, 0x10101010);
+        ImGuizmo::ViewManipulate((float *)(&camera->view), camDistance, ImVec2(canvas_rect.x + canvas_rect.width - air_window_size.x, canvas_rect.y), air_window_size, 0x10101010);
     }
 #endif
 }

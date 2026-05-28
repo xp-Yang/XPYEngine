@@ -19,9 +19,8 @@ bool GUIInput::refreshState()
 {
 	ImGuiIO& io = ImGui::GetIO();
 
-	auto main_viewport = ref_editor->getMainViewport();
-	if (!(main_viewport.x <= io.MousePos.x && io.MousePos.x <= main_viewport.x + main_viewport.width &&
-		main_viewport.y <= io.MousePos.y && io.MousePos.y <= main_viewport.y + main_viewport.height) ||
+	auto main_canvas_rect = ref_editor->mainCanvasRect();
+	if (!main_canvas_rect.contains(io.MousePos.x, io.MousePos.y) ||
 		io.WantCaptureMouse)
 		return false;
 
@@ -72,7 +71,7 @@ bool GUIInput::refreshState()
 
 bool GUIInput::onUpdate(float delta_time)
 {
-	m_camera_manipulator->syncContext(ref_editor->getMainViewport());
+	m_camera_manipulator->syncContext(ref_editor->mainCanvasRect());
 	m_camera_manipulator->onUpdate();
 
 	if (!refreshState()) {
@@ -114,9 +113,9 @@ bool GUIInput::onUpdate(float delta_time)
 Vec2 GUIInput::mapToMainCanvasWindow(const Vec2& value)
 {
 	Vec2 pos = value;
-	auto main_viewport = ref_editor->getMainViewport();
-	pos.x -= main_viewport.x;
-	pos.y -= main_viewport.y;
+	auto main_canvas_rect = ref_editor->mainCanvasRect();
+	pos.x -= main_canvas_rect.x;
+	pos.y -= main_canvas_rect.y;
 	return pos;
 }
 
@@ -125,14 +124,14 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 	int x = (int)mouse_x;
 	int y = (int)mouse_y;
 	// map to picking framebuffer size (follows render resolution preset)
-	auto main_viewport = ref_editor->getMainViewport();
+	auto main_canvas_rect = ref_editor->mainCanvasRect();
 	Vec2 render_size = g_context.render_system->renderParams().renderTargetPixels();
 	const int fb_w = (int)render_size.x;
 	const int fb_h = (int)render_size.y;
 	if (fb_w <= 0 || fb_h <= 0)
 		return;
-	x *= fb_w / (float)main_viewport.width;
-	y *= fb_h / (float)main_viewport.height;
+	x *= fb_w / (float)main_canvas_rect.width;
+	y *= fb_h / (float)main_canvas_rect.height;
 	x = std::clamp(x, 0, fb_w - 1);
 	y = std::clamp(y, 0, fb_h - 1);
 	// in gl coordinate system, left-bottom is as origin

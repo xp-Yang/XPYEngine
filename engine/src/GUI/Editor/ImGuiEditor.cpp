@@ -94,9 +94,9 @@ void ImGuiEditor::endFrame()
     }
 }
 
-Viewport ImGuiEditor::getMainViewport() const
+IntRect ImGuiEditor::mainCanvasRect() const
 {
-    return m_main_canvas->getViewport();
+    return m_main_canvas->canvasRect();
 }
 
 void ImGuiEditor::popUpMenu()
