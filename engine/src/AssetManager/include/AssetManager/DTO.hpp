@@ -104,7 +104,6 @@ struct ObjectDTO
 
 struct ProjectDTO
 {
-	int schema_version{4};
 	std::string project_name{"XPYProject"};
 	std::vector<ObjectDTO> objects;
 };

@@ -152,7 +152,6 @@ inline void allMetaRegister()
 		.registerProperty(&ObjectDTO::has_camera, "has_camera")
 		.registerProperty(&ObjectDTO::camera, "camera");
 	registerClass<ProjectDTO>("ProjectDTO")
-		.registerProperty(&ProjectDTO::schema_version, "schema_version")
 		.registerProperty(&ProjectDTO::project_name, "project_name")
 		.registerProperty(&ProjectDTO::objects, "objects");
 

@@ -9,7 +9,7 @@ class Scene {
 public:
 	Scene();
 
-	GObject* createObject(const std::string& name);
+	GObject* createObject(const std::string& name, bool with_transform = true);
 	GObject* createCamera(const std::string& name = "Main Camera");
 	GObject* loadModel(const std::string& filepath);
 	GObject* createDirectionalLight(const std::string& name = "Directional Light");

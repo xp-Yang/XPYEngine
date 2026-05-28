@@ -18,10 +18,11 @@ Scene::Scene()
 	createDirectionalLight();
 }
 
-GObject* Scene::createObject(const std::string& name)
+GObject* Scene::createObject(const std::string& name, bool with_transform)
 {
 	auto obj = GObject::create(nullptr, name);
-	obj->addComponent<TransformComponent>();
+	if (with_transform)
+		obj->addComponent<TransformComponent>();
 	m_objects.push_back(std::shared_ptr<GObject>(obj));
 	return obj;
 }
@@ -46,7 +47,7 @@ GObject* Scene::createCamera(const std::string& name)
 
 GObject* Scene::createDirectionalLight(const std::string& name)
 {
-	GObject* obj = createObject(name);
+	GObject* obj = createObject(name, false);
 	auto& light = obj->addComponent<DirectionalLightComponent>();
 	light.luminousColor = Color3(1.0f);
 	light.direction = { 15.0f, -30.0f, 15.0f };
@@ -139,7 +140,6 @@ GObject* Scene::loadModel(const std::string& filepath)
 ProjectDTO Scene::buildProjectDTOFromScene(const std::string& project_filepath)
 {
 	ProjectDTO dto;
-	dto.schema_version = 4;
     dto.project_name = PathService::getFileName(project_filepath);
 	const std::string project_dir = PathService::getDirectory(project_filepath);
 
@@ -267,7 +267,7 @@ void Scene::applyProjectDTOToScene(const ProjectDTO& dto, bool clear_old)
 		if (!obj && !model_abs.empty() && (ft == FileType::OBJ || ft == FileType::None))
 			obj = this->loadModel(model_abs);
 		if (!obj && (obj_dto.has_point_light || obj_dto.has_directional_light))
-			obj = this->createObject(obj_dto.name.empty() ? "Light" : obj_dto.name);
+			obj = this->createObject(obj_dto.name.empty() ? "Light" : obj_dto.name, obj_dto.has_point_light);
 		if (!obj) continue;
 
 		obj->setName(obj_dto.name.empty() ? obj->name() : obj_dto.name);
