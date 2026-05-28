@@ -14,10 +14,10 @@ file(GLOB_RECURSE HEAD_FILES "${ENGINE_SRC_DIR}/*.hpp" "${ENGINE_SRC_DIR}/*.h" "
 file(GLOB_RECURSE ASSET_FILES "${ENGINE_ASSET_DIR}/*.*")
 
 if(NOT WIN32)
-	list(FILTER SRC_FILES EXCLUDE REGEX ".*/GUI/Platform/Windows/.*")
+	list(FILTER SRC_FILES EXCLUDE REGEX ".*/Platform/Windows/.*")
 endif()
 if(NOT APPLE)
-	list(FILTER SRC_FILES EXCLUDE REGEX ".*/GUI/Platform/Mac/.*")
+	list(FILTER SRC_FILES EXCLUDE REGEX ".*/Platform/Mac/.*")
 endif()
 
 #使ide呈现文件夹层级结构

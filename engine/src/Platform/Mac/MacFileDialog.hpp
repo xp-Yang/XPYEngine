@@ -1,7 +1,7 @@
 #ifndef MacFileDialog_hpp
 #define MacFileDialog_hpp
 
-#include "GUI/FileDialog.hpp"
+#include "Platform/FileDialog.hpp"
 
 class MacFileDialog : public FileDialog {
 public:
