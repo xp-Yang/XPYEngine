@@ -2,6 +2,7 @@
 #include "Base/Utils/PathService.hpp"
 #include "Cube/cubetest.hpp"
 #include "GcodePreview/GcodePreview.hpp"
+#include "MaterialBallTest/MaterialBallTest.hpp"
 
 int main()
 {
@@ -17,8 +18,11 @@ int main()
     engine.setExternalGuiCallback([gcode_feature]() { gcode_feature->renderGui(); });
     engine.init();
 
-    Cubetest* cubetest = new Cubetest();
-    cubetest->init();
+    // Cubetest* cubetest = new Cubetest();
+    // cubetest->init();
+
+    MaterialBallTest materialBallTest;
+    materialBallTest.init();
 
     engine.run();
     engine.shutdown();
