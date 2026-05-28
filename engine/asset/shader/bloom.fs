@@ -1,21 +1,16 @@
 #version 330 core
 
-#include "common.h"
-
 in vec2 fragUV;
 
-uniform sampler2D Texture;
-//uniform sampler2DMS Texture;
-uniform sampler2D bloomMap;
+uniform sampler2D sceneColor;
+uniform sampler2D bloomTexture;
+uniform float bloomIntensity;
 
 out vec4 FragColor;
 
 void main()
 {
-    vec3 sceneColor = texture(Texture, fragUV).rgb;      
-
-    vec3 bloomColor = texture(bloomMap, fragUV).rgb;
-    sceneColor += bloomColor; // additive blending
-
-    FragColor = vec4(sceneColor, 1.0);
+    vec3 scene = texture(sceneColor, fragUV).rgb;
+    vec3 bloom = texture(bloomTexture, fragUV).rgb;
+    FragColor = vec4(scene + bloom * bloomIntensity, 1.0);
 }

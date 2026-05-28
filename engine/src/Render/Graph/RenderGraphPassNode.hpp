@@ -27,9 +27,7 @@ static inline RGResourceName GBufferDepth = "GBuffer.Depth";
 static inline RGResourceName SceneColor = "Scene.Color";
 static inline RGResourceName SceneDepth = "Scene.Depth";
               
-static inline RGResourceName BloomBrightColor = "Bloom.BrightColor";
-static inline RGResourceName BloomPingPong1Color = "Bloom.PingPong1Color";
-static inline RGResourceName BloomPingPong2Color = "Bloom.PingPong2Color";
+// Old bloom ping-pong resources removed; BloomPass now manages its own mip chain internally.
               
 static inline RGResourceName OutlineMaskColor = "Outline.MaskColor";
 static inline RGResourceName OutlineMaskDepth = "Outline.MaskDepth";
@@ -47,9 +45,7 @@ namespace RGTarget {
 static inline RGTargetName Main = "Main";
 // 窗口默认framebuffer
 static inline RGTargetName ScreenFrameBuffer = "ScreenFrameBuffer";
-// BloomPass 的辅助 pingpong framebuffer
-static inline RGTargetName BloomPingPong1 = "Bloom.PingPong1";
-static inline RGTargetName BloomPingPong2 = "Bloom.PingPong2";
+// Old bloom ping-pong targets removed; BloomPass now manages its own mip chain FBOs internally.
 // OutlinePass 的辅助 mask framebuffer
 static inline RGTargetName OutlineMask = "Outline.Mask";
 // ShadowPass 的点光源 cubemap depth 的framebuffer

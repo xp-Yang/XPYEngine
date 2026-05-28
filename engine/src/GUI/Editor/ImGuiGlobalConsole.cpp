@@ -112,8 +112,14 @@ void ImGuiGlobalConsole::render() {
 
     ImGui::Text("PostProcess:");
     ImGui::Checkbox("FXAA", &render_params.post_processing_params.fxaa); ImGui::SameLine();
-    //ImGui::Checkbox("reflection", &render_params.reflection); ImGui::SameLine();
     ImGui::Checkbox("bloom", &render_params.post_processing_params.bloom);
+    if (render_params.post_processing_params.bloom)
+    {
+        ImGui::SliderFloat("bloom threshold", &render_params.post_processing_params.bloom_threshold, 0.0f, 5.0f, "%.2f");
+        ImGui::SliderFloat("bloom soft knee", &render_params.post_processing_params.bloom_soft_knee, 0.0f, 1.0f, "%.2f");
+        ImGui::SliderFloat("bloom intensity", &render_params.post_processing_params.bloom_intensity, 0.0f, 5.0f, "%.2f");
+        ImGui::SliderInt("bloom mip levels", &render_params.post_processing_params.bloom_mip_levels, 2, 6);
+    }
 
     separator();
 

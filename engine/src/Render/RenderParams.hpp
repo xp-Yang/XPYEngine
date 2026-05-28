@@ -24,6 +24,11 @@ struct ShadowParams {
 
 struct PostProcessingParams {
     bool bloom = true;
+    float bloom_threshold = 1.0f;
+    float bloom_soft_knee = 0.5f;
+    float bloom_intensity = 1.0f;
+    int   bloom_mip_levels = 5;
+
     bool hdr = true;
     bool gamma = true;
     bool fxaa = true;

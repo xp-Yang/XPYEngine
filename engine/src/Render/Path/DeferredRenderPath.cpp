@@ -155,14 +155,18 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
 
     m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
         .setEnabled(bloom_used)
-        .setDisabledExecution(RGDisabledExecution::Clear)
         .modify(RGResource::SceneColor)
-        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .color(RGResource::BloomBrightColor, RhiTexture::Format::RGB16F)
-        .target(RGTarget::BloomPingPong1, RenderTargetType::FrameBuffer)
-        .color(RGResource::BloomPingPong1Color, RhiTexture::Format::RGB16F)
-        .target(RGTarget::BloomPingPong2, RenderTargetType::FrameBuffer)
-        .color(RGResource::BloomPingPong2Color, RhiTexture::Format::RGB16F);
+        .setSetup([&render_params](RenderPass& render_pass)
+        {
+            auto& bloom_pass = static_cast<BloomPass&>(render_pass);
+            const auto& pp = render_params.post_processing_params;
+            bloom_pass.setParams({
+                pp.bloom_threshold,
+                pp.bloom_soft_knee,
+                pp.bloom_intensity,
+                pp.bloom_mip_levels
+            });
+        });
 
     m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
         .setEnabled(render_params.post_processing_params.fxaa)

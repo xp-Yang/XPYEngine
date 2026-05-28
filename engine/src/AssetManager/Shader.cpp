@@ -206,6 +206,12 @@ Shader Shader::create(const ShaderType &type)
         return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/rayTracing.fs"};
     case ShaderType::BloomShader:
         return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/bloom.fs"};
+    case ShaderType::BloomDownsampleShader:
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/bloomDownsample.fs"};
+    case ShaderType::BloomUpsampleShader:
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/bloomUpsample.fs"};
+    case ShaderType::BloomCompositeShader:
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/bloom.fs"};
     case ShaderType::CubeMapShader:
         return Shader{asset_dir + "/shader/mesh.vs", asset_dir + "/shader/cubeMap.fs"};
     case ShaderType::ExtractBrightShader:
