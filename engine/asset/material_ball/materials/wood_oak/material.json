@@ -1,0 +1,10 @@
+{
+  "display_name": "Oak Wood",
+  "base_color_factor": [0.55, 0.38, 0.22],
+  "metallic_factor": 0.0,
+  "roughness_factor": 0.6,
+  "ao_factor": 1.0,
+  "albedo_map": "albedo.png",
+  "roughness_map": "roughness.png",
+  "normal_map": "normal.png"
+}

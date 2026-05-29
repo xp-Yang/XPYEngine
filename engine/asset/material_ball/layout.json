@@ -1,0 +1,17 @@
+{
+  "spacing": 3.0,
+  "lift": 1.0,
+  "scale": 1.0,
+  "origin": [0.0, 0.0, 0.0],
+  "row_counts": [3, 5, 6, 6, 6, 6],
+  "materials": [
+    "chrome", "gold_polished", "copper_polished",
+    "silver", "brass", "aluminum", "iron", "titanium",
+    "gold_brushed", "copper_brushed", "black_metal", "rusted_metal",
+    "ceramic_white", "marble_white", "marble_black", "jade",
+    "plastic_red", "plastic_green", "plastic_blue", "plastic_yellow",
+    "plastic_white", "plastic_black", "rubber_black", "pearl",
+    "wood_oak", "wood_walnut", "concrete", "brick_red",
+    "sand", "emerald", "ruby", "sapphire"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "display_name": "Gold Polished",
+  "base_color_factor": [1.0, 0.86, 0.57],
+  "metallic_factor": 1.0,
+  "roughness_factor": 0.12,
+  "ao_factor": 1.0,
+  "albedo_map": "albedo.png",
+  "metallic_map": "metallic.png",
+  "roughness_map": "roughness.png",
+  "normal_map": "normal.png",
+  "ao_map": "ao.png"
+}
