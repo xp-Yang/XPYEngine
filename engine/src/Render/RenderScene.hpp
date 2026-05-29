@@ -52,6 +52,9 @@ public:
     Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
     float shininess{ 128.0f };
 
+    // 是否拥有真实法线贴图（normal_map 永不为空，会回退到默认贴图，需此标志门控）。
+    bool has_normal_map{ false };
+
     // Shared material state.
     float alpha{ 1.0f };
     uint64_t material_version{ 0 };

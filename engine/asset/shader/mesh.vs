@@ -4,6 +4,7 @@ layout (location = 1) in vec3 vertex_normal;
 layout (location = 2) in vec2 vertex_uv;
 layout (location = 3) in ivec4 bone_ids;
 layout (location = 4) in vec4 bone_weights;
+layout (location = 5) in vec4 vertex_tangent;
 
 const int MAX_BONES = 100;
 
@@ -15,15 +16,20 @@ uniform bool useSkinning;
 uniform int bone_count;
 
 out VS_OUT {
-    vec3 fragWorldPos;          //世界坐标
-    vec3 fragWorldNormal;       //世界坐标
+    vec3 fragWorldPos;          //????????
+    vec3 fragWorldNormal;       //????????
     vec2 fragUV;
 } vs_out;
+
+// ??????????????????????mesh.vs ????? fs ?????????? VS_OUT ????????????
+// ?? PBR ?? (gBuffer_pbr.fs / fowardLighting_pbr.fs) ??????? in??????????
+out vec4 vWorldTangent; // xyz = ????????, w = ????
 
 void main()
 {
     vec4 skinned_pos = vec4(vertex_pos, 1.0);
     vec3 skinned_normal = vertex_normal;
+    vec3 skinned_tangent = vertex_tangent.xyz;
     if (useSkinning && bone_count > 0) {
         mat4 skin_matrix = mat4(0.0);
         for (int i = 0; i < 4; ++i) {
@@ -38,12 +44,14 @@ void main()
         }
         skinned_pos = skin_matrix * vec4(vertex_pos, 1.0);
         skinned_normal = mat3(skin_matrix) * vertex_normal;
+        skinned_tangent = mat3(skin_matrix) * vertex_tangent.xyz;
     }
 
     vs_out.fragWorldPos = vec3(model * skinned_pos);
     vs_out.fragWorldNormal = normalize(mat3(model) * skinned_normal);
 	vs_out.fragUV = vertex_uv;
-    //这里输出的gl_Position为Clip Space，给到gs时还是Clip Space，到fs时已经自动做了 (透视除法) => NDC => (视口变换) => Screen Space，变成了屏幕空间Screen Space
-    //裁剪坐标
+    vWorldTangent = vec4(mat3(model) * skinned_tangent, vertex_tangent.w);
+    //?????????gl_Position?Clip Space??????gs?????Clip Space????fs??????????? (??????) => NDC => (?????) => Screen Space?????????????Screen Space
+    //????????
     gl_Position = projection * view * model * skinned_pos;
 }

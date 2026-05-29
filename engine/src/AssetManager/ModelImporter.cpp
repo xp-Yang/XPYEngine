@@ -99,7 +99,7 @@ bool ModelImporter::load(const std::string &file_path)
     else
     {
         auto importer = new Assimp::Importer();
-        m_scene = importer->ReadFile(file_path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+        m_scene = importer->ReadFile(file_path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
         if (!m_scene || m_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !m_scene->mRootNode)
         {
             auto error_str = importer->GetErrorString();
@@ -200,6 +200,15 @@ std::shared_ptr<Mesh> ModelImporter::load_sub_mesh_data(aiMesh *mesh)
         }
         else
             vertex.texture_uv = Vec2(0.0f, 0.0f);
+
+        if (mesh->HasTangentsAndBitangents())
+        {
+            Vec3 t(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z);
+            Vec3 b(mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z);
+            // 手性：镜像 UV 处 assimp 的 bitangent 与 cross(N,T) 反向，记 w=-1 供着色器还原副切线。
+            float handedness = (glm::dot(glm::cross(vertex.normal, t), b) < 0.0f) ? -1.0f : 1.0f;
+            vertex.tangent = Vec4(t, handedness);
+        }
 
         vertices.push_back(vertex);
     }

@@ -91,6 +91,7 @@ RenderMeshResource::RenderMeshResource(std::shared_ptr<Mesh> mesh_data)
         {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},   // uv
         {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},      // bone ids
         {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)}, // bone weights
+        {5, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, tangent)},      // tangent (xyz) + handedness (w)
     });
     m_vertex_layout->create();
 }
@@ -183,6 +184,12 @@ void RenderMaterialResource::updateFrom(std::shared_ptr<Material> material_)
         specular_map = RenderTextureData(material_->specular_texture).texture;
     if (!normal_map)
         normal_map = RenderTextureData(material_->normal_texture).texture;
+    // 仅当材质拥有“真实”法线贴图时才扰动法线。create_complete_default_material /
+    // fillBlinnPhongFromPBR 会把 normal_texture 填成默认白图 pure_white_map.png（非空且非平面法线），
+    // 直接按非空判断会把白图当法线图采样 (1,1,1)，导致整面法线歪斜、镜像 UV 中缝裂开。
+    static const std::string kDefaultNormalPath = std::string(ASSET_DIR) + "/images/pure_white_map.png";
+    has_normal_map = material_->normal_texture
+        && material_->normal_texture->texture_filepath != kDefaultNormalPath;
     if (!height_map)
         height_map = RenderTextureData(material_->height_texture).texture;
 }

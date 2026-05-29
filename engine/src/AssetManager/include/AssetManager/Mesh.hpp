@@ -10,6 +10,7 @@ struct Vertex {
 	Vec3 position;
 	Vec3 normal;
 	Vec2 texture_uv;
+	Vec4 tangent{ 0.0f, 0.0f, 0.0f, 1.0f }; // xyz = 切线，w = 副切线手性（应对镜像 UV）
 	std::array<int, MAX_BONE_INFLUENCE> bone_ids{ -1, -1, -1, -1 };
 	std::array<float, MAX_BONE_INFLUENCE> bone_weights{ 0.0f, 0.0f, 0.0f, 0.0f };
 };

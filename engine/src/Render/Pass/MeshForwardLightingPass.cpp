@@ -72,6 +72,8 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
             bindings.setTexture("metallic_map", 1, material.metallic_map);
             bindings.setTexture("roughness_map", 2, material.roughness_map);
             bindings.setTexture("ao_map", 3, material.ao_map);
+            bindings.setTexture("normal_map", 4, material.normal_map);
+            bindings.setBool("has_normal_map", material.has_normal_map);
         }
         else
         {
