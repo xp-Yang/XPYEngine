@@ -14,7 +14,12 @@
 
 #include <AssetManager/MeshAlgorithm.hpp>
 
+#include "Render/IBL/IBLPreprocessor.hpp"
+#include "Base/Utils/PathService.hpp"
+
 #include "GlobalContext.hpp"
+
+#include <fstream>
 
 RenderSystem::RenderSystem()
 {
@@ -115,7 +120,46 @@ void RenderSystem::initializeRenderResources()
     m_render_scene.skybox().skybox_cube_map = RenderTextureData(skybox_cube_texture).texture;
     m_render_scene.skybox().mesh = std::make_shared<RenderMeshResource>(skybox_mesh);
 
+    buildIBLResources(asset_dir);
+
     m_initialized = true;
+}
+
+void RenderSystem::buildIBLResources(const std::string& asset_dir)
+{
+    IBLPreprocessor preprocessor;
+
+    // 1) 优先使用配置的 HDR；2) 否则使用约定默认 HDR；3) 都不存在则从 skybox cube 派生。
+    std::string hdr_path = m_render_params.ibl.env_hdr_path;
+    if (!hdr_path.empty() && !PathService::isAbsolute(hdr_path))
+        hdr_path = PathService::join(asset_dir, hdr_path);
+
+    auto fileExists = [](const std::string& p) {
+        if (p.empty())
+            return false;
+        std::ifstream f(p);
+        return f.good();
+    };
+
+    if (!fileExists(hdr_path))
+    {
+        const std::string default_hdr = asset_dir + "/images/ibl/environment.hdr";
+        hdr_path = fileExists(default_hdr) ? default_hdr : std::string();
+    }
+
+    bool built = false;
+    if (!hdr_path.empty())
+    {
+        built = preprocessor.buildFromEquirectHDR(hdr_path, m_builtin_resources.ibl);
+        if (built)
+            m_render_scene.skybox().skybox_cube_map = m_builtin_resources.ibl.environment_cube;
+    }
+
+    if (!built)
+    {
+        // 回退：直接用 skybox 的 6 面 cubemap 派生 IBL（LDR 近似）。
+        preprocessor.buildFromEnvironmentCube(m_render_scene.skybox().skybox_cube_map, m_builtin_resources.ibl);
+    }
 }
 
 void RenderSystem::syncRenderSceneChanges(Scene& scene)

@@ -45,6 +45,17 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         k++;
     }
     bindings.setInt("point_lights_size", k);
+
+    // IBL 环境光（forward 纹理单元：cube shadow 6-10 之后，IBL 固定 11/12/13）。
+    const IBLResources& ibl = context.builtinResources().ibl;
+    const bool ibl_ready = m_pbr && m_ibl && ibl.isReady();
+    bindings.setBool("iblEnable", ibl_ready);
+    RhiTexture* default_cube = RenderTextureData::defaultCubeTexture().texture;
+    RhiTexture* default_2d = RenderTextureData::defaultTexture().texture;
+    bindings.setCubeTexture("irradianceMap", 11, ibl_ready ? ibl.irradiance_cube : default_cube);
+    bindings.setCubeTexture("prefilterMap", 12, ibl_ready ? ibl.prefilter_cube : default_cube);
+    bindings.setTexture("brdfLUT", 13, ibl_ready ? ibl.brdf_lut : default_2d);
+
     for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections())
     {
         if (!render_node)

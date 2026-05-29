@@ -102,6 +102,7 @@ void ImGuiGlobalConsole::render() {
 
     ImGui::Text("Effect:");
     ImGui::Checkbox("skybox", &render_params.effect_params.skybox); ImGui::SameLine();
+    ImGui::Checkbox("IBL", &render_params.ibl.enable); ImGui::SameLine();
     ImGui::Checkbox("shadow", &render_params.shadow_params.enable); ImGui::SameLine();
     ImGui::Checkbox("checkerboard", &render_params.effect_params.checkerboard); ImGui::SameLine();
     ImGui::Checkbox("wireframe", &render_params.effect_params.wireframe); ImGui::SameLine();

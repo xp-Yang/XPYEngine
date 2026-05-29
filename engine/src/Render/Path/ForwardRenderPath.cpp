@@ -60,6 +60,7 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
             auto& main_pass = static_cast<MeshForwardLightingPass&>(render_pass);
             main_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             main_pass.enableReflection(render_params.effect_params.reflection);
+            main_pass.enableIBL(render_params.ibl.enable);
         });
 
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))

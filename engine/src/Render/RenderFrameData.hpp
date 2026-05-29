@@ -8,7 +8,9 @@
 #include <memory>
 #include <vector>
 
-static const size_t MAX_CUBE_SHADOW_MAP_COUNT = 8;
+// 注意：与 GLSL common.h 的 MAX_POINT_LIGHTS_COUNT 保持一致。
+// 降为 5 是为了给 IBL 三张纹理让出 sampler 单元（见 IBL 方案“纹理单元预算”）。
+static const size_t MAX_CUBE_SHADOW_MAP_COUNT = 5;
 
 struct RenderDirectionalLightData {
     Color3 color;

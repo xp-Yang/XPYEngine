@@ -3,6 +3,8 @@
 
 #include "Base/Common.hpp"
 
+#include <string>
+
 enum class RenderPathType {
     Forward,
     Deferred,
@@ -25,7 +27,7 @@ struct ShadowParams {
 struct PostProcessingParams {
     bool bloom = true;
     float bloom_threshold = 1.0f;
-    float bloom_soft_knee = 0.5f;
+    float bloom_soft_knee = 0.3f;
     float bloom_intensity = 1.0f;
     int   bloom_mip_levels = 5;
 
@@ -38,12 +40,19 @@ struct PostProcessingParams {
 };
 
 struct EffectParams {
-    bool skybox = false;
+    bool skybox = true;
     bool reflection = false;
     bool wireframe = false;
     bool show_normal = false;
     bool checkerboard = false;
     //int pixelate_level = 1;
+};
+
+struct IBLParams {
+    bool enable = true;
+    // 可选等距柱状 HDR 路径（相对 ASSET_DIR 或绝对路径）。
+    // 为空时回退到从已有 skybox cubemap 派生 IBL。
+    std::string env_hdr_path;
 };
 
 /** Preset internal render target resolution (offscreen FBOs). Not tied to window size. */
@@ -70,13 +79,14 @@ inline Vec2 renderResolutionPresetSize(RenderResolutionPreset preset)
 
 struct RenderParams {
     RenderPathType render_path_type = RenderPathType::Deferred;
-    MaterialModel material_model = MaterialModel::BlinnPhong;
+    MaterialModel material_model = MaterialModel::PBR;
     MSAAParams msaa_params;
     ShadowParams shadow_params;
     PostProcessingParams post_processing_params;
     EffectParams effect_params;
+    IBLParams ibl;
 
-    RenderResolutionPreset render_resolution = RenderResolutionPreset::FullHD_1080p;
+    RenderResolutionPreset render_resolution = RenderResolutionPreset::UHD_4K;
 
     Vec2 renderTargetPixels() const { return renderResolutionPresetSize(render_resolution); }
 };

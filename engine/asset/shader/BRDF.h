@@ -40,6 +40,35 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+// 粗糙度版 Fresnel：用于 IBL 环境光，避免粗糙表面边缘反射过强。
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+// Split-Sum IBL 环境光。依赖 common.h 中声明的 iblEnable / irradianceMap /
+// prefilterMap / brdfLUT。iblEnable 关闭时退回低强度常量 ambient（线性空间）。
+vec3 computeIBLAmbient(vec3 N, vec3 V, vec3 albedo, vec3 F0, float metallic, float roughness, float ao)
+{
+    if (!iblEnable)
+        return 0.03 * albedo * ao;
+
+    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    vec3 kS = F;
+    vec3 kD = (1.0 - kS) * (1.0 - metallic);
+
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+    vec3 diffuse = irradiance * albedo;
+
+    const float MAX_REFLECTION_LOD = 4.0; // 与 prefilter mip 级数(5)-1 一致
+    vec3 R = reflect(-V, N);
+    vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
+    vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+    return (kD * diffuse + specular) * ao;
+}
+
 vec3 BRDF(vec3  L,
           vec3  V,
           vec3  N,

@@ -64,6 +64,16 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 			bindings.setTexture("shadow_map", 6, dir_light_shadow_texture);
 		}
     }
+		// IBL 环境光（固定单元 7/8/9，见 IBL 方案“纹理单元预算”方案 A）。
+		const IBLResources& ibl = context.builtinResources().ibl;
+		const bool ibl_ready = m_pbr && m_ibl && ibl.isReady();
+		bindings.setBool("iblEnable", ibl_ready);
+		RhiTexture* default_cube = RenderTextureData::defaultCubeTexture().texture;
+		RhiTexture* default_2d = RenderTextureData::defaultTexture().texture;
+		bindings.setCubeTexture("irradianceMap", 7, ibl_ready ? ibl.irradiance_cube : default_cube);
+		bindings.setCubeTexture("prefilterMap", 8, ibl_ready ? ibl.prefilter_cube : default_cube);
+		bindings.setTexture("brdfLUT", 9, ibl_ready ? ibl.brdf_lut : default_2d);
+
     std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
     const int max_cube_shadow_maps = static_cast<int>(MAX_CUBE_SHADOW_MAP_COUNT);
     int point_light_size = std::min(max_cube_shadow_maps, static_cast<int>(cube_shadow_maps.size()));
@@ -73,7 +83,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
             ? cube_shadow_maps[i]
             : RenderTextureData::defaultCubeTexture().texture;
         std::string cube_map_id_str = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-        bindings.setCubeTexture(cube_map_id_str, 7 + i, cube_shadow_map);
+        bindings.setCubeTexture(cube_map_id_str, 10 + i, cube_shadow_map);
     }
 
 	int point_light_idx = 0;

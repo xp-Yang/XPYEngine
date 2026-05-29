@@ -29,6 +29,7 @@ public:
 
 protected:
     void initializeRenderResources();
+    void buildIBLResources(const std::string& asset_dir);
     void syncRenderSceneChanges(Scene& scene);
     void rebuildRenderSceneFromScene(Scene& scene);
     void rebuildObjectRenderProxy(GObject& object);

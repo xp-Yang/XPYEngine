@@ -4,8 +4,8 @@
 #include "BRDF.h"
 
 in VS_OUT {
-    vec3 fragWorldPos;          //世界坐标
-    vec3 fragWorldNormal;       //局部坐标
+    vec3 fragWorldPos;          //????????
+    vec3 fragWorldNormal;       //???????
     vec2 fragUV;
 } fs_in;
 
@@ -49,7 +49,7 @@ void main()
         vec3 L = normalize(-directionalLight.direction);
         vec3 H = normalize(V + L);
         vec3 radiance = directionalLight.color.xyz;  
-        Lo += shadowFactor * radiance * BRDF(L, V, N, F0, radiance, metallic, roughness);  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+        Lo += shadowFactor * radiance * BRDF(L, V, N, F0, albedo, metallic, roughness);  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
 
     for(int i = 0; i < point_lights_size; ++i) 
     {
@@ -61,12 +61,11 @@ void main()
         vec3 radiance = pointLights[i].color.xyz * attenuation;  
 
         // add to outgoing radiance Lo
-        Lo += radiance * BRDF(L, V, N, F0, radiance, metallic, roughness);  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+        Lo += radiance * BRDF(L, V, N, F0, albedo, metallic, roughness);  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
     }   
     
-    // ambient lighting (note that the next IBL tutorial will replace 
-    // this ambient lighting with environment lighting).
-    vec3 ambient = 0.3 * albedo * ao;
+    // ambient lighting: Split-Sum IBL（iblEnable 关闭时退回常量 ambient）。
+    vec3 ambient = computeIBLAmbient(N, V, albedo, F0, metallic, roughness, ao);
 
     vec3 color = ambient + Lo;
 

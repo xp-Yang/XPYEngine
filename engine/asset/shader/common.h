@@ -16,10 +16,18 @@ uniform sampler2D shadow_map;
 uniform mat4 lightSpaceMatrix;
 
 // TODO shader里怎么用动态数组
-const int MAX_POINT_LIGHTS_COUNT = 8;
+// 注意：降为 5 是为了给 IBL 让出纹理单元（见 IBL 方案“纹理单元预算”）。
+// 必须与 C++ 端 MAX_CUBE_SHADOW_MAP_COUNT 保持一致。
+const int MAX_POINT_LIGHTS_COUNT = 5;
 uniform int point_lights_size;
 uniform PointLight pointLights[MAX_POINT_LIGHTS_COUNT];
 uniform samplerCube cube_shadow_maps[MAX_POINT_LIGHTS_COUNT];
+
+// IBL（Image-Based Lighting）环境光资源。iblEnable 关闭时退回常量 ambient。
+uniform bool iblEnable;
+uniform samplerCube irradianceMap;
+uniform samplerCube prefilterMap;
+uniform sampler2D brdfLUT;
 
 const float gamma = 2.2;
 

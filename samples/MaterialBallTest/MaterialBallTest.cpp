@@ -340,7 +340,7 @@ void MaterialBallTest::createLighting(Scene* scene)
     // 主方向光：补出阴影形状，待 IBL 接入后可进一步弱化。
     if (GObject* dir_light = scene->createDirectionalLight("GalleryKeyLight")) {
         if (auto* light = dir_light->getComponent<DirectionalLightComponent>()) {
-            light->luminousColor = Color3(3.0f, 3.0f, 3.0f);
+            light->luminousColor = Color3(1.5f, 1.5f, 1.5f);
             light->direction = Vec3(-0.4f, -1.0f, -0.5f);
         }
     }

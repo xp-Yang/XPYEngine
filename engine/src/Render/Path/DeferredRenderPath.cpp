@@ -108,6 +108,7 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         {
             auto& lighting_pass = static_cast<DeferredLightingPass&>(render_pass);
             lighting_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
+            lighting_pass.enableIBL(render_params.ibl.enable);
         });
     if (render_params.material_model == MaterialModel::PBR)
     {
