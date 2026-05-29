@@ -32,6 +32,9 @@ struct PostProcessingParams {
     bool hdr = true;
     bool gamma = true;
     bool fxaa = true;
+
+    bool tone_mapping = true;
+    float exposure = 1.0f;
 };
 
 struct EffectParams {

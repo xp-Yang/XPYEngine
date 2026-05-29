@@ -13,6 +13,7 @@
 #include "../Pass/PickingPass.hpp"
 #include "../Pass/OutlinePass.hpp"
 #include "../Pass/FXAAPass.hpp"
+#include "../Pass/ToneMappingPass.hpp"
 #include "../Pass/FinalPass.hpp"
 
 #include "Render/Graph/RenderGraphDumper.hpp"
@@ -30,6 +31,7 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
     m_render_passes[RenderPass::Type::Bloom] = std::make_unique<BloomPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
     m_render_passes[RenderPass::Type::FXAA] = std::make_unique<FXAAPass>();
+    m_render_passes[RenderPass::Type::ToneMapping] = std::make_unique<ToneMappingPass>();
     m_render_passes[RenderPass::Type::WireFrame] = std::make_unique<WireFramePass>();
     m_render_passes[RenderPass::Type::CheckerBoard] = std::make_unique<CheckerBoardPass>();
     m_render_passes[RenderPass::Type::Normal] = std::make_unique<NormalPass>();
@@ -48,6 +50,9 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
     const auto& render_params = ref_render_system->renderParams();
     const bool checkerboard_enabled = render_params.effect_params.checkerboard;
     const bool bloom_used = render_params.post_processing_params.bloom && !checkerboard_enabled;
+    const bool tone_mapping_used = render_params.post_processing_params.tone_mapping
+        && render_params.post_processing_params.hdr
+        && !checkerboard_enabled;
     auto pass = [this](RenderPass::Type type) -> RenderPass*
     {
         return m_render_passes.at(type).get();
@@ -171,6 +176,15 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
     m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
         .setEnabled(render_params.post_processing_params.fxaa)
         .modify(RGResource::SceneColor);
+
+    m_render_graph.addPass(RenderPass::Type::ToneMapping, pass(RenderPass::Type::ToneMapping))
+        .setEnabled(tone_mapping_used)
+        .modify(RGResource::SceneColor)
+        .setSetup([&render_params](RenderPass& render_pass)
+        {
+            auto& tone_pass = static_cast<ToneMappingPass&>(render_pass);
+            tone_pass.setExposure(render_params.post_processing_params.exposure);
+        });
 
     RGResourceName beforeFinalColor = checkerboard_enabled ? RGResource::CheckerBoardColor : RGResource::SceneColor;
     RGResourceName beforeFinalDepth = checkerboard_enabled ? RGResource::CheckerBoardDepth : RGResource::SceneDepth;

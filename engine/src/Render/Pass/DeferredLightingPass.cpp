@@ -12,8 +12,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferDepth);
 	if (!framebuffer || !gbuffer_framebuffer)
 		return;
-	// framebuffer clear color before gamma correction: Color4(0.046, 0.046, 0.046, 1.0)
-	m_command_buffer->beginPass(framebuffer, Color4(0.251, 0.251, 0.251, 1.0)); // after gamma correction
+	m_command_buffer->beginPass(framebuffer, Color4(0.046f, 0.046f, 0.046f, 1.0f));
 
 	// deferred lighting
     const ShaderType lighting_shader = m_pbr ? ShaderType::DeferredLightingShader : ShaderType::DeferredLightingPhongShader;

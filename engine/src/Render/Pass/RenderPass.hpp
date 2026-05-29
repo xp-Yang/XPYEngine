@@ -44,6 +44,7 @@ public:
         // post process
         Bloom,
         FXAA,
+        ToneMapping,
         ColorGrading,
         
         Final,

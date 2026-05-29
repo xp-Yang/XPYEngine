@@ -29,6 +29,7 @@ enum class ShaderType {
 	InstancingShader,
 	BillBoardShader,
 	FXAAShader,
+	ToneMappingShader,
 	DebugTexturePreviewShader,
 	TransparentShader,
 };

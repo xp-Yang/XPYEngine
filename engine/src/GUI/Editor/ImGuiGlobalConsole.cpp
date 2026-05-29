@@ -120,6 +120,11 @@ void ImGuiGlobalConsole::render() {
         ImGui::SliderFloat("bloom intensity", &render_params.post_processing_params.bloom_intensity, 0.0f, 5.0f, "%.2f");
         ImGui::SliderInt("bloom mip levels", &render_params.post_processing_params.bloom_mip_levels, 2, 6);
     }
+    ImGui::Checkbox("tone mapping", &render_params.post_processing_params.tone_mapping);
+    if (render_params.post_processing_params.tone_mapping)
+    {
+        ImGui::SliderFloat("exposure", &render_params.post_processing_params.exposure, 0.1f, 5.0f, "%.2f");
+    }
 
     separator();
 
