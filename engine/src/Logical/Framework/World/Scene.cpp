@@ -125,8 +125,8 @@ int Scene::pointLightCount() const
 
 void Scene::addObject(std::shared_ptr<GObject> obj)
 {
-	if (obj && obj->hasComponent<CameraComponent>() && m_registry.mainCameraObjectId() == 0)
-		m_registry.setMainCameraObjectId(obj->ID().id);
+	if (obj && obj->hasComponent<CameraComponent>() && !m_registry.mainCameraObjectId().isValid())
+		m_registry.setMainCameraObjectId(obj->ID());
 	m_registry.registerObject(obj);
 }
 

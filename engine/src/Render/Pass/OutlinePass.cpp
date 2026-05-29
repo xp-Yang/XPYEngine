@@ -24,7 +24,7 @@ void OutlinePass::draw(RenderPassContext& context)
         bindings.setMatrix("view", 1, context.frameData().view_matrix);
         bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
 
-        const RenderObjectProxy* object_proxy = context.renderScene().objectProxy(picked_id.id);
+        const RenderObjectProxy* object_proxy = context.renderScene().objectProxy(picked_id);
         if (!object_proxy)
             continue;
 
@@ -43,7 +43,7 @@ void OutlinePass::draw(RenderPassContext& context)
                 bindings.setInt("bone_count", 0);
             }
             bindings.setMatrix("model", 1, render_node->model_matrix);
-            int id = picked_id * PickingColorIDFactor;
+            int id = picked_id.value() * PickingColorIDFactor;
             int r = (id & 0x000000FF) >> 0;
             int g = (id & 0x0000FF00) >> 8;
             int b = (id & 0x00FF0000) >> 16;

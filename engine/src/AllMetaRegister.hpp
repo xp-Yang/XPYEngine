@@ -183,7 +183,7 @@ inline void allMetaRegister()
 	registerProperty(&ecs::World::m_component_pools, "m_component_pools", true);
 #else
 	registerClass<::GObjectID>("GObjectID").
-		registerProperty(&::GObjectID::id, "id");
+		registerProperty(&::GObjectID::m_id, "id");
 
 	registerClass<::Component>("Component");
 

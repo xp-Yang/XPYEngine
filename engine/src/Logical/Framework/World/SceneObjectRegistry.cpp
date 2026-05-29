@@ -52,7 +52,7 @@ GObject* SceneObjectRegistry::createCamera(const std::string& name)
 	if (auto* transform = obj->getComponent<TransformComponent>())
 		transform->translation = camera.pos;
 
-	m_main_camera_object_id = obj->ID().id;
+	m_main_camera_object_id = obj->ID();
 	obj->markDirty(
 		SceneDirtyFlagBit(SceneDirtyFlag::Transform) |
 		SceneDirtyFlagBit(SceneDirtyFlag::Camera));
@@ -141,10 +141,10 @@ void SceneObjectRegistry::registerObject(const std::shared_ptr<GObject>& obj, bo
 		return;
 
 	m_objects.push_back(obj);
-	m_object_by_id[obj->ID().id] = obj;
+	m_object_by_id[obj->ID()] = obj;
 	refreshCaches(obj->ID());
 
-	if (m_signal_bound_object_ids.insert(obj->ID().id).second)
+	if (m_signal_bound_object_ids.insert(obj->ID()).second)
 	{
 		connect(obj.get(), &obj->dirty, this, &SceneObjectRegistry::onObjectDirty);
 	}
@@ -155,11 +155,11 @@ void SceneObjectRegistry::registerObject(const std::shared_ptr<GObject>& obj, bo
 
 void SceneObjectRegistry::unregisterObject(GObjectID id)
 {
-	m_object_by_id.erase(id.id);
+	m_object_by_id.erase(id);
 	removeID(m_directional_light_object_ids, id);
 	removeID(m_point_light_object_ids, id);
-	if (m_main_camera_object_id == id.id)
-		m_main_camera_object_id = 0;
+	if (m_main_camera_object_id == id)
+		m_main_camera_object_id = {};
 }
 
 void SceneObjectRegistry::removeObject(GObjectID id)
@@ -185,19 +185,19 @@ void SceneObjectRegistry::clear()
 
 GObject* SceneObjectRegistry::objectOf(GObjectID id) const
 {
-	return objectOf(id.id);
+	auto it = m_object_by_id.find(id);
+	return it == m_object_by_id.end() ? nullptr : it->second.get();
 }
 
 GObject* SceneObjectRegistry::objectOf(int id) const
 {
-	auto it = m_object_by_id.find(id);
-	return it == m_object_by_id.end() ? nullptr : it->second.get();
+	return objectOf(GObjectID(id));
 }
 
 GObject* SceneObjectRegistry::mainCameraObject() const
 {
 	for (const auto& obj : m_objects) {
-		if (obj && obj->ID().id == m_main_camera_object_id && obj->hasComponent<CameraComponent>())
+		if (obj && obj->ID() == m_main_camera_object_id && obj->hasComponent<CameraComponent>())
 			return obj.get();
 	}
 
@@ -225,7 +225,7 @@ std::vector<std::shared_ptr<GObject>> SceneObjectRegistry::directionalLightObjec
 {
 	std::vector<std::shared_ptr<GObject>> res;
 	for (const GObjectID& id : m_directional_light_object_ids) {
-		auto it = m_object_by_id.find(id.id);
+		auto it = m_object_by_id.find(id);
 		if (it != m_object_by_id.end() && it->second)
 			res.push_back(it->second);
 	}
@@ -236,7 +236,7 @@ std::vector<std::shared_ptr<GObject>> SceneObjectRegistry::pointLightObjects() c
 {
 	std::vector<std::shared_ptr<GObject>> res;
 	for (const GObjectID& id : m_point_light_object_ids) {
-		auto it = m_object_by_id.find(id.id);
+		auto it = m_object_by_id.find(id);
 		if (it != m_object_by_id.end() && it->second)
 			res.push_back(it->second);
 	}
@@ -276,8 +276,8 @@ void SceneObjectRegistry::refreshCaches(GObjectID id)
 	else
 		removeID(m_point_light_object_ids, id);
 
-	if (object->hasComponent<CameraComponent>() && m_main_camera_object_id == 0)
-		m_main_camera_object_id = id.id;
+	if (object->hasComponent<CameraComponent>() && !m_main_camera_object_id.isValid())
+		m_main_camera_object_id = id;
 }
 
 void SceneObjectRegistry::onObjectDirty(GObjectID object_id, SceneDirtyFlags flags)

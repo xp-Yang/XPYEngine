@@ -34,8 +34,8 @@ public:
 
 	GObject* mainCameraObject() const;
 	CameraComponent& getMainCamera() const;
-	int mainCameraObjectId() const { return m_main_camera_object_id; }
-	void setMainCameraObjectId(int id) { m_main_camera_object_id = id; }
+	GObjectID mainCameraObjectId() const { return m_main_camera_object_id; }
+	void setMainCameraObjectId(GObjectID id) { m_main_camera_object_id = id; }
 
 	std::vector<std::shared_ptr<GObject>> directionalLightObjects() const;
 	std::vector<std::shared_ptr<GObject>> pointLightObjects() const;
@@ -51,11 +51,11 @@ private:
 	SceneDirtyTracker& m_dirty_tracker;
 
 	std::vector<std::shared_ptr<GObject>> m_objects;
-	std::unordered_map<int, std::shared_ptr<GObject>> m_object_by_id;
-	std::unordered_set<int> m_signal_bound_object_ids;
+	std::unordered_map<GObjectID, std::shared_ptr<GObject>> m_object_by_id;
+	std::unordered_set<GObjectID> m_signal_bound_object_ids;
 	std::vector<GObjectID> m_directional_light_object_ids;
 	std::vector<GObjectID> m_point_light_object_ids;
-	int m_main_camera_object_id{ 0 };
+	GObjectID m_main_camera_object_id{};
 };
 
 #endif // !SceneObjectRegistry_hpp

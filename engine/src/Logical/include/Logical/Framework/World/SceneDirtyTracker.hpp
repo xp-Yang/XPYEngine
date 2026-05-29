@@ -8,18 +8,18 @@
 #include <vector>
 
 struct SceneChange {
-	int object_id{ 0 };
+	GObjectID object_id{};
 	SceneDirtyFlags flags{ SceneDirtyFlagBit(SceneDirtyFlag::None) };
 };
 
 class SceneDirtyTracker {
 public:
-	void markDirty(int object_id, SceneDirtyFlags flags);
+	void markDirty(GObjectID object_id, SceneDirtyFlags flags);
 	void markFullResync();
 	std::vector<SceneChange> consumeChanges();
 
 private:
-	std::unordered_map<int, SceneChange> m_pending_changes;
+	std::unordered_map<GObjectID, SceneChange> m_pending_changes;
 	bool m_full_resync{ true };
 };
 

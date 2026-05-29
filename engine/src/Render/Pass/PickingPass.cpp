@@ -34,7 +34,7 @@ void PickingPass::draw(RenderPassContext& context)
             bindings.setInt("bone_count", 0);
         }
         bindings.setMatrix("model", 1, render_node->model_matrix);
-        int id = render_node->section_id.object_id * PickingColorIDFactor;
+        int id = render_node->section_id.object_id.value() * PickingColorIDFactor;
         int r = (id & 0x000000FF) >> 0;
         int g = (id & 0x0000FF00) >> 8;
         int b = (id & 0x00FF0000) >> 16;

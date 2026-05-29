@@ -141,9 +141,10 @@ void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)
 	if (!g_context.render_system->readRenderGraphPixelRGBAOf(RGResource::PickingColor, x, y, data))
 		return;
 	int picked_id = ((int)data[0] + ((int)data[1] << 8) + ((int)data[2] << 16)) / PickingColorIDFactor;
+	const GObjectID picked_object_id(picked_id);
 	const auto& scene_objects = g_context.scene->getObjects();
-	auto it = std::find_if(scene_objects.begin(), scene_objects.end(), [picked_id](const std::shared_ptr<GObject>& obj) {
-		return obj->ID().id == picked_id;
+	auto it = std::find_if(scene_objects.begin(), scene_objects.end(), [picked_object_id](const std::shared_ptr<GObject>& obj) {
+		return obj->ID() == picked_object_id;
 		});
 	if (it != scene_objects.end())
 		emit pickedChanged({ (*it)->ID() }, retain_old ? std::vector<GObjectID>() : g_context.scene->getPickedObjectIDs());

@@ -1,6 +1,6 @@
 #include "Logical/Framework/World/SceneDirtyTracker.hpp"
 
-void SceneDirtyTracker::markDirty(int object_id, SceneDirtyFlags flags)
+void SceneDirtyTracker::markDirty(GObjectID object_id, SceneDirtyFlags flags)
 {
 	if (HasSceneDirtyFlag(flags, SceneDirtyFlag::FullResync))
 	{
@@ -27,7 +27,7 @@ std::vector<SceneChange> SceneDirtyTracker::consumeChanges()
 	{
 		m_full_resync = false;
 		m_pending_changes.clear();
-		return { SceneChange{ 0, SceneDirtyFlagBit(SceneDirtyFlag::FullResync) } };
+		return { SceneChange{ {}, SceneDirtyFlagBit(SceneDirtyFlag::FullResync) } };
 	}
 
 	std::vector<SceneChange> changes;

@@ -133,9 +133,9 @@ void ProjectSerializer::applyProjectDTOToScene(const ProjectDTO& dto, bool clear
 {
 	if (clear_old) {
 		std::shared_ptr<GObject> main_camera_object;
-		int main_camera_id = m_registry.mainCameraObjectId();
+		GObjectID main_camera_id = m_registry.mainCameraObjectId();
 		for (const auto& obj : m_registry.getObjects()) {
-			if (obj && obj->ID().id == main_camera_id && obj->hasComponent<CameraComponent>()) {
+			if (obj && obj->ID() == main_camera_id && obj->hasComponent<CameraComponent>()) {
 				main_camera_object = obj;
 				break;
 			}
@@ -252,7 +252,7 @@ void ProjectSerializer::applyProjectDTOToScene(const ProjectDTO& dto, bool clear
 			camera->upDirection = obj_dto.camera.up_direction;
 			camera->refreshView();
 			camera->refreshProjection();
-			m_registry.setMainCameraObjectId(obj->ID().id);
+			m_registry.setMainCameraObjectId(obj->ID());
 
 			if (auto* transform = obj->getComponent<TransformComponent>())
 				transform->translation = camera->pos;

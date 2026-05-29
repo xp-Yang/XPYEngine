@@ -95,7 +95,14 @@ signals:
 	Signal<GObjectID, SceneDirtyFlags> dirty;
 
 protected:
-	GObject(GObject* parent, const std::string& name) : m_parent(parent), m_name(name) { if (parent) parent->append(this); }
+	GObject(GObject* parent, const std::string& name)
+		: m_parent(parent)
+		, m_name(name)
+		, m_id(GObjectID::next())
+	{
+		if (parent)
+			parent->append(this);
+	}
 	GObject(const GObject&) = delete;
 	GObject& operator=(const GObject&) = delete;
 

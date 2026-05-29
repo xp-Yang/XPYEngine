@@ -190,7 +190,7 @@ void RenderSystem::rebuildRenderSceneFromScene(Scene& scene)
 
 void RenderSystem::rebuildObjectRenderProxy(GObject& object)
 {
-    const int object_id = object.ID().id;
+    const GObjectID object_id = object.ID();
     auto* mesh_component = object.getComponent<MeshComponent>();
     auto* transform_component = object.getComponent<TransformComponent>();
     if (!mesh_component || !transform_component)
@@ -245,7 +245,7 @@ void RenderSystem::updateSkinnedMeshSections()
         if (!section)
             continue;
 
-        const int object_id = section->section_id.object_id.id;
+        const GObjectID object_id = section->section_id.object_id;
         if (!animation_system->HasAnimation(object_id))
         {
             section->use_skinning = false;
@@ -332,7 +332,7 @@ void RenderSystem::buildRenderFrameData(Scene& scene)
         const auto* point_light = light_object->getComponent<PointLightComponent>();
         const Vec3 position = transform->translation;
         render_point_lights.emplace_back(RenderPointLightData{
-            light_object->ID().id,
+            light_object->ID().value(),
             point_light->luminousColor,
             position,
             point_light->radius,

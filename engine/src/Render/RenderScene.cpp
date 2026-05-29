@@ -267,21 +267,11 @@ const RenderMeshSection* RenderObjectProxy::meshSection(int sub_mesh_idx) const
 
 RenderObjectProxy* RenderScene::objectProxy(GObjectID object_id)
 {
-    return objectProxy(object_id.id);
-}
-
-const RenderObjectProxy* RenderScene::objectProxy(GObjectID object_id) const
-{
-    return objectProxy(object_id.id);
-}
-
-RenderObjectProxy* RenderScene::objectProxy(int object_id)
-{
     auto it = m_object_proxies.find(object_id);
     return it == m_object_proxies.end() ? nullptr : it->second.get();
 }
 
-const RenderObjectProxy* RenderScene::objectProxy(int object_id) const
+const RenderObjectProxy* RenderScene::objectProxy(GObjectID object_id) const
 {
     auto it = m_object_proxies.find(object_id);
     return it == m_object_proxies.end() ? nullptr : it->second.get();
@@ -304,24 +294,19 @@ RenderMeshSection* RenderScene::addMeshSection(const RenderMeshSectionID& id, st
     if (!section)
         return nullptr;
 
-    auto it = m_object_proxies.find(id.object_id.id);
+    auto it = m_object_proxies.find(id.object_id);
     if (it == m_object_proxies.end())
-        it = m_object_proxies.emplace(id.object_id.id, std::make_unique<RenderObjectProxy>(id.object_id)).first;
+        it = m_object_proxies.emplace(id.object_id, std::make_unique<RenderObjectProxy>(id.object_id)).first;
 
     return it->second->addMeshSection(std::move(section));
 }
 
 void RenderScene::removeObjectProxy(GObjectID object_id)
 {
-    removeObjectProxy(object_id.id);
-}
-
-void RenderScene::removeObjectProxy(int object_id)
-{
     m_object_proxies.erase(object_id);
 }
 
-void RenderScene::removeDeadObjectProxies(const std::unordered_set<int>& alive_object_ids)
+void RenderScene::removeDeadObjectProxies(const std::unordered_set<GObjectID>& alive_object_ids)
 {
     for (auto it = m_object_proxies.begin(); it != m_object_proxies.end();)
     {
@@ -332,7 +317,7 @@ void RenderScene::removeDeadObjectProxies(const std::unordered_set<int>& alive_o
     }
 }
 
-void RenderScene::removeDeadSubMeshesOfObject(int object_id, const std::unordered_set<int>& alive_sub_mesh_ids)
+void RenderScene::removeDeadSubMeshesOfObject(GObjectID object_id, const std::unordered_set<int>& alive_sub_mesh_ids)
 {
     RenderObjectProxy* proxy = objectProxy(object_id);
     if (!proxy)
@@ -353,7 +338,7 @@ void RenderScene::removeDeadSubMeshesOfObject(int object_id, const std::unordere
         removeObjectProxy(object_id);
 }
 
-void RenderScene::setObjectVisible(int object_id, bool visible)
+void RenderScene::setObjectVisible(GObjectID object_id, bool visible)
 {
     RenderObjectProxy* proxy = objectProxy(object_id);
     if (proxy)
@@ -361,11 +346,6 @@ void RenderScene::setObjectVisible(int object_id, bool visible)
 }
 
 void RenderScene::updateObjectTransform(GObjectID object_id, const Mat4& model_matrix)
-{
-    updateObjectTransform(object_id.id, model_matrix);
-}
-
-void RenderScene::updateObjectTransform(int object_id, const Mat4& model_matrix)
 {
     RenderObjectProxy* proxy = objectProxy(object_id);
     if (proxy)

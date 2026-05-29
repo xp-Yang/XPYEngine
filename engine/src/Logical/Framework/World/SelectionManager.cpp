@@ -40,7 +40,7 @@ void SelectionManager::onPickedChanged(std::vector<GObjectID> added, std::vector
 	for (const auto& obj : m_registry.getObjects()) {
 		if (std::find(added.begin(), added.end(), obj->ID()) != added.end()) {
 			m_picked_objects.push_back(obj);
-			Logger::debug("SelectionManager::onPickedChanged(), added obj: {} {}", obj->ID().id, obj->name());
+			Logger::debug("SelectionManager::onPickedChanged(), added obj: {} {}", obj->ID().value(), obj->name());
 		}
 	}
 }

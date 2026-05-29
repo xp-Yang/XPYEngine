@@ -98,7 +98,7 @@ struct RenderMeshSectionID {
 };
 struct RenderMeshSectionIDHasher {
     size_t operator()(const RenderMeshSectionID& id) const {
-        return (std::hash<int>()(id.object_id.id) ^ (std::hash<int>()(id.sub_mesh_idx)) << 1);
+        return (std::hash<GObjectID>()(id.object_id) ^ (std::hash<int>()(id.sub_mesh_idx)) << 1);
     }
 };
 
@@ -174,8 +174,6 @@ class RenderScene {
 public:
     RenderObjectProxy* objectProxy(GObjectID object_id);
     const RenderObjectProxy* objectProxy(GObjectID object_id) const;
-    RenderObjectProxy* objectProxy(int object_id);
-    const RenderObjectProxy* objectProxy(int object_id) const;
 
     // Find a mesh section by object id and subMesh index. This is a linear lookup inside the object.
     RenderMeshSection* meshSection(const RenderMeshSectionID& id);
@@ -186,20 +184,18 @@ public:
 
     // Remove the object proxy and all sections owned by it.
     void removeObjectProxy(GObjectID object_id);
-    void removeObjectProxy(int object_id);
 
     // Remove proxies whose logical objects no longer exist.
-    void removeDeadObjectProxies(const std::unordered_set<int>& alive_object_ids);
+    void removeDeadObjectProxies(const std::unordered_set<GObjectID>& alive_object_ids);
 
     // Remove sections whose subMeshes no longer exist on the logical object.
-    void removeDeadSubMeshesOfObject(int object_id, const std::unordered_set<int>& alive_sub_mesh_ids);
+    void removeDeadSubMeshesOfObject(GObjectID object_id, const std::unordered_set<int>& alive_sub_mesh_ids);
 
     // Set object-level visibility and update owned sections.
-    void setObjectVisible(int object_id, bool visible);
+    void setObjectVisible(GObjectID object_id, bool visible);
 
     // Update object transform and refresh all owned section model matrices.
     void updateObjectTransform(GObjectID object_id, const Mat4& model_matrix);
-    void updateObjectTransform(int object_id, const Mat4& model_matrix);
 
     // Refresh section material resources for all sections of one object.
     void updateObjectMaterials(GObject& object);
@@ -221,7 +217,7 @@ public:
     void clear();
 
 private:
-    std::unordered_map<int, std::unique_ptr<RenderObjectProxy>> m_object_proxies;
+    std::unordered_map<GObjectID, std::unique_ptr<RenderObjectProxy>> m_object_proxies;
     std::vector<RenderMeshSection*> m_visible_sections;
     std::vector<RenderMeshSection*> m_opaque_sections;
     std::vector<RenderMeshSection*> m_transparent_sections;

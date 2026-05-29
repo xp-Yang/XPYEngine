@@ -17,14 +17,14 @@ public:
         if (!scene)
             return;
 
-        std::unordered_set<int> alive_object_ids;
+        std::unordered_set<GObjectID> alive_object_ids;
         for (const auto &object : scene->getObjects())
         {
             auto *animation_component = object->getComponent<AnimationComponent>();
             if (!animation_component || !animation_component->clip)
                 continue;
 
-            const int object_id = object->ID().id;
+            const GObjectID object_id = object->ID();
             alive_object_ids.insert(object_id);
 
             auto &state = m_object_states[object_id];
@@ -58,7 +58,7 @@ public:
         }
     }
 
-    const std::vector<Mat4> &GetFinalBoneMatrices(int object_id) const
+    const std::vector<Mat4> &GetFinalBoneMatrices(GObjectID object_id) const
     {
         auto it = m_object_states.find(object_id);
         if (it == m_object_states.end())
@@ -66,7 +66,7 @@ public:
         return it->second.final_bone_matrices;
     }
 
-    bool HasAnimation(int object_id) const
+    bool HasAnimation(GObjectID object_id) const
     {
         auto it = m_object_states.find(object_id);
         return it != m_object_states.end() && it->second.clip != nullptr;
@@ -113,7 +113,7 @@ private:
             CalculateBoneTransform(state, &node->children[i], globalTransformation);
     }
 
-    std::unordered_map<int, ObjectAnimationState> m_object_states;
+    std::unordered_map<GObjectID, ObjectAnimationState> m_object_states;
     std::vector<Mat4> m_empty_bone_matrices = std::vector<Mat4>(MAX_BONE_PALETTE_SIZE, Mat4(1.0f));
 };
 

@@ -476,7 +476,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     {
         auto& object = inst.getValue<GObject&>();
         GObjectID id = object.ID();
-        std::string display_text = name + " (ID: " + std::to_string(id.id) + ")";
+        std::string display_text = name + " (ID: " + std::to_string(id.value()) + ")";
 
         ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
         const auto& original_picked_ids = g_context.scene->getPickedObjectIDs();
