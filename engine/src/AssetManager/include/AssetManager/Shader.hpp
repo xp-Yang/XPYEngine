@@ -30,6 +30,8 @@ enum class ShaderType {
 	BillBoardShader,
 	FXAAShader,
 	ToneMappingShader,
+	SSAOShader,
+	SSAOBlurShader,
 	DebugTexturePreviewShader,
 	TransparentShader,
 };

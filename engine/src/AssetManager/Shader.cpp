@@ -228,6 +228,10 @@ Shader Shader::create(const ShaderType &type)
         return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/fxaa.fs"};
     case ShaderType::ToneMappingShader:
         return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/tonemapping.fs"};
+    case ShaderType::SSAOShader:
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/ssao.fs"};
+    case ShaderType::SSAOBlurShader:
+        return Shader{asset_dir + "/shader/screenQuad.vs", asset_dir + "/shader/ssaoBlur.fs"};
     case ShaderType::DebugTexturePreviewShader:
         return Shader{asset_dir + "/shader/debugTexturePreview.vs", asset_dir + "/shader/debugTexturePreview.fs"};
     case ShaderType::TransparentShader:

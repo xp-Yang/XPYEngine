@@ -95,6 +95,13 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		point_light_idx++;
 	}
 	bindings.setInt("point_lights_size", point_light_size);
+
+	// SSAO（单元 15，关闭时绑定默认白图并由 ssaoEnable 门控）。
+	const bool ssao_ready = m_pbr && m_ssao;
+	bindings.setBool("ssaoEnable", ssao_ready);
+	RhiTexture* ssao_map = ssao_ready ? context.texture(RGResource::SSAOResult) : nullptr;
+	bindings.setTexture("ssaoMap", 15, ssao_map ? ssao_map : RenderTextureData::defaultTexture().texture);
+
     m_command_buffer->setShaderResources(&bindings);
 	m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());
 	m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));

@@ -107,6 +107,13 @@ void ImGuiGlobalConsole::render() {
     ImGui::Checkbox("checkerboard", &render_params.effect_params.checkerboard); ImGui::SameLine();
     ImGui::Checkbox("wireframe", &render_params.effect_params.wireframe); ImGui::SameLine();
     ImGui::Checkbox("normal", &render_params.effect_params.show_normal); ImGui::SameLine();
+    ImGui::Checkbox("SSAO", &render_params.ssao.enable);
+    if (render_params.ssao.enable)
+    {
+        ImGui::SliderFloat("ssao radius", &render_params.ssao.radius, 0.05f, 2.0f, "%.2f");
+        ImGui::SliderFloat("ssao bias", &render_params.ssao.bias, 0.0f, 0.1f, "%.3f");
+        ImGui::SliderFloat("ssao power", &render_params.ssao.power, 0.5f, 4.0f, "%.2f");
+    }
     //ImGui::SliderInt("pixel style", &render_params.pixelate_level, 1, 16);
     
     separator();

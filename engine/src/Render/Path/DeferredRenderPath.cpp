@@ -7,6 +7,7 @@
 #include "../Pass/NormalPass.hpp"
 #include "../Pass/GBufferPass.hpp"
 #include "../Pass/DeferredLightingPass.hpp"
+#include "../Pass/SSAOPass.hpp"
 #include "../Pass/TransparentPass.hpp"
 #include "../Pass/SkyBoxPass.hpp"
 #include "../Pass/BloomPass.hpp"
@@ -27,6 +28,7 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
     m_render_passes[RenderPass::Type::Shadow] = std::make_unique<ShadowPass>();
     m_render_passes[RenderPass::Type::GBuffer] = std::make_unique<GBufferPass>();
     m_render_passes[RenderPass::Type::DeferredLighting] = std::make_unique<DeferredLightingPass>();
+    m_render_passes[RenderPass::Type::SSAO] = std::make_unique<SSAOPass>();
     m_render_passes[RenderPass::Type::Transparent] = std::make_unique<TransparentPass>();
     m_render_passes[RenderPass::Type::Bloom] = std::make_unique<BloomPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
@@ -97,6 +99,21 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
             .color(RGResource::GBufferSpecular, RhiTexture::Format::RGBA16F, 3);
     }
 
+    // SSAO 仅在 PBR 路径生效（环境光遮蔽乘入 deferredLighting_pbr.fs 的 ambient 项）。
+    const bool ssao_used = render_params.ssao.enable && render_params.material_model == MaterialModel::PBR;
+    if (ssao_used)
+    {
+        m_render_graph.addPass(RenderPass::Type::SSAO, pass(RenderPass::Type::SSAO))
+            .read(RGResource::GBufferPosition)
+            .read(RGResource::GBufferNormal)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(RGResource::SSAOResult, RhiTexture::Format::R8, 0)
+            .setSetup([&render_params](RenderPass& render_pass)
+            {
+                static_cast<SSAOPass&>(render_pass).setParams(render_params.ssao);
+            });
+    }
+
     auto& lighting_node = m_render_graph.addPass(RenderPass::Type::DeferredLighting, pass(RenderPass::Type::DeferredLighting))
         .read(RGResource::GBufferPosition)
         .read(RGResource::GBufferNormal)
@@ -104,12 +121,17 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGBA16F)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH)
-        .setSetup([this, &render_params](RenderPass& render_pass)
+        .setSetup([this, &render_params, ssao_used](RenderPass& render_pass)
         {
             auto& lighting_pass = static_cast<DeferredLightingPass&>(render_pass);
             lighting_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             lighting_pass.enableIBL(render_params.ibl.enable);
+            lighting_pass.enableSSAO(ssao_used);
         });
+    if (ssao_used)
+    {
+        lighting_node.read(RGResource::SSAOResult);
+    }
     if (render_params.material_model == MaterialModel::PBR)
     {
         lighting_node

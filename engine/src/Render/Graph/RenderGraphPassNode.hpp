@@ -24,6 +24,8 @@ static inline RGResourceName GBufferDiffuse = "GBuffer.Diffuse";
 static inline RGResourceName GBufferSpecular = "GBuffer.Specular";
 static inline RGResourceName GBufferDepth = "GBuffer.Depth";
               
+static inline RGResourceName SSAOResult = "SSAO.Result";
+
 static inline RGResourceName SceneColor = "Scene.Color";
 static inline RGResourceName SceneDepth = "Scene.Depth";
               

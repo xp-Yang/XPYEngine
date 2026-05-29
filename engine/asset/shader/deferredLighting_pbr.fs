@@ -13,6 +13,9 @@ uniform sampler2D gMetallic;
 uniform sampler2D gRoughness;
 uniform sampler2D gAo;
 
+uniform sampler2D ssaoMap;
+uniform bool ssaoEnable;
+
 uniform vec3 cameraPos;
 
 layout (location = 0) out vec4 FragColor;
@@ -70,8 +73,11 @@ void main()
         Lo += pointShadowFactor * radiance * BRDF(L, V, N, F0, albedo, metallic, roughness);  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
     }   
     
+    // 屏幕空间环境光遮蔽：仅作用于 ambient 项。
+    float ssao = ssaoEnable ? texture(ssaoMap, fragUV).r : 1.0;
+
     // ambient lighting: Split-Sum IBL（iblEnable 关闭时退回常量 ambient）。
-    vec3 ambient = computeIBLAmbient(N, V, albedo, F0, metallic, roughness, ao);
+    vec3 ambient = computeIBLAmbient(N, V, albedo, F0, metallic, roughness, ao * ssao);
 
     vec3 color = ambient + Lo;
     

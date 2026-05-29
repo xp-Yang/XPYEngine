@@ -34,6 +34,7 @@ public:
         Forward,
         GBuffer,
         DeferredLighting,
+        SSAO,
         Transparent,
         
         WireFrame,

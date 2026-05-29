@@ -55,6 +55,13 @@ struct IBLParams {
     std::string env_hdr_path;
 };
 
+struct SSAOParams {
+    bool  enable = true;
+    float radius = 0.5f;
+    float bias = 0.025f;
+    float power = 1.0f;
+};
+
 /** Preset internal render target resolution (offscreen FBOs). Not tied to window size. */
 enum class RenderResolutionPreset {
     FullHD_1080p, /**< 1920 x 1080 */
@@ -85,6 +92,7 @@ struct RenderParams {
     PostProcessingParams post_processing_params;
     EffectParams effect_params;
     IBLParams ibl;
+    SSAOParams ssao;
 
     RenderResolutionPreset render_resolution = RenderResolutionPreset::UHD_4K;
 
