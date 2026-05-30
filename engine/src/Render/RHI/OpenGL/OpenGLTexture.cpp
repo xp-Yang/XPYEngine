@@ -33,6 +33,14 @@ struct TextureFormatDesc {
     bool is_depth{ false };
 };
 
+// Screen-space / offscreen render targets: clamp to avoid REPEAT bleed at edges
+// when post-process shaders sample with texel offsets (bloom, FXAA, SSAO, etc.).
+static void setRenderTargetWrapClamp2D()
+{
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
 static bool getTextureFormatDesc(RhiTexture::Format format, TextureFormatDesc& desc)
 {
     switch (format)
@@ -133,8 +141,7 @@ bool OpenGLTexture::create()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                setRenderTargetWrapClamp2D();
             }
             break;
         }
@@ -155,6 +162,7 @@ bool OpenGLTexture::create()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_FLOAT, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                setRenderTargetWrapClamp2D();
             }
             break;
         }
@@ -175,6 +183,7 @@ bool OpenGLTexture::create()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_FLOAT, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                setRenderTargetWrapClamp2D();
             }
             break;
         }
@@ -195,6 +204,7 @@ bool OpenGLTexture::create()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_FLOAT, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                setRenderTargetWrapClamp2D();
             }
             break;
         }
@@ -215,6 +225,7 @@ bool OpenGLTexture::create()
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_FLOAT, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                setRenderTargetWrapClamp2D();
             }
             break;
         }
