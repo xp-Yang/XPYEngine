@@ -9,8 +9,10 @@ ShadowPass::ShadowPass()
 
 void ShadowPass::draw(RenderPassContext& context)
 {
-    drawDirectionalLightShadowMap(context);
-    drawPointLightShadowMap(context);
+    if (m_render_directional_shadows)
+        drawDirectionalLightShadowMap(context);
+    if (m_render_point_shadows && !context.frameData().point_lights.empty())
+        drawPointLightShadowMap(context);
 }
 
 void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)

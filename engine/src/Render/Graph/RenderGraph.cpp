@@ -27,6 +27,29 @@ void RenderGraph::setFrameSize(const Vec2& pixel_size)
     m_frame_size = pixel_size;
 }
 
+void RenderGraph::setShadowTargetSizes(const Vec2& directional_size, int point_cube_edge)
+{
+    if (!samePixelSize(m_shadow_directional_size, directional_size))
+    {
+        m_shadow_directional_size = directional_size;
+        RenderGraphRenderTarget* target = findRenderTarget(RenderPass::Type::Shadow, RGTarget::Main);
+        if (target && target->framebuffer)
+        {
+            target->framebuffer->destroyGPU();
+            target->framebuffer.reset();
+            target->framebuffer_desc = {};
+        }
+    }
+
+    if (m_point_cube_edge != point_cube_edge)
+    {
+        m_point_cube_edge = point_cube_edge;
+        RenderGraphRenderTarget* target = findRenderTarget(RenderPass::Type::Shadow, RGTarget::ShadowPointDepth);
+        if (target)
+            destroyCubeShadowFrameBuffer(*target);
+    }
+}
+
 RenderGraphPassNode& RenderGraph::addPass(RenderPass::Type type, RenderPass* pass)
 {
     assert(pass);
@@ -171,7 +194,10 @@ void RenderGraph::ensureRenderTargets()
             RenderGraphRenderTarget& target = m_render_targets[TargetKey{ node.m_type, target_decl.name }];
 
             RhiFrameBufferDesc framebuffer_desc;
-            framebuffer_desc.size = m_frame_size;
+            if (node.m_type == RenderPass::Type::Shadow && target_decl.name == RGTarget::Main)
+                framebuffer_desc.size = m_shadow_directional_size;
+            else
+                framebuffer_desc.size = m_frame_size;
 
             if (target_decl.render_target_type == RenderTargetType::FrameBuffer)
             {
@@ -238,7 +264,7 @@ void RenderGraph::ensureRenderTargets()
             }
             else if (target_decl.render_target_type == RenderTargetType::CubeDepth)
             {
-                target.framebuffer_desc.size = m_frame_size;
+                target.framebuffer_desc.size = Vec2(static_cast<float>(m_point_cube_edge), static_cast<float>(m_point_cube_edge));
             }
         }
     }
@@ -306,9 +332,11 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const RhiFrameBuf
     if (sample_count == 0)
         sample_count = 1;
 
-    auto makeAttachment = [this](const RhiAttachmentDesc& resource_desc)
+    const Vec2 fb_size = (desc.size.x > 0.f && desc.size.y > 0.f) ? desc.size : m_frame_size;
+
+    auto makeAttachment = [this, fb_size](const RhiAttachmentDesc& resource_desc)
     {
-        RhiTexture* texture = m_rhi->newTexture(resource_desc.format, m_frame_size, resource_desc.sample_count);
+        RhiTexture* texture = m_rhi->newTexture(resource_desc.format, fb_size, resource_desc.sample_count);
         texture->create();
         return RhiAttachment(texture);
     };
@@ -323,7 +351,7 @@ std::unique_ptr<RhiFrameBuffer> RenderGraph::createFrameBuffer(const RhiFrameBuf
         has_color = true;
     }
 
-    std::unique_ptr<RhiFrameBuffer> framebuffer(m_rhi->newFrameBuffer(RhiAttachment(), m_frame_size, sample_count));
+    std::unique_ptr<RhiFrameBuffer> framebuffer(m_rhi->newFrameBuffer(RhiAttachment(), fb_size, sample_count));
     if (has_color)
         framebuffer->setColorAttachments(color_attachments);
     if (desc.has_depth)
@@ -365,8 +393,15 @@ void RenderGraph::destroyCubeShadowFrameBuffer(RenderGraphRenderTarget& target)
 void RenderGraph::ensureCubeShadowMapsCount(RenderPass::Type type, size_t count)
 {
     RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
-    if (!target || target->cube_shadow_framebuffers.size() >= count)
+    if (!target)
         return;
+
+    if (!target->cube_shadow_framebuffers.empty())
+    {
+        const int current_edge = static_cast<int>(target->cube_shadow_framebuffers[0][0]->pixelSize().x);
+        if (current_edge != m_point_cube_edge)
+            destroyCubeShadowFrameBuffer(*target);
+    }
 
     while (target->cube_shadow_framebuffers.size() < count)
         appendCubeShadowMap(*target);
@@ -374,7 +409,7 @@ void RenderGraph::ensureCubeShadowMapsCount(RenderPass::Type type, size_t count)
 
 void RenderGraph::appendCubeShadowMap(RenderGraphRenderTarget& target)
 {
-    const int cube_edge = std::clamp(std::min((int)m_frame_size.x, (int)m_frame_size.y), 256, 4096);
+    const int cube_edge = m_point_cube_edge;
     RhiTexture* cube_texture = m_rhi->newTexture(
         RhiTexture::Format::DEPTH,
         Vec2(cube_edge),

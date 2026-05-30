@@ -37,7 +37,7 @@ void main()
     vec3 lightingByDirectionalLight = BlinnPhong(directionalLight.color.xyz, Normal, viewDir, -lightDir, Diffuse, Specular, Shininess);
     // Directional Light Shadow:
     vec4 fragPosLightSpace = lightSpaceMatrix * vec4(Position, 1.0);
-    float shadowFactor = ShadowCalculation(fragPosLightSpace, shadow_map);
+    float shadowFactor = directionalShadowEnable ? ShadowCalculation(fragPosLightSpace, shadow_map) : 1.0;
     lightingByDirectionalLight *= shadowFactor;
 
     // Point Light Source:
@@ -49,7 +49,9 @@ void main()
         float attenuation = PointLightAttenuation(distance, pointLights[i].radius);
         lightingByPointLights[i] = BlinnPhong(pointLights[i].color.xyz * attenuation, Normal, viewDir, -lightDir, Diffuse, Specular, Shininess);
         // Point Light Shadow:
-        float pointShadowFactor = OmnidirectionalShadowCalculation(Position - pointLights[i].position, cube_shadow_maps[i], pointLights[i].radius);
+        float pointShadowFactor = pointShadowEnable
+            ? OmnidirectionalShadowCalculation(Position - pointLights[i].position, cube_shadow_maps[i], pointLights[i].radius)
+            : 1.0;
         lightingByPointLights[i] *= pointShadowFactor;
         lightingByPointLight += lightingByPointLights[i];
     }

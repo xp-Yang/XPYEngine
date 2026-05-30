@@ -107,19 +107,12 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         bindings.setFloat3("directionalLight.color", light_color);
 
         RhiTexture* shadow_texture = hasSlot("inShadowDepth") ? context.texture(slot("inShadowDepth")) : nullptr;
-        if (shadow_texture)
+        const bool directional_shadow_ready = m_directional_shadow && shadow_texture != nullptr;
+        bindings.setBool("directionalShadowEnable", directional_shadow_ready);
+        if (directional_shadow_ready)
         {
             bindings.setMatrix("lightSpaceMatrix", 1, light_ref_matrix);
             bindings.setTexture("shadow_map", 5, shadow_texture);
-
-            std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
-            for (int i = 0; i < cube_shadow_maps.size(); i++)
-            {
-                if (!cube_shadow_maps[i])
-                    continue;
-                std::string cube_map_id = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
-                bindings.setCubeTexture(cube_map_id, 6 + i, cube_shadow_maps[i]);
-            }
         }
         m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());

@@ -53,7 +53,7 @@ void main()
 		
         // Shadow of Directional Light:
         vec4 fragPosLightSpace = lightSpaceMatrix * vec4(fs_in.fragWorldPos, 1.0);
-        float shadowFactor = ShadowCalculation(fragPosLightSpace, shadow_map);
+        float shadowFactor = directionalShadowEnable ? ShadowCalculation(fragPosLightSpace, shadow_map) : 1.0;
 
 		// Directional Light
         vec3 L = normalize(-directionalLight.direction);

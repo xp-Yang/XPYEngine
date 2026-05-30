@@ -45,6 +45,10 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
 void DeferredRenderPath::resizeRenderTargets(const Vec2& pixel_size)
 {
     m_render_graph.setFrameSize(pixel_size);
+    const auto& shadow_params = ref_render_system->renderParams().shadow_params;
+    m_render_graph.setShadowTargetSizes(
+        shadowDirectionalPixelSize(pixel_size, shadow_params.directional_resolution_scale),
+        shadowPointCubeEdge(shadow_params.point_cube_resolution));
 }
 
 void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
@@ -75,13 +79,16 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
     // --- Shadow ---
     m_render_graph.addPass(RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .setEnabled(render_params.shadow_params.enable)
+        .setEnabled(render_params.shadow_params.directional_enable || render_params.shadow_params.point_enable)
         .setDisabledExecution(RGDisabledExecution::Clear)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
         .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth)
-        .setSetup([](RenderPass& p)
+        .setSetup([&render_params](RenderPass& p)
         {
+            auto& shadow_pass = static_cast<ShadowPass&>(p);
+            shadow_pass.setRenderDirectionalShadows(render_params.shadow_params.directional_enable);
+            shadow_pass.setRenderPointShadows(render_params.shadow_params.point_enable);
             p.bindSlot("outTarget", RGTarget::Main);
         });
 
@@ -143,6 +150,8 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
             lighting_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             lighting_pass.enableIBL(render_params.ibl.enable);
             lighting_pass.enableSSAO(ssao_used);
+            lighting_pass.enableDirectionalShadow(render_params.shadow_params.directional_enable);
+            lighting_pass.enablePointShadow(render_params.shadow_params.point_enable);
             p.bindSlot("outTarget", RGTarget::Main);
             p.bindSlot("inGBufferPosition", RGResource::GBufferPosition);
             p.bindSlot("inGBufferNormal", RGResource::GBufferNormal);

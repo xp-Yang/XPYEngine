@@ -3,6 +3,8 @@
 
 #include "Base/Common.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <string>
 
 enum class RenderPathType {
@@ -20,9 +22,32 @@ struct MSAAParams {
 };
 
 struct ShadowParams {
-    bool enable = true;
-    int sample_count = 1;
+    bool directional_enable = true;
+    bool point_enable = true;
+    float directional_resolution_scale = 0.5f;
+    int point_cube_resolution = 1024;
 };
+
+inline int shadowScaledDimension(int main_dim, float scale)
+{
+    int scaled = static_cast<int>(std::round(main_dim * scale));
+    scaled = std::max(256, scaled);
+    if (scaled % 2 != 0)
+        ++scaled;
+    return scaled;
+}
+
+inline Vec2 shadowDirectionalPixelSize(Vec2 main_size, float scale)
+{
+    return Vec2(
+        static_cast<float>(shadowScaledDimension(static_cast<int>(main_size.x), scale)),
+        static_cast<float>(shadowScaledDimension(static_cast<int>(main_size.y), scale)));
+}
+
+inline int shadowPointCubeEdge(int preset)
+{
+    return std::clamp(preset, 256, 4096);
+}
 
 struct PostProcessingParams {
     bool bloom = true;

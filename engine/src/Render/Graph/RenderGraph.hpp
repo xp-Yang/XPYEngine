@@ -44,6 +44,7 @@ public:
 
     void reset();
     void setFrameSize(const Vec2& pixel_size);
+    void setShadowTargetSizes(const Vec2& directional_size, int point_cube_edge);
     RenderGraphPassNode& addPass(RenderPass::Type type, RenderPass* pass);
     void markOutput(const RGResourceName& resource_name);
     void compile();
@@ -84,6 +85,8 @@ private:
 
     Rhi* m_rhi{ Rhi::get() };
     Vec2 m_frame_size{ DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y };
+    Vec2 m_shadow_directional_size{ DEFAULT_RENDER_RESOLUTION_X, DEFAULT_RENDER_RESOLUTION_Y };
+    int m_point_cube_edge{ 1024 };
     std::vector<RenderGraphPassNode> m_nodes;
     std::vector<RenderGraphPassNode*> m_ordered_nodes;
     std::vector<RGResourceName> m_outputs;

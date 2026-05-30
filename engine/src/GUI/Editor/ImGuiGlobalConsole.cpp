@@ -1,5 +1,6 @@
 #include "ImGuiGlobalConsole.hpp"
 
+#include <cmath>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -103,12 +104,66 @@ void ImGuiGlobalConsole::render() {
     ImGui::Text("Effect:");
     ImGui::Checkbox("skybox", &render_params.effect_params.skybox); ImGui::SameLine();
     ImGui::Checkbox("IBL", &render_params.ibl.enable); ImGui::SameLine();
-    ImGui::Checkbox("shadow", &render_params.shadow_params.enable); ImGui::SameLine();
+    ImGui::Checkbox("dir shadow", &render_params.shadow_params.directional_enable); ImGui::SameLine();
+    ImGui::Checkbox("point shadow", &render_params.shadow_params.point_enable); ImGui::SameLine();
     ImGui::Checkbox("checkerboard", &render_params.effect_params.checkerboard); ImGui::SameLine();
     ImGui::Checkbox("grid", &render_params.effect_params.grid); ImGui::SameLine();
     ImGui::Checkbox("wireframe", &render_params.effect_params.wireframe); ImGui::SameLine();
     ImGui::Checkbox("normal", &render_params.effect_params.show_normal); ImGui::SameLine();
     ImGui::Checkbox("SSAO", &render_params.ssao.enable);
+    if (render_params.shadow_params.directional_enable)
+    {
+        ImGui::PushItemWidth(150.0f);
+        static const float directional_scale_options[] = { 0.25f, 0.5f, 1.0f };
+        static const char* directional_scale_labels[] = { "25%", "50%", "100%" };
+        int directional_scale_idx = 1;
+        for (int i = 0; i < 3; ++i)
+        {
+            if (std::abs(render_params.shadow_params.directional_resolution_scale - directional_scale_options[i]) < 0.001f)
+                directional_scale_idx = i;
+        }
+        ImGui::Text("Directional Shadow Scale:");
+        if (ImGui::BeginCombo("##Directional Shadow Scale", directional_scale_labels[directional_scale_idx]))
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                const bool selected = directional_scale_idx == i;
+                if (ImGui::Selectable(directional_scale_labels[i], selected))
+                {
+                    render_params.shadow_params.directional_resolution_scale = directional_scale_options[i];
+                    g_context.render_system->rebuildRenderTargets();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::PopItemWidth();
+    }
+    if (render_params.shadow_params.point_enable)
+    {
+        ImGui::PushItemWidth(150.0f);
+        static const int point_resolution_options[] = { 512, 1024, 2048 };
+        int point_resolution_idx = 1;
+        for (int i = 0; i < 3; ++i)
+        {
+            if (render_params.shadow_params.point_cube_resolution == point_resolution_options[i])
+                point_resolution_idx = i;
+        }
+        ImGui::Text("Point Shadow Resolution:");
+        if (ImGui::BeginCombo("##Point Shadow Resolution", std::to_string(point_resolution_options[point_resolution_idx]).c_str()))
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                const bool selected = point_resolution_idx == i;
+                if (ImGui::Selectable(std::to_string(point_resolution_options[i]).c_str(), selected))
+                {
+                    render_params.shadow_params.point_cube_resolution = point_resolution_options[i];
+                    g_context.render_system->rebuildRenderTargets();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::PopItemWidth();
+    }
     if (render_params.ssao.enable)
     {
         ImGui::SliderFloat("ssao radius", &render_params.ssao.radius, 0.05f, 2.0f, "%.2f");

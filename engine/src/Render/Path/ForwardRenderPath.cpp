@@ -25,6 +25,10 @@ ForwardRenderPath::ForwardRenderPath(RenderSystem *render_system)
 void ForwardRenderPath::resizeRenderTargets(const Vec2& pixel_size)
 {
     m_render_graph.setFrameSize(pixel_size);
+    const auto& shadow_params = ref_render_system->renderParams().shadow_params;
+    m_render_graph.setShadowTargetSizes(
+        shadowDirectionalPixelSize(pixel_size, shadow_params.directional_resolution_scale),
+        shadowPointCubeEdge(shadow_params.point_cube_resolution));
 }
 
 void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
@@ -44,13 +48,19 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
         .setSetup([](RenderPass& p) { p.bindSlot("outTarget", RGTarget::Main); });
 
     m_render_graph.addPass(RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
-        .setEnabled(render_params.shadow_params.enable)
+        .setEnabled(render_params.shadow_params.directional_enable)
         .setDisabledExecution(RGDisabledExecution::Clear)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
         .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth)
-        .setSetup([](RenderPass& p) { p.bindSlot("outTarget", RGTarget::Main); });
+        .setSetup([&render_params](RenderPass& p)
+        {
+            auto& shadow_pass = static_cast<ShadowPass&>(p);
+            shadow_pass.setRenderDirectionalShadows(render_params.shadow_params.directional_enable);
+            shadow_pass.setRenderPointShadows(false);
+            p.bindSlot("outTarget", RGTarget::Main);
+        });
 
     m_render_graph.addPass(RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
         .read(RGResource::ShadowDirectionalDepth)
@@ -63,6 +73,7 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
             main_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             main_pass.enableReflection(render_params.effect_params.reflection);
             main_pass.enableIBL(render_params.ibl.enable);
+            main_pass.enableDirectionalShadow(render_params.shadow_params.directional_enable);
             p.bindSlot("outTarget", RGTarget::Main);
             p.bindSlot("inShadowDepth", RGResource::ShadowDirectionalDepth);
         });

@@ -49,7 +49,7 @@ void main()
         
         // Shadow of Directional Light:
         vec4 fragPosLightSpace = lightSpaceMatrix * vec4(Position, 1.0);
-        float shadowFactor = ShadowCalculation(fragPosLightSpace, shadow_map);
+        float shadowFactor = directionalShadowEnable ? ShadowCalculation(fragPosLightSpace, shadow_map) : 1.0;
 
         // Directional Light
         vec3 L = normalize(-directionalLight.direction);
@@ -67,7 +67,9 @@ void main()
         vec3 radiance = pointLights[i].color.xyz * attenuation;  
 
         // Point Light Shadow:
-        float pointShadowFactor = OmnidirectionalShadowCalculation(Position - pointLights[i].position, cube_shadow_maps[i], pointLights[i].radius);
+        float pointShadowFactor = pointShadowEnable
+            ? OmnidirectionalShadowCalculation(Position - pointLights[i].position, cube_shadow_maps[i], pointLights[i].radius)
+            : 1.0;
 
         // add to outgoing radiance Lo
         Lo += pointShadowFactor * radiance * BRDF(L, V, N, F0, albedo, metallic, roughness);  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again

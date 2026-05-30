@@ -45,7 +45,7 @@ void main()
 
 	// Shadow:
     vec4 fragPosLightSpace = lightSpaceMatrix * vec4(fs_in.fragWorldPos, 1.0);
-    float shadowFactor = ShadowCalculation(fragPosLightSpace, shadow_map);       
+    float shadowFactor = directionalShadowEnable ? ShadowCalculation(fragPosLightSpace, shadow_map) : 1.0;       
     
     vec3 result = shadowFactor * lightingByDirectionalLight + lightingByPointLight;
     outColor = vec4(result, 1.0);

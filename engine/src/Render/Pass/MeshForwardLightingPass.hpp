@@ -9,6 +9,7 @@ public:
     void enableReflection(bool reflection);
     void enablePBR(bool pbr);
     void enableIBL(bool enable) { m_ibl = enable; }
+    void enableDirectionalShadow(bool enable) { m_directional_shadow = enable; }
     void draw(RenderPassContext& context) override;
 
 private:
@@ -16,6 +17,7 @@ private:
     bool m_reflection = false;
     bool m_pbr = false;
     bool m_ibl = true;
+    bool m_directional_shadow = true;
 };
 
 #endif

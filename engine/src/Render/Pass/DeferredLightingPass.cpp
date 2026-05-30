@@ -54,6 +54,8 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	}
 
 	RhiTexture* dir_light_shadow_texture = context.texture(slot("inShadowDepth"));
+	bindings.setBool("directionalShadowEnable", m_directional_shadow && dir_light_shadow_texture != nullptr);
+	bindings.setBool("pointShadowEnable", m_point_shadow);
 	bindings.setFloat3("cameraPos", context.frameData().camera_position);
 	for (const auto& render_directional_light_data : context.frameData().directional_lights) {
 		bindings.setFloat3("directionalLight.direction", render_directional_light_data.direction);

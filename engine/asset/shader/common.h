@@ -14,6 +14,8 @@ struct PointLight
 uniform DirectionalLight directionalLight;
 uniform sampler2D shadow_map;
 uniform mat4 lightSpaceMatrix;
+uniform bool directionalShadowEnable;
+uniform bool pointShadowEnable;
 
 // TODO shader里怎么用动态数组
 // 注意：降为 5 是为了给 IBL 让出纹理单元（见 IBL 方案“纹理单元预算”）。
