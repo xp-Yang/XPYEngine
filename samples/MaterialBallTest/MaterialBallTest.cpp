@@ -15,56 +15,7 @@
 
 namespace fs = std::filesystem;
 
-// 内置预设材质：缺少 materials/<name>/ 目录时直接以因子渲染，
-// 保证无贴图资产时画廊仍能展示 30+ 种不同外观的材质球。
 namespace {
-
-struct MaterialPreset
-{
-    const char* name;
-    Vec3        base_color;
-    float       metallic;
-    float       roughness;
-};
-
-const MaterialPreset kPresets[] = {
-    // 金属
-    { "chrome",          Vec3(0.95f, 0.96f, 0.98f), 1.0f, 0.05f },
-    { "gold_polished",   Vec3(1.00f, 0.86f, 0.57f), 1.0f, 0.12f },
-    { "copper_polished", Vec3(0.95f, 0.64f, 0.54f), 1.0f, 0.12f },
-    { "silver",          Vec3(0.97f, 0.96f, 0.91f), 1.0f, 0.15f },
-    { "brass",           Vec3(0.91f, 0.78f, 0.42f), 1.0f, 0.20f },
-    { "aluminum",        Vec3(0.91f, 0.92f, 0.92f), 1.0f, 0.25f },
-    { "iron",            Vec3(0.56f, 0.57f, 0.58f), 1.0f, 0.30f },
-    { "titanium",        Vec3(0.54f, 0.50f, 0.46f), 1.0f, 0.35f },
-    { "gold_brushed",    Vec3(1.00f, 0.86f, 0.57f), 1.0f, 0.42f },
-    { "copper_brushed",  Vec3(0.95f, 0.64f, 0.54f), 1.0f, 0.45f },
-    { "black_metal",     Vec3(0.05f, 0.05f, 0.05f), 1.0f, 0.30f },
-    { "rusted_metal",    Vec3(0.45f, 0.30f, 0.20f), 1.0f, 0.70f },
-    // 陶瓷 / 石材
-    { "ceramic_white",   Vec3(0.95f, 0.95f, 0.92f), 0.0f, 0.08f },
-    { "marble_white",    Vec3(0.90f, 0.90f, 0.88f), 0.0f, 0.20f },
-    { "marble_black",    Vec3(0.06f, 0.06f, 0.07f), 0.0f, 0.18f },
-    { "jade",            Vec3(0.20f, 0.60f, 0.40f), 0.0f, 0.25f },
-    // 塑料 / 橡胶
-    { "plastic_red",     Vec3(0.80f, 0.05f, 0.05f), 0.0f, 0.25f },
-    { "plastic_green",   Vec3(0.05f, 0.60f, 0.10f), 0.0f, 0.30f },
-    { "plastic_blue",    Vec3(0.05f, 0.20f, 0.80f), 0.0f, 0.20f },
-    { "plastic_yellow",  Vec3(0.90f, 0.80f, 0.10f), 0.0f, 0.35f },
-    { "plastic_white",   Vec3(0.90f, 0.90f, 0.90f), 0.0f, 0.40f },
-    { "plastic_black",   Vec3(0.02f, 0.02f, 0.02f), 0.0f, 0.30f },
-    { "rubber_black",    Vec3(0.02f, 0.02f, 0.02f), 0.0f, 0.90f },
-    { "pearl",           Vec3(0.90f, 0.88f, 0.82f), 0.0f, 0.15f },
-    // 有机 / 矿物
-    { "wood_oak",        Vec3(0.55f, 0.38f, 0.22f), 0.0f, 0.60f },
-    { "wood_walnut",     Vec3(0.30f, 0.20f, 0.12f), 0.0f, 0.55f },
-    { "concrete",        Vec3(0.60f, 0.60f, 0.58f), 0.0f, 0.85f },
-    { "brick_red",       Vec3(0.55f, 0.25f, 0.18f), 0.0f, 0.80f },
-    { "sand",            Vec3(0.76f, 0.68f, 0.50f), 0.0f, 0.90f },
-    { "emerald",         Vec3(0.05f, 0.55f, 0.30f), 0.0f, 0.10f },
-    { "ruby",            Vec3(0.60f, 0.05f, 0.10f), 0.0f, 0.12f },
-    { "sapphire",        Vec3(0.05f, 0.15f, 0.60f), 0.0f, 0.10f },
-};
 
 bool readJsonFile(const std::string& path, json11::Json& out)
 {
@@ -98,39 +49,30 @@ std::string resolveTexture(const std::string& dir,
     return {};
 }
 
-// 由因子（可被 material.json 覆盖）与目录贴图构建一个 PBR 材质。
-std::shared_ptr<Material> loadMaterialFromDir(const std::string& dir,
-                                              Vec3 base_color,
-                                              float metallic,
-                                              float roughness)
+// 由 material.json 与目录贴图构建 PBR 材质。
+std::shared_ptr<Material> loadMaterialFromDir(const std::string& dir)
 {
-    float ao = 1.0f;
-    std::string albedo_name, metallic_name, roughness_name, normal_name, ao_name;
+    auto mat = Material::create_complete_default_material();
 
+    std::string albedo_name, metallic_name, roughness_name, normal_name, ao_name;
+    const std::string json_path = dir + "/material.json";
     json11::Json json;
-    const std::string json_path = dir.empty() ? std::string() : dir + "/material.json";
-    if (!json_path.empty() && fs::exists(json_path) && readJsonFile(json_path, json)) {
+    if (fs::exists(json_path) && readJsonFile(json_path, json)) {
         const auto& bc = json["base_color_factor"].array_items();
         if (bc.size() == 3)
-            base_color = Vec3((float)bc[0].number_value(), (float)bc[1].number_value(), (float)bc[2].number_value());
+            mat->base_color_factor = Vec3((float)bc[0].number_value(), (float)bc[1].number_value(), (float)bc[2].number_value());
         if (json["metallic_factor"].is_number())
-            metallic = (float)json["metallic_factor"].number_value();
+            mat->metallic_factor = (float)json["metallic_factor"].number_value();
         if (json["roughness_factor"].is_number())
-            roughness = (float)json["roughness_factor"].number_value();
+            mat->roughness_factor = (float)json["roughness_factor"].number_value();
         if (json["ao_factor"].is_number())
-            ao = (float)json["ao_factor"].number_value();
+            mat->ao_factor = (float)json["ao_factor"].number_value();
         albedo_name    = json["albedo_map"].string_value();
         metallic_name  = json["metallic_map"].string_value();
         roughness_name = json["roughness_map"].string_value();
         normal_name    = json["normal_map"].string_value();
         ao_name        = json["ao_map"].string_value();
     }
-
-    auto mat = Material::create_complete_default_material();
-    mat->base_color_factor = base_color;
-    mat->metallic_factor = metallic;
-    mat->roughness_factor = roughness;
-    mat->ao_factor = ao;
 
     const std::string albedo = resolveTexture(dir, albedo_name, { "albedo.png", "albedo.jpg", "basecolor.png", "diffuse.png" });
     if (!albedo.empty())
@@ -206,22 +148,12 @@ std::map<std::string, std::shared_ptr<Material>> MaterialBallTest::loadMaterialL
     std::map<std::string, std::shared_ptr<Material>> lib;
     const std::string materials_dir = m_root_dir + "/materials";
 
-    // 预设：每个预设名优先使用同名目录里的 material.json / 贴图覆盖。
-    for (const auto& preset : kPresets) {
-        const std::string dir = materials_dir + "/" + preset.name;
-        const std::string scan_dir = fs::exists(dir) ? dir : std::string();
-        lib[preset.name] = loadMaterialFromDir(scan_dir, preset.base_color, preset.metallic, preset.roughness);
-    }
-
-    // 额外目录：用户新增的、不在预设表里的材质同样纳入画廊。
     if (fs::exists(materials_dir) && fs::is_directory(materials_dir)) {
         for (const auto& entry : fs::directory_iterator(materials_dir)) {
             if (!entry.is_directory())
                 continue;
             const std::string name = entry.path().filename().string();
-            if (lib.count(name))
-                continue;
-            lib[name] = loadMaterialFromDir(entry.path().string(), Vec3(0.7f, 0.7f, 0.7f), 0.0f, 0.5f);
+            lib[name] = loadMaterialFromDir(entry.path().string());
         }
     }
 

@@ -1,0 +1,10 @@
+{
+  "base_color_factor": [
+    1.0,
+    0.86,
+    0.57
+  ],
+  "metallic_factor": 1.0,
+  "roughness_factor": 0.42,
+  "ao_factor": 1.0
+}
