@@ -15,7 +15,7 @@ void ShadowPass::draw(RenderPassContext& context)
 
 void ShadowPass::drawDirectionalLightShadowMap(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(slot("outTarget"));
     if (!framebuffer)
         return;
     m_command_buffer->beginPass(framebuffer);

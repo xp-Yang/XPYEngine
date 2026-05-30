@@ -9,7 +9,7 @@ PickingPass::PickingPass()
 void PickingPass::draw(RenderPassContext& context)
 {
     // render for picking
-    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(slot("outTarget"));
     if (!framebuffer)
         return;
     m_command_buffer->beginPass(framebuffer);

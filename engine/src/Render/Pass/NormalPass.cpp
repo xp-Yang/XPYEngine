@@ -13,7 +13,7 @@ void NormalPass::init()
 
 void NormalPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
+    RhiFrameBuffer* target_framebuffer = context.frameBuffer(slot("outColor"));
     if (!target_framebuffer)
         return;
     m_command_buffer->beginPass(target_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);

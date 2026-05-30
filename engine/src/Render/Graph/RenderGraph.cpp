@@ -508,6 +508,31 @@ void RenderGraph::resolveResourceDependencies()
         if (node.m_enabled) {
             resolveReads(node);
             resolveModifies(node);
+            validateNoReadWriteConflict(node);
+        }
+    }
+}
+
+void RenderGraph::validateNoReadWriteConflict(const RenderGraphPassNode& node)
+{
+    for (const RGResourceName& modify : node.m_modifies)
+    {
+        for (const RGResourceName& read : node.m_reads)
+        {
+            if (read == modify)
+                throw std::runtime_error(
+                    "RenderGraph: pass reads and modifies the same resource '" + modify +
+                    "' — this causes a feedback loop. Use read(input) + color(output) instead.");
+        }
+    }
+
+    for (const auto& produced : node.m_resources)
+    {
+        for (const RGResourceName& read : node.m_reads)
+        {
+            if (read == produced.name)
+                throw std::runtime_error(
+                    "RenderGraph: pass reads its own produced resource '" + produced.name + "'.");
         }
     }
 }

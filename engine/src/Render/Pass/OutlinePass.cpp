@@ -8,7 +8,7 @@ OutlinePass::OutlinePass()
 
 void OutlinePass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* mask_framebuffer = context.frameBufferOfTarget(RGTarget::OutlineMask);
+    RhiFrameBuffer* mask_framebuffer = context.frameBufferOfTarget(slot("outMaskTarget"));
     if (!mask_framebuffer)
         return;
     m_command_buffer->beginPass(mask_framebuffer);
@@ -57,9 +57,9 @@ void OutlinePass::draw(RenderPassContext& context)
     m_command_buffer->endPass();
 
 
-    RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
-    RhiTexture* obj_map = context.texture(RGResource::OutlineMaskColor);
-    RhiTexture* obj_depth_map = context.texture(RGResource::OutlineMaskDepth);
+    RhiFrameBuffer* target_framebuffer = context.frameBuffer(slot("outColor"));
+    RhiTexture* obj_map = context.texture(slot("inMaskColor"));
+    RhiTexture* obj_depth_map = context.texture(slot("inMaskDepth"));
     if (!target_framebuffer || !obj_map || !obj_depth_map)
         return;
     m_command_buffer->beginPass(target_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);

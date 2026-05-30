@@ -19,7 +19,7 @@ void MeshForwardLightingPass::enablePBR(bool pbr)
 
 void MeshForwardLightingPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(slot("outTarget"));
     if (!framebuffer)
         return;
     // framebuffer clear color before gamma correction: Color4(0.046, 0.046, 0.046, 1.0)
@@ -106,7 +106,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
         bindings.setFloat3("directionalLight.direction", light_direction);
         bindings.setFloat3("directionalLight.color", light_color);
 
-        RhiTexture* shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
+        RhiTexture* shadow_texture = hasSlot("inShadowDepth") ? context.texture(slot("inShadowDepth")) : nullptr;
         if (shadow_texture)
         {
             bindings.setMatrix("lightSpaceMatrix", 1, light_ref_matrix);

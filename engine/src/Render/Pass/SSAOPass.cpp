@@ -77,9 +77,9 @@ void SSAOPass::destroyRawBuffer()
 
 void SSAOPass::draw(RenderPassContext& context)
 {
-    RhiTexture* g_position = context.texture(RGResource::GBufferPosition);
-    RhiTexture* g_normal = context.texture(RGResource::GBufferNormal);
-    RhiFrameBuffer* result_fbo = context.frameBufferOfTarget(RGTarget::Main);
+    RhiTexture* g_position = context.texture(slot("inPosition"));
+    RhiTexture* g_normal = context.texture(slot("inNormal"));
+    RhiFrameBuffer* result_fbo = context.frameBufferOfTarget(slot("outTarget"));
     if (!g_position || !g_normal || !result_fbo)
         return;
 

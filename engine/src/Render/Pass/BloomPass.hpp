@@ -8,7 +8,9 @@
 class RenderPassContext;
 
 // Mip-chain bloom: progressive downsample -> upsample -> composite.
-// Owns its own mip chain textures and FBOs internally, independent of RenderGraph targets.
+// The mip chain textures/FBOs are managed internally by the pass.
+// The composite step writes to the graph-provided output target (via slot "outColor"),
+// reading from slot "inColor" and the internal mip chain.
 class BloomPass : public RenderPass
 {
 public:
@@ -47,10 +49,6 @@ private:
     Vec2 m_current_scene_size{ 0.f, 0.f };
     int m_current_mip_count{ 0 };
     std::vector<MipLevel> m_mip_chain;
-
-    // Temp FBO for composite to avoid SceneColor read-write feedback loop
-    RhiTexture* m_composite_texture{ nullptr };
-    std::unique_ptr<RhiFrameBuffer> m_composite_framebuffer;
 };
 
 #endif

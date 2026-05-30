@@ -40,7 +40,8 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
     m_render_graph.addPass(RenderPass::Type::Picking, pass(RenderPass::Type::Picking))
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::PickingColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH)
+        .setSetup([](RenderPass& p) { p.bindSlot("outTarget", RGTarget::Main); });
 
     m_render_graph.addPass(RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
         .setEnabled(render_params.shadow_params.enable)
@@ -48,40 +49,53 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth);
+        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth)
+        .setSetup([](RenderPass& p) { p.bindSlot("outTarget", RGTarget::Main); });
 
     m_render_graph.addPass(RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
         .read(RGResource::ShadowDirectionalDepth)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGB8, 0, 4)
         .depthStencil(RGResource::SceneDepth, RhiTexture::Format::DEPTH24STENCIL8, 4)
-        .setSetup([this, &render_params](RenderPass& render_pass)
+        .setSetup([this, &render_params](RenderPass& p)
         {
-            auto& main_pass = static_cast<MeshForwardLightingPass&>(render_pass);
+            auto& main_pass = static_cast<MeshForwardLightingPass&>(p);
             main_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             main_pass.enableReflection(render_params.effect_params.reflection);
             main_pass.enableIBL(render_params.ibl.enable);
+            p.bindSlot("outTarget", RGTarget::Main);
+            p.bindSlot("inShadowDepth", RGResource::ShadowDirectionalDepth);
         });
 
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
         .setEnabled(render_params.effect_params.skybox)
         .modify(RGResource::SceneColor)
-        .modify(RGResource::SceneDepth);
+        .modify(RGResource::SceneDepth)
+        .setSetup([](RenderPass& p) { p.bindSlot("outColor", RGResource::SceneColor); });
 
     m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outColor", RGResource::SceneColor);
+            p.bindSlot("outMaskTarget", RGTarget::OutlineMask);
+            p.bindSlot("inMaskColor", RGResource::OutlineMaskColor);
+            p.bindSlot("inMaskDepth", RGResource::OutlineMaskDepth);
+        });
 
     m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
         .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
-        .setSetup([&render_params](RenderPass& render_pass)
+        .setSetup([&render_params](RenderPass& p)
         {
-            static_cast<FinalPass&>(render_pass).setDrawGrid(render_params.effect_params.grid);
+            static_cast<FinalPass&>(p).setDrawGrid(render_params.effect_params.grid);
+            p.bindSlot("inColor", RGResource::SceneColor);
+            p.bindSlot("outTarget", RGTarget::Main);
         });
 
     m_render_graph.markOutput(RGResource::PickingColor);

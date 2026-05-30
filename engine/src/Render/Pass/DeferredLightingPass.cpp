@@ -8,18 +8,17 @@ DeferredLightingPass::DeferredLightingPass()
 
 void DeferredLightingPass::draw(RenderPassContext& context)
 {
-	RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
-	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(RGResource::GBufferDepth);
+	RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(slot("outTarget"));
+	RhiFrameBuffer* gbuffer_framebuffer = context.frameBuffer(slot("inGBufferDepthFBO"));
 	if (!framebuffer || !gbuffer_framebuffer)
 		return;
 	m_command_buffer->beginPass(framebuffer, Color4(0.046f, 0.046f, 0.046f, 1.0f));
 
-	// deferred lighting
-    const ShaderType lighting_shader = m_pbr ? ShaderType::DeferredLightingShader : ShaderType::DeferredLightingPhongShader;
+	const ShaderType lighting_shader = m_pbr ? ShaderType::DeferredLightingShader : ShaderType::DeferredLightingPhongShader;
 	m_command_buffer->setGraphicsPipeline(RenderPipelineLibrary::graphicsPipeline(lighting_shader));
     ShaderResourceBindings bindings;
-	RhiTexture* g_position_map = context.texture(RGResource::GBufferPosition);
-	RhiTexture* g_normal_map = context.texture(RGResource::GBufferNormal);
+	RhiTexture* g_position_map = context.texture(slot("inGBufferPosition"));
+	RhiTexture* g_normal_map = context.texture(slot("inGBufferNormal"));
 	if (!g_position_map || !g_normal_map)
 	{
 		m_command_buffer->endPass();
@@ -28,10 +27,10 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	bindings.setTexture("gPosition", 0, g_position_map);
 	bindings.setTexture("gNormal", 1, g_normal_map);
 	if (m_pbr) {
-		RhiTexture* g_albedo_map = context.texture(RGResource::GBufferAlbedo);
-		RhiTexture* g_metallic_map = context.texture(RGResource::GBufferMetallic);
-		RhiTexture* g_roughness_map = context.texture(RGResource::GBufferRoughness);
-		RhiTexture* g_ao_map = context.texture(RGResource::GBufferAO);
+		RhiTexture* g_albedo_map = context.texture(slot("inGBufferAlbedo"));
+		RhiTexture* g_metallic_map = context.texture(slot("inGBufferMetallic"));
+		RhiTexture* g_roughness_map = context.texture(slot("inGBufferRoughness"));
+		RhiTexture* g_ao_map = context.texture(slot("inGBufferAO"));
 		if (!g_albedo_map || !g_metallic_map || !g_roughness_map || !g_ao_map)
 		{
 			m_command_buffer->endPass();
@@ -43,8 +42,8 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		bindings.setTexture("gAo", 5, g_ao_map);
 	}
 	else {
-		RhiTexture* g_diffuse_map = context.texture(RGResource::GBufferDiffuse);
-		RhiTexture* g_specular_map = context.texture(RGResource::GBufferSpecular);
+		RhiTexture* g_diffuse_map = context.texture(slot("inGBufferDiffuse"));
+		RhiTexture* g_specular_map = context.texture(slot("inGBufferSpecular"));
 		if (!g_diffuse_map || !g_specular_map)
 		{
 			m_command_buffer->endPass();
@@ -54,7 +53,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		bindings.setTexture("gSpecular", 3, g_specular_map);
 	}
 
-	RhiTexture* dir_light_shadow_texture = context.texture(RGResource::ShadowDirectionalDepth);
+	RhiTexture* dir_light_shadow_texture = context.texture(slot("inShadowDepth"));
 	bindings.setFloat3("cameraPos", context.frameData().camera_position);
 	for (const auto& render_directional_light_data : context.frameData().directional_lights) {
 		bindings.setFloat3("directionalLight.direction", render_directional_light_data.direction);
@@ -99,7 +98,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	// SSAO（单元 15，关闭时绑定默认白图并由 ssaoEnable 门控）。
 	const bool ssao_ready = m_pbr && m_ssao;
 	bindings.setBool("ssaoEnable", ssao_ready);
-	RhiTexture* ssao_map = ssao_ready ? context.texture(RGResource::SSAOResult) : nullptr;
+	RhiTexture* ssao_map = (ssao_ready && hasSlot("inSSAO")) ? context.texture(slot("inSSAO")) : nullptr;
 	bindings.setTexture("ssaoMap", 15, ssao_map ? ssao_map : RenderTextureData::defaultTexture().texture);
 
     m_command_buffer->setShaderResources(&bindings);

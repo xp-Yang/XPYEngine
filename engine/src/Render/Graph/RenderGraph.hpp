@@ -75,6 +75,7 @@ protected:
     void resolveReads(RenderGraphPassNode& node);
     void resolveModifies(RenderGraphPassNode& node);
     void resolveResources(RenderGraphPassNode& node);
+    void validateNoReadWriteConflict(const RenderGraphPassNode& node);
     void visit(RenderPass::Type type, std::unordered_set<RenderPass::Type>& visiting, std::unordered_set<RenderPass::Type>& visited);
 
 private:

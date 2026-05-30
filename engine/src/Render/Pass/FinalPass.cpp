@@ -8,15 +8,13 @@ FinalPass::FinalPass()
 
 void FinalPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(slot("outTarget"));
 
-    RhiFrameBuffer* source_framebuffer = nullptr;
-    source_framebuffer = context.frameBuffer(RGResource::CheckerBoardColor);
-        if (!source_framebuffer)
-            source_framebuffer = context.frameBuffer(RGResource::SceneColor);
+    RhiFrameBuffer* source_color_framebuffer = context.frameBuffer(slot("inColor"));
+    RhiFrameBuffer* source_depth_framebuffer = context.frameBuffer(slot("inDepth"));
     // TODO //downSample if msaa?
-    m_command_buffer->blit(source_framebuffer, framebuffer, RhiTexture::Format::RGB16F);
-    m_command_buffer->blit(source_framebuffer, framebuffer, RhiTexture::Format::DEPTH);
+    m_command_buffer->blit(source_color_framebuffer, framebuffer, RhiTexture::Format::RGB16F);
+    m_command_buffer->blit(source_depth_framebuffer, framebuffer, RhiTexture::Format::DEPTH);
     if (m_draw_grid) {
         m_command_buffer->beginPass(framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
         RenderPipelineState state;

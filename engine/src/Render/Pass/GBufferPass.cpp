@@ -8,7 +8,7 @@ GBufferPass::GBufferPass()
 
 void GBufferPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(RGTarget::Main);
+    RhiFrameBuffer* framebuffer = context.frameBufferOfTarget(slot("outTarget"));
     if (!framebuffer)
         return;
     m_command_buffer->beginPass(framebuffer);

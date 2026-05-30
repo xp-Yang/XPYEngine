@@ -28,8 +28,10 @@ static inline RGResourceName SSAOResult = "SSAO.Result";
 
 static inline RGResourceName SceneColor = "Scene.Color";
 static inline RGResourceName SceneDepth = "Scene.Depth";
-              
-// Old bloom ping-pong resources removed; BloomPass now manages its own mip chain internally.
+
+static inline RGResourceName BloomColor = "Bloom.Color";
+static inline RGResourceName FXAAColor = "FXAA.Color";
+static inline RGResourceName ToneMappingColor = "ToneMapping.Color";
               
 static inline RGResourceName OutlineMaskColor = "Outline.MaskColor";
 static inline RGResourceName OutlineMaskDepth = "Outline.MaskDepth";
@@ -98,9 +100,10 @@ public:
     // 声明所需的资源，表明pass将从该resource采样
     RenderGraphPassNode& read(const RGResourceName& resource_name);
 
-    // 声明续写的资源，表明pass将续写这个resource
-    // 建立在旧图像内容的基础之上，如果不是，就write新resource
-    // 但不能同时采样这个resource，否则会导致UB: feedback loop
+    // 就地续写已有资源（作为渲染目标，LoadAction=Load，保留旧内容）。
+    // 等价 Unity SetRenderAttachment / UE RTV-with-Load。
+    // 铁律：同一 pass 不得同时 read() 和 modify() 同一资源（会导致 feedback loop UB）。
+    // 如果 pass 需要采样一张纹理并产出变换后的结果，应使用 read(in) + color(out) 写独立输出。
     RenderGraphPassNode& modify(const RGResourceName& resource_name);
 
     // 声明produce的资源，一个资源只能有一个producer pass、只属于一个target，表明pass写出这个resource

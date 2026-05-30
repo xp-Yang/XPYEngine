@@ -13,7 +13,7 @@ void TransparentPass::init()
 
 void TransparentPass::draw(RenderPassContext& context)
 {
-    RhiFrameBuffer* target_framebuffer = context.frameBuffer(RGResource::SceneColor);
+    RhiFrameBuffer* target_framebuffer = context.frameBuffer(slot("outColor"));
     m_command_buffer->beginPass(target_framebuffer, Color4(0.f, 0.f, 0.f, 1.f), 1.0f, 0, false, false);
 
     Mat4 light_ref_matrix = context.frameData().directional_lights.front().lightProjMatrix *

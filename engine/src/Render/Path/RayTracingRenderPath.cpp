@@ -2,6 +2,7 @@
 
 #include "../Pass/RayTracingPass.hpp"
 #include "../Pass/FinalPass.hpp"
+#include "../RenderSystem.hpp"
 #include "Render/Graph/RenderGraphDumper.hpp"
 #include "GlobalContext.hpp"
 
@@ -18,16 +19,19 @@ void RayTracingRenderPath::render(RenderScene& render_scene, RenderFrameData& fr
     m_render_graph.addPass(RenderPass::Type::RayTracing, m_ray_tracing_pass.get())
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH)
+        .setSetup([](RenderPass& p) { p.bindSlot("outTarget", RGTarget::Main); });
 
     m_render_graph.addPass(RenderPass::Type::Final, m_final_pass.get())
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
         .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
-        .setSetup([](RenderPass& render_pass)
+        .setSetup([](RenderPass& p)
         {
             const auto& effect = g_context.render_system->renderParams().effect_params;
-            static_cast<FinalPass&>(render_pass).setDrawGrid(effect.grid);
+            static_cast<FinalPass&>(p).setDrawGrid(effect.grid);
+            p.bindSlot("inColor", RGResource::SceneColor);
+            p.bindSlot("outTarget", RGTarget::Main);
         });
 
     m_render_graph.markOutput(RGResource::SceneColor);

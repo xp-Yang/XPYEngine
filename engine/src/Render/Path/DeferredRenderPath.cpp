@@ -62,27 +62,39 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
 
     m_render_graph.reset();
 
+    // --- Picking ---
     m_render_graph.addPass(RenderPass::Type::Picking, pass(RenderPass::Type::Picking))
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::PickingColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::PickingDepth, RhiTexture::Format::DEPTH)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outTarget", RGTarget::Main);
+        });
 
+    // --- Shadow ---
     m_render_graph.addPass(RenderPass::Type::Shadow, pass(RenderPass::Type::Shadow))
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .setEnabled(render_params.shadow_params.enable)
         .setDisabledExecution(RGDisabledExecution::Clear)
         .color(RGResource::ShadowDirectionalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::ShadowDirectionalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth);
+        .target(RGTarget::ShadowPointDepth, RenderTargetType::CubeDepth)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outTarget", RGTarget::Main);
+        });
 
+    // --- GBuffer ---
     auto& gbuffer_node = m_render_graph.addPass(RenderPass::Type::GBuffer, pass(RenderPass::Type::GBuffer))
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::GBufferPosition, RhiTexture::Format::RGBA16F, 0)
         .color(RGResource::GBufferNormal, RhiTexture::Format::RGBA16F, 1)
         .depth(RGResource::GBufferDepth, RhiTexture::Format::DEPTH)
-        .setSetup([&render_params](RenderPass& render_pass)
+        .setSetup([&render_params](RenderPass& p)
         {
-            static_cast<GBufferPass&>(render_pass).enablePBR(render_params.material_model == MaterialModel::PBR);
+            static_cast<GBufferPass&>(p).enablePBR(render_params.material_model == MaterialModel::PBR);
+            p.bindSlot("outTarget", RGTarget::Main);
         });
     if (render_params.material_model == MaterialModel::PBR)
     {
@@ -99,7 +111,7 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
             .color(RGResource::GBufferSpecular, RhiTexture::Format::RGBA16F, 3);
     }
 
-    // SSAO 仅在 PBR 路径生效（环境光遮蔽乘入 deferredLighting_pbr.fs 的 ambient 项）。
+    // --- SSAO ---
     const bool ssao_used = render_params.ssao.enable && render_params.material_model == MaterialModel::PBR;
     if (ssao_used)
     {
@@ -108,12 +120,16 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
             .read(RGResource::GBufferNormal)
             .target(RGTarget::Main, RenderTargetType::FrameBuffer)
             .color(RGResource::SSAOResult, RhiTexture::Format::R8, 0)
-            .setSetup([&render_params](RenderPass& render_pass)
+            .setSetup([&render_params](RenderPass& p)
             {
-                static_cast<SSAOPass&>(render_pass).setParams(render_params.ssao);
+                static_cast<SSAOPass&>(p).setParams(render_params.ssao);
+                p.bindSlot("inPosition", RGResource::GBufferPosition);
+                p.bindSlot("inNormal", RGResource::GBufferNormal);
+                p.bindSlot("outTarget", RGTarget::Main);
             });
     }
 
+    // --- Deferred Lighting ---
     auto& lighting_node = m_render_graph.addPass(RenderPass::Type::DeferredLighting, pass(RenderPass::Type::DeferredLighting))
         .read(RGResource::GBufferPosition)
         .read(RGResource::GBufferNormal)
@@ -121,12 +137,31 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::SceneColor, RhiTexture::Format::RGBA16F)
         .depth(RGResource::SceneDepth, RhiTexture::Format::DEPTH)
-        .setSetup([this, &render_params, ssao_used](RenderPass& render_pass)
+        .setSetup([this, &render_params, ssao_used](RenderPass& p)
         {
-            auto& lighting_pass = static_cast<DeferredLightingPass&>(render_pass);
+            auto& lighting_pass = static_cast<DeferredLightingPass&>(p);
             lighting_pass.enablePBR(render_params.material_model == MaterialModel::PBR);
             lighting_pass.enableIBL(render_params.ibl.enable);
             lighting_pass.enableSSAO(ssao_used);
+            p.bindSlot("outTarget", RGTarget::Main);
+            p.bindSlot("inGBufferPosition", RGResource::GBufferPosition);
+            p.bindSlot("inGBufferNormal", RGResource::GBufferNormal);
+            p.bindSlot("inShadowDepth", RGResource::ShadowDirectionalDepth);
+            p.bindSlot("inGBufferDepthFBO", RGResource::GBufferDepth);
+            if (render_params.material_model == MaterialModel::PBR)
+            {
+                p.bindSlot("inGBufferAlbedo", RGResource::GBufferAlbedo);
+                p.bindSlot("inGBufferMetallic", RGResource::GBufferMetallic);
+                p.bindSlot("inGBufferRoughness", RGResource::GBufferRoughness);
+                p.bindSlot("inGBufferAO", RGResource::GBufferAO);
+            }
+            else
+            {
+                p.bindSlot("inGBufferDiffuse", RGResource::GBufferDiffuse);
+                p.bindSlot("inGBufferSpecular", RGResource::GBufferSpecular);
+            }
+            if (ssao_used)
+                p.bindSlot("inSSAO", RGResource::SSAOResult);
         });
     if (ssao_used)
     {
@@ -147,15 +182,24 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
             .read(RGResource::GBufferSpecular);
     }
 
+    // --- In-place modify passes (SkyBox, Transparent, Outline, WireFrame, Normal) ---
     m_render_graph.addPass(RenderPass::Type::SkyBox, pass(RenderPass::Type::SkyBox))
         .setEnabled(render_params.effect_params.skybox)
         .modify(RGResource::SceneColor)
-        .modify(RGResource::SceneDepth);
+        .modify(RGResource::SceneDepth)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outColor", RGResource::SceneColor);
+        });
 
     m_render_graph.addPass(RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
         .setEnabled(render_scene.hasTransparent())
         .modify(RGResource::SceneColor)
-        .modify(RGResource::SceneDepth);
+        .modify(RGResource::SceneDepth)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outColor", RGResource::SceneColor);
+        });
 
     m_render_graph.addPass(RenderPass::Type::Outline, pass(RenderPass::Type::Outline))
         .setEnabled(!frame_data.picked_ids.empty())
@@ -163,53 +207,109 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         .modify(RGResource::SceneDepth)
         .target(RGTarget::OutlineMask, RenderTargetType::FrameBuffer)
         .color(RGResource::OutlineMaskColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::OutlineMaskDepth, RhiTexture::Format::DEPTH)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outColor", RGResource::SceneColor);
+            p.bindSlot("outMaskTarget", RGTarget::OutlineMask);
+            p.bindSlot("inMaskColor", RGResource::OutlineMaskColor);
+            p.bindSlot("inMaskDepth", RGResource::OutlineMaskDepth);
+        });
 
     m_render_graph.addPass(RenderPass::Type::CheckerBoard, pass(RenderPass::Type::CheckerBoard))
         .setEnabled(checkerboard_enabled)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::CheckerBoardColor, RhiTexture::Format::RGB16F)
-        .depth(RGResource::CheckerBoardDepth, RhiTexture::Format::DEPTH);
+        .depth(RGResource::CheckerBoardDepth, RhiTexture::Format::DEPTH)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outTarget", RGTarget::Main);
+        });
 
     m_render_graph.addPass(RenderPass::Type::WireFrame, pass(RenderPass::Type::WireFrame))
         .setEnabled(render_params.effect_params.wireframe)
         .modify(RGResource::SceneColor)
-        .modify(RGResource::SceneDepth);
+        .modify(RGResource::SceneDepth)
+        .setSetup([](RenderPass& p)
+        {
+            p.bindSlot("outColor", RGResource::SceneColor);
+        });
 
     m_render_graph.addPass(RenderPass::Type::Normal, pass(RenderPass::Type::Normal))
         .setEnabled(render_params.effect_params.show_normal)
         .modify(RGResource::SceneColor)
-        .modify(RGResource::SceneDepth);
-
-    m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
-        .setEnabled(bloom_used)
-        .modify(RGResource::SceneColor)
-        .setSetup([&render_params](RenderPass& render_pass)
+        .modify(RGResource::SceneDepth)
+        .setSetup([](RenderPass& p)
         {
-            auto& bloom_pass = static_cast<BloomPass&>(render_pass);
-            const auto& pp = render_params.post_processing_params;
-            bloom_pass.setParams({
-                pp.bloom_threshold,
-                pp.bloom_soft_knee,
-                pp.bloom_intensity,
-                pp.bloom_mip_levels
+            p.bindSlot("outColor", RGResource::SceneColor);
+        });
+
+    // --- Post-processing chain: read(in) + write(out) ---
+    RGResourceName currentColor = RGResource::SceneColor;
+
+    if (bloom_used)
+    {
+        const RGResourceName bloomIn = currentColor;
+        const RGResourceName bloomOut = RGResource::BloomColor;
+        m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
+            .setEnabled(true)
+            .read(bloomIn)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(bloomOut, RhiTexture::Format::RGBA16F)
+            .setSetup([&render_params, bloomIn, bloomOut](RenderPass& p)
+            {
+                auto& bloom_pass = static_cast<BloomPass&>(p);
+                const auto& pp = render_params.post_processing_params;
+                bloom_pass.setParams({
+                    pp.bloom_threshold,
+                    pp.bloom_soft_knee,
+                    pp.bloom_intensity,
+                    pp.bloom_mip_levels
+                });
+                p.bindSlot("inColor", bloomIn);
+                p.bindSlot("outColor", bloomOut);
             });
-        });
+        currentColor = bloomOut;
+    }
 
-    m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
-        .setEnabled(render_params.post_processing_params.fxaa)
-        .modify(RGResource::SceneColor);
+    if (render_params.post_processing_params.fxaa)
+    {
+        const RGResourceName fxaaIn = currentColor;
+        const RGResourceName fxaaOut = RGResource::FXAAColor;
+        m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
+            .setEnabled(true)
+            .read(fxaaIn)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(fxaaOut, RhiTexture::Format::RGBA16F)
+            .setSetup([fxaaIn, fxaaOut](RenderPass& p)
+            {
+                p.bindSlot("inColor", fxaaIn);
+                p.bindSlot("outColor", fxaaOut);
+            });
+        currentColor = fxaaOut;
+    }
 
-    m_render_graph.addPass(RenderPass::Type::ToneMapping, pass(RenderPass::Type::ToneMapping))
-        .setEnabled(tone_mapping_used)
-        .modify(RGResource::SceneColor)
-        .setSetup([&render_params](RenderPass& render_pass)
-        {
-            auto& tone_pass = static_cast<ToneMappingPass&>(render_pass);
-            tone_pass.setExposure(render_params.post_processing_params.exposure);
-        });
+    if (tone_mapping_used)
+    {
+        const RGResourceName tmIn = currentColor;
+        const RGResourceName tmOut = RGResource::ToneMappingColor;
+        m_render_graph.addPass(RenderPass::Type::ToneMapping, pass(RenderPass::Type::ToneMapping))
+            .setEnabled(true)
+            .read(tmIn)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(tmOut, RhiTexture::Format::RGBA16F)
+            .setSetup([&render_params, tmIn, tmOut](RenderPass& p)
+            {
+                auto& tone_pass = static_cast<ToneMappingPass&>(p);
+                tone_pass.setExposure(render_params.post_processing_params.exposure);
+                p.bindSlot("inColor", tmIn);
+                p.bindSlot("outColor", tmOut);
+            });
+        currentColor = tmOut;
+    }
 
-    RGResourceName beforeFinalColor = checkerboard_enabled ? RGResource::CheckerBoardColor : RGResource::SceneColor;
+    // --- Final ---
+    RGResourceName beforeFinalColor = checkerboard_enabled ? RGResource::CheckerBoardColor : currentColor;
     RGResourceName beforeFinalDepth = checkerboard_enabled ? RGResource::CheckerBoardDepth : RGResource::SceneDepth;
     m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
         .read(beforeFinalColor)
@@ -218,15 +318,17 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         .color(RGResource::FinalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
         .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
-        .setSetup([&render_params](RenderPass& render_pass)
+        .setSetup([&render_params, beforeFinalColor, beforeFinalDepth](RenderPass& p)
         {
-            static_cast<FinalPass&>(render_pass).setDrawGrid(render_params.effect_params.grid);
+            static_cast<FinalPass&>(p).setDrawGrid(render_params.effect_params.grid);
+            p.bindSlot("inColor", beforeFinalColor);
+            p.bindSlot("inDepth", beforeFinalDepth);
+            p.bindSlot("outTarget", RGTarget::Main);
         });
 
     m_render_graph.markOutput(RGResource::PickingColor);
     m_render_graph.markOutput(RGResource::FinalColor);
 
-    // TODO 不必每帧都重新compile?
     m_render_graph.compile();
     m_render_graph.execute(render_scene, frame_data, builtin_resources);
 }
