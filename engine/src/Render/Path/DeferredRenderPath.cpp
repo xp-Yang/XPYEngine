@@ -217,7 +217,11 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
+        .setSetup([&render_params](RenderPass& render_pass)
+        {
+            static_cast<FinalPass&>(render_pass).setDrawGrid(render_params.effect_params.grid);
+        });
 
     m_render_graph.markOutput(RGResource::PickingColor);
     m_render_graph.markOutput(RGResource::FinalColor);

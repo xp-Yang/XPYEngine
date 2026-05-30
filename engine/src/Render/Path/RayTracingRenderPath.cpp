@@ -3,6 +3,7 @@
 #include "../Pass/RayTracingPass.hpp"
 #include "../Pass/FinalPass.hpp"
 #include "Render/Graph/RenderGraphDumper.hpp"
+#include "GlobalContext.hpp"
 
 RayTracingRenderPath::RayTracingRenderPath()
 {
@@ -22,7 +23,12 @@ void RayTracingRenderPath::render(RenderScene& render_scene, RenderFrameData& fr
     m_render_graph.addPass(RenderPass::Type::Final, m_final_pass.get())
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
-        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
+        .setSetup([](RenderPass& render_pass)
+        {
+            const auto& effect = g_context.render_system->renderParams().effect_params;
+            static_cast<FinalPass&>(render_pass).setDrawGrid(effect.grid);
+        });
 
     m_render_graph.markOutput(RGResource::SceneColor);
     m_render_graph.compile();

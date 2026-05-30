@@ -78,7 +78,11 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
     m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
-        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
+        .setSetup([&render_params](RenderPass& render_pass)
+        {
+            static_cast<FinalPass&>(render_pass).setDrawGrid(render_params.effect_params.grid);
+        });
 
     m_render_graph.markOutput(RGResource::PickingColor);
     m_render_graph.markOutput(RGResource::SceneColor);

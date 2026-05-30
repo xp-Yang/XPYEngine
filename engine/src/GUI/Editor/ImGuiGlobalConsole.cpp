@@ -105,6 +105,7 @@ void ImGuiGlobalConsole::render() {
     ImGui::Checkbox("IBL", &render_params.ibl.enable); ImGui::SameLine();
     ImGui::Checkbox("shadow", &render_params.shadow_params.enable); ImGui::SameLine();
     ImGui::Checkbox("checkerboard", &render_params.effect_params.checkerboard); ImGui::SameLine();
+    ImGui::Checkbox("grid", &render_params.effect_params.grid); ImGui::SameLine();
     ImGui::Checkbox("wireframe", &render_params.effect_params.wireframe); ImGui::SameLine();
     ImGui::Checkbox("normal", &render_params.effect_params.show_normal); ImGui::SameLine();
     ImGui::Checkbox("SSAO", &render_params.ssao.enable);
