@@ -56,10 +56,12 @@ inline void allMetaRegister()
 	// Mat4
 	registerClass<Mat4>("Mat4");
 
+	registerClass<MeshGeometry>("MeshGeometry").
+		registerProperty(&MeshGeometry::vertices, "vertices").
+		registerProperty(&MeshGeometry::indices, "indices");
 	registerClass<Mesh>("Mesh").
 		registerProperty(&Mesh::sub_mesh_idx, "sub_mesh_idx").
-		registerProperty(&Mesh::vertices, "vertices").
-		registerProperty(&Mesh::indices, "indices").
+		registerProperty(&Mesh::geometry, "geometry").
 		registerProperty(&Mesh::material, "material").
 		registerProperty(&Mesh::translation, "translation").
 		registerProperty(&Mesh::rotation, "rotation").

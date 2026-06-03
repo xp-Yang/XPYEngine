@@ -340,12 +340,12 @@ std::shared_ptr<Mesh> create_complex_quad_mesh(const Vec2 &size)
             Point3 sub_start_point = start_point + (float)j * sub_u + (float)i * sub_v;
             Point3 sub_end_point = sub_start_point + sub_u + sub_v;
             std::shared_ptr<Mesh> sub_mesh_data = create_quad_mesh(sub_start_point, sub_u, sub_v);
-            vertices.insert(vertices.end(), sub_mesh_data->vertices.begin(), sub_mesh_data->vertices.end());
-            for (auto &index : sub_mesh_data->indices)
+            vertices.insert(vertices.end(), sub_mesh_data->vertices().begin(), sub_mesh_data->vertices().end());
+            const int index_offset = 4 * (j + i * static_cast<int>(sub_quad_num_u));
+            for (auto index : sub_mesh_data->indices())
             {
-                index += 4 * (j + i * sub_quad_num_u);
+                indices.push_back(index + index_offset);
             }
-            indices.insert(indices.end(), sub_mesh_data->indices.begin(), sub_mesh_data->indices.end());
             sub_mesh_data.reset();
         }
     }

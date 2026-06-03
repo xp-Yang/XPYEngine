@@ -3,6 +3,55 @@
 #include "Render/RHI/rhi.hpp"
 
 #include <algorithm>
+#include <unordered_map>
+
+struct RenderGeometryGpuResource
+{
+    RhiBuffer* vertex_buffer{ nullptr };
+    RhiBuffer* index_buffer{ nullptr };
+    size_t vertices_count{ 0 };
+    size_t indices_count{ 0 };
+};
+
+namespace
+{
+std::unordered_map<const MeshGeometry*, std::weak_ptr<RenderGeometryGpuResource>> s_render_geometry_gpu_cache;
+
+std::shared_ptr<RenderGeometryGpuResource> renderGeometryResourceOf(const std::shared_ptr<MeshGeometry>& geometry)
+{
+    assert(geometry && !geometry->vertices.empty() && !geometry->indices.empty());
+
+    auto cache_it = s_render_geometry_gpu_cache.find(geometry.get());
+    if (cache_it != s_render_geometry_gpu_cache.end())
+    {
+        if (auto cached = cache_it->second.lock())
+            return cached;
+        s_render_geometry_gpu_cache.erase(cache_it);
+    }
+
+    const auto& rhi = Rhi::get();
+    auto resource = std::make_shared<RenderGeometryGpuResource>();
+    resource->vertices_count = geometry->vertices.size();
+    resource->indices_count = geometry->indices.size();
+
+    resource->vertex_buffer = rhi->newBuffer(
+        RhiBuffer::Immutable,
+        RhiBuffer::VertexBuffer,
+        (void*)geometry->vertices.data(),
+        static_cast<int>(geometry->vertices.size() * sizeof(Vertex)));
+    resource->vertex_buffer->create();
+
+    resource->index_buffer = rhi->newBuffer(
+        RhiBuffer::Immutable,
+        RhiBuffer::IndexBuffer,
+        (void*)geometry->indices.data(),
+        static_cast<int>(geometry->indices.size() * sizeof(unsigned int)));
+    resource->index_buffer->create();
+
+    s_render_geometry_gpu_cache[geometry.get()] = resource;
+    return resource;
+}
+}
 
 RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
 {
@@ -72,19 +121,15 @@ RenderTextureData &RenderTextureData::defaultCubeTexture()
 
 RenderMeshResource::RenderMeshResource(std::shared_ptr<Mesh> mesh_data)
 {
-    m_vertices_count = mesh_data->vertices.size();
-    m_indices_count = mesh_data->indices.size();
+    assert(mesh_data && mesh_data->geometry);
+
+    m_geometry_resource = renderGeometryResourceOf(mesh_data->geometry);
+    m_vertices_count = m_geometry_resource->vertices_count;
+    m_indices_count = m_geometry_resource->indices_count;
 
     const auto &rhi = Rhi::get();
 
-    RhiBuffer *vbuf = rhi->newBuffer(RhiBuffer::Immutable, RhiBuffer::VertexBuffer, (void *)(&(mesh_data->vertices[0])), mesh_data->vertices.size() * sizeof(Vertex));
-    vbuf->create();
-
-    assert(!mesh_data->indices.empty());
-    RhiBuffer *ibuf = rhi->newBuffer(RhiBuffer::Immutable, RhiBuffer::IndexBuffer, (void *)(&(mesh_data->indices[0])), mesh_data->indices.size() * sizeof(unsigned int));
-    ibuf->create();
-
-    m_vertex_layout = rhi->newVertexLayout(vbuf, ibuf);
+    m_vertex_layout = rhi->newVertexLayout(m_geometry_resource->vertex_buffer, m_geometry_resource->index_buffer);
     m_vertex_layout->setAttributes({
         {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                              // position
         {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},       // normal

@@ -484,11 +484,11 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 ImGui::SetColumnWidth(0, columnWidth);
                 ImGui::Text("vertices");
                 ImGui::NextColumn();
-                ImGui::Text("%d", (int)sub_mesh.vertices.size());
+                ImGui::Text("%d", sub_mesh.geometry ? (int)sub_mesh.geometry->vertices.size() : 0);
                 ImGui::NextColumn();
                 ImGui::Text("indices");
                 ImGui::NextColumn();
-                ImGui::Text("%d", (int)sub_mesh.indices.size());
+                ImGui::Text("%d", sub_mesh.geometry ? (int)sub_mesh.geometry->indices.size() : 0);
                 ImGui::Columns(1);
 
                 if (TreeNodeExWithTitleFont(("Local Transform##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))

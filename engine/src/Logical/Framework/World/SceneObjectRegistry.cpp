@@ -14,26 +14,26 @@
 
 namespace
 {
-void addUniqueID(std::vector<GObjectID>& ids, GObjectID id)
-{
-	if (std::find(ids.begin(), ids.end(), id) == ids.end())
-		ids.push_back(id);
+	void addUniqueID(std::vector<GObjectID> &ids, GObjectID id)
+	{
+		if (std::find(ids.begin(), ids.end(), id) == ids.end())
+			ids.push_back(id);
+	}
+
+	void removeID(std::vector<GObjectID> &ids, GObjectID id)
+	{
+		ids.erase(std::remove(ids.begin(), ids.end(), id), ids.end());
+	}
 }
 
-void removeID(std::vector<GObjectID>& ids, GObjectID id)
-{
-	ids.erase(std::remove(ids.begin(), ids.end(), id), ids.end());
-}
-}
-
-SceneObjectRegistry::SceneObjectRegistry(SceneDirtyTracker& dirty_tracker)
+SceneObjectRegistry::SceneObjectRegistry(SceneDirtyTracker &dirty_tracker)
 	: m_dirty_tracker(dirty_tracker)
 {
 }
 
 // --- Object creation ---
 
-GObject* SceneObjectRegistry::createObject(const std::string& name, bool with_transform)
+GObject *SceneObjectRegistry::createObject(const std::string &name, bool with_transform)
 {
 	auto obj = GObject::create(nullptr, name);
 	if (with_transform)
@@ -42,14 +42,14 @@ GObject* SceneObjectRegistry::createObject(const std::string& name, bool with_tr
 	return obj;
 }
 
-GObject* SceneObjectRegistry::createCamera(const std::string& name)
+GObject *SceneObjectRegistry::createCamera(const std::string &name)
 {
-	GObject* obj = createObject(name);
-	auto& camera = obj->addComponent<CameraComponent>();
+	GObject *obj = createObject(name);
+	auto &camera = obj->addComponent<CameraComponent>();
 	camera.refreshView();
 	camera.refreshProjection();
 
-	if (auto* transform = obj->getComponent<TransformComponent>())
+	if (auto *transform = obj->getComponent<TransformComponent>())
 		transform->translation = camera.pos;
 
 	m_main_camera_object_id = obj->ID();
@@ -59,28 +59,27 @@ GObject* SceneObjectRegistry::createCamera(const std::string& name)
 	return obj;
 }
 
-GObject* SceneObjectRegistry::createDirectionalLight(const std::string& name)
+GObject *SceneObjectRegistry::createDirectionalLight(const std::string &name)
 {
-	GObject* obj = createObject(name, false);
-	auto& light = obj->addComponent<DirectionalLightComponent>();
-	light.luminousColor = Color3(1.0f);
-	light.direction = { 15.0f, -30.0f, 15.0f };
+	GObject *obj = createObject(name, false);
+	auto &light = obj->addComponent<DirectionalLightComponent>();
+	light.luminousColor = Color3(1.5f);
+	light.direction = Vec3(-0.4f, -1.0f, -0.5f);
 	obj->markDirty(SceneDirtyFlagBit(SceneDirtyFlag::Light));
 	return obj;
 }
 
-GObject* SceneObjectRegistry::createPointLight(const std::string& name)
+GObject *SceneObjectRegistry::createPointLight(const std::string &name)
 {
-	GObject* obj = createObject(name);
-	auto& transform = *obj->getComponent<TransformComponent>();
+	GObject *obj = createObject(name);
+	auto &transform = *obj->getComponent<TransformComponent>();
 	transform.translation = {
 		static_cast<float>(Math::random(-15.0f, 15.0f)),
 		static_cast<float>(Math::random(1.0f, 30.0f)),
-		static_cast<float>(Math::random(-15.0f, 15.0f))
-	};
+		static_cast<float>(Math::random(-15.0f, 15.0f))};
 	obj->markDirty(SceneDirtyFlagBit(SceneDirtyFlag::Transform));
 
-	auto& light = obj->addComponent<PointLightComponent>();
+	auto &light = obj->addComponent<PointLightComponent>();
 	light.radius = 30.0f;
 	light.luminousColor = Color3(
 		static_cast<float>(Math::randomUnit()),
@@ -103,28 +102,31 @@ void SceneObjectRegistry::removeLastPointLight()
 	}
 }
 
-GObject* SceneObjectRegistry::loadModel(const std::string& filepath)
+GObject *SceneObjectRegistry::loadModel(const std::string &filepath)
 {
 	ModelImporter model_importer;
 	if (!model_importer.load(filepath))
 		return nullptr;
 	std::vector<int> obj_sub_meshes_idx = model_importer.getSubMeshesIds();
-	if (obj_sub_meshes_idx.empty()) {
+	if (obj_sub_meshes_idx.empty())
+	{
 		return nullptr;
 	}
 	std::string name = PathService::getFileName(filepath);
 
 	auto res = GObject::create(nullptr, name);
 	res->addComponent<TransformComponent>();
-	MeshComponent& mesh = res->addComponent<MeshComponent>();
+	MeshComponent &mesh = res->addComponent<MeshComponent>();
 	mesh.source_filepath = filepath;
-	for (int idx : obj_sub_meshes_idx) {
+	for (int idx : obj_sub_meshes_idx)
+	{
 		std::shared_ptr<Mesh> sub_mesh = model_importer.meshOfNode(idx);
 		sub_mesh->sub_mesh_idx = idx;
 		mesh.sub_meshes.push_back(sub_mesh);
 	}
-	if (model_importer.hasAnimation()) {
-		AnimationComponent& animation = res->addComponent<AnimationComponent>();
+	if (model_importer.hasAnimation())
+	{
+		AnimationComponent &animation = res->addComponent<AnimationComponent>();
 		animation.clip_path = filepath;
 		animation.clip = std::make_shared<Animation>(filepath, &model_importer);
 	}
@@ -135,7 +137,7 @@ GObject* SceneObjectRegistry::loadModel(const std::string& filepath)
 
 // --- Object registration ---
 
-void SceneObjectRegistry::registerObject(const std::shared_ptr<GObject>& obj, bool mark_created)
+void SceneObjectRegistry::registerObject(const std::shared_ptr<GObject> &obj, bool mark_created)
 {
 	if (!obj)
 		return;
@@ -166,10 +168,11 @@ void SceneObjectRegistry::unregisterObject(GObjectID id)
 void SceneObjectRegistry::removeObject(GObjectID id)
 {
 	m_objects.erase(std::remove_if(m_objects.begin(), m_objects.end(),
-		[id](const std::shared_ptr<GObject>& obj)
-		{
-			return obj && obj->ID() == id;
-		}), m_objects.end());
+								   [id](const std::shared_ptr<GObject> &obj)
+								   {
+									   return obj && obj->ID() == id;
+								   }),
+					m_objects.end());
 	unregisterObject(id);
 	m_dirty_tracker.markDirty(id, SceneDirtyFlagBit(SceneDirtyFlag::Removed));
 }
@@ -185,36 +188,39 @@ void SceneObjectRegistry::clear()
 
 // --- Queries ---
 
-GObject* SceneObjectRegistry::objectOf(GObjectID id) const
+GObject *SceneObjectRegistry::objectOf(GObjectID id) const
 {
 	auto it = m_object_by_id.find(id);
 	return it == m_object_by_id.end() ? nullptr : it->second.get();
 }
 
-GObject* SceneObjectRegistry::objectOf(int id) const
+GObject *SceneObjectRegistry::objectOf(int id) const
 {
 	return objectOf(GObjectID(id));
 }
 
-GObject* SceneObjectRegistry::mainCameraObject() const
+GObject *SceneObjectRegistry::mainCameraObject() const
 {
-	for (const auto& obj : m_objects) {
+	for (const auto &obj : m_objects)
+	{
 		if (obj && obj->ID() == m_main_camera_object_id && obj->hasComponent<CameraComponent>())
 			return obj.get();
 	}
 
-	for (const auto& obj : m_objects) {
+	for (const auto &obj : m_objects)
+	{
 		if (obj && obj->hasComponent<CameraComponent>())
 			return obj.get();
 	}
 	return nullptr;
 }
 
-CameraComponent& SceneObjectRegistry::getMainCamera() const
+CameraComponent &SceneObjectRegistry::getMainCamera() const
 {
-	GObject* camera_object = mainCameraObject();
-	if (camera_object) {
-		if (auto* camera = camera_object->getComponent<CameraComponent>())
+	GObject *camera_object = mainCameraObject();
+	if (camera_object)
+	{
+		if (auto *camera = camera_object->getComponent<CameraComponent>())
 			return *camera;
 	}
 
@@ -226,7 +232,8 @@ CameraComponent& SceneObjectRegistry::getMainCamera() const
 std::vector<std::shared_ptr<GObject>> SceneObjectRegistry::directionalLightObjects() const
 {
 	std::vector<std::shared_ptr<GObject>> res;
-	for (const GObjectID& id : m_directional_light_object_ids) {
+	for (const GObjectID &id : m_directional_light_object_ids)
+	{
 		auto it = m_object_by_id.find(id);
 		if (it != m_object_by_id.end() && it->second)
 			res.push_back(it->second);
@@ -237,7 +244,8 @@ std::vector<std::shared_ptr<GObject>> SceneObjectRegistry::directionalLightObjec
 std::vector<std::shared_ptr<GObject>> SceneObjectRegistry::pointLightObjects() const
 {
 	std::vector<std::shared_ptr<GObject>> res;
-	for (const GObjectID& id : m_point_light_object_ids) {
+	for (const GObjectID &id : m_point_light_object_ids)
+	{
 		auto it = m_object_by_id.find(id);
 		if (it != m_object_by_id.end() && it->second)
 			res.push_back(it->second);
@@ -245,10 +253,10 @@ std::vector<std::shared_ptr<GObject>> SceneObjectRegistry::pointLightObjects() c
 	return res;
 }
 
-GObject* SceneObjectRegistry::mainDirectionalLightObject() const
+GObject *SceneObjectRegistry::mainDirectionalLightObject() const
 {
-	for (const GObjectID& id : m_directional_light_object_ids)
-		if (GObject* object = objectOf(id))
+	for (const GObjectID &id : m_directional_light_object_ids)
+		if (GObject *object = objectOf(id))
 			return object;
 	return nullptr;
 }
@@ -260,7 +268,7 @@ int SceneObjectRegistry::pointLightCount() const
 
 void SceneObjectRegistry::refreshCaches(GObjectID id)
 {
-	GObject* object = objectOf(id);
+	GObject *object = objectOf(id);
 	if (!object)
 	{
 		removeID(m_directional_light_object_ids, id);

@@ -24,19 +24,35 @@ struct Triangle {
 	std::array<Vertex, 3> vertices;
 };
 
+struct MeshGeometry {
+	MeshGeometry() = default;
+	MeshGeometry(const std::vector<Vertex>& vertices_, const std::vector<int>& indices_);
+
+	void reset();
+
+	std::vector<Vertex> vertices;
+	std::vector<int> indices;
+};
+
 struct Mesh {
 	Mesh() = delete;
 	Mesh(const std::vector<Vertex>& vertices, const std::vector<int>& indices);
 	Mesh(const std::vector<Vertex>& vertices, const std::vector<int>& indices, std::shared_ptr<Material> material_);
+	Mesh(std::shared_ptr<MeshGeometry> geometry_);
+	Mesh(std::shared_ptr<MeshGeometry> geometry_, std::shared_ptr<Material> material_);
 	//Mesh(const std::vector<Triangle>& triangles);
 
 	void reset();
 
+	const std::vector<Vertex>& vertices() const { return geometry->vertices; }
+	const std::vector<int>& indices() const { return geometry->indices; }
+	std::vector<Vertex>& mutableVertices() { return geometry->vertices; }
+	std::vector<int>& mutableIndices() { return geometry->indices; }
+
 	int sub_mesh_idx{ 0 };
 	int index_offset{ 0 };
 	int index_count{ 0 };
-	std::vector<Vertex> vertices;
-	std::vector<int> indices;
+	std::shared_ptr<MeshGeometry> geometry;
 	std::shared_ptr<Material> material;
 	Vec3 translation{ 0.0f, 0.0f, 0.0f };
 	Vec3 rotation{ 0.0f, 0.0f, 0.0f };

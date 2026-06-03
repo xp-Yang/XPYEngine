@@ -60,6 +60,8 @@ public:
     uint64_t material_version{ 0 };
 };
 
+struct RenderGeometryGpuResource;
+
 // Render-side mesh resource that owns the RHI vertex/index layout for a mesh.
 class RenderMeshResource {
 public:
@@ -67,7 +69,7 @@ public:
     ~RenderMeshResource() { reset(); }
 
     void reset();
-    GL_HANDLE getVAO() const { return m_vertex_layout->id(); }
+    GL_HANDLE getVAO() const { return m_vertex_layout ? m_vertex_layout->id() : 0; }
     RhiVertexLayout* vertexLayout() const { return m_vertex_layout; }
     size_t verticesCount() const { return m_vertices_count; }
     size_t indicesCount() const { return m_indices_count; }
@@ -76,9 +78,10 @@ public:
     int instancingCapacityBytes() const { return m_instancing_capacity_bytes; }
 
 private:
+    std::shared_ptr<RenderGeometryGpuResource> m_geometry_resource;
     RhiVertexLayout* m_vertex_layout{ nullptr };
-    size_t m_vertices_count;
-    size_t m_indices_count;
+    size_t m_vertices_count{ 0 };
+    size_t m_indices_count{ 0 };
 
     RhiBuffer* m_instancing_buffer{ nullptr };
     int m_instancing_capacity_bytes{ 0 };

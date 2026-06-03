@@ -25,6 +25,13 @@ struct BoneInfo
 	Mat4 offset;
 };
 
+struct ModelGeometryCacheEntry
+{
+	std::unordered_map<int, std::shared_ptr<MeshGeometry>> geometries;
+	std::map<std::string, BoneInfo> bone_info_map;
+	int bone_count{ 0 };
+};
+
 class ModelImporter {
 public:
     ModelImporter() = default;
@@ -39,17 +46,18 @@ public:
 
 protected:
 	std::vector<aiMesh*> collect_ai_meshes();
-	std::shared_ptr<Mesh> load_sub_mesh_data(aiMesh* mesh);
+	std::shared_ptr<MeshGeometry> load_sub_mesh_geometry(aiMesh* mesh);
 	std::shared_ptr<Material> load_material(aiMaterial* material);
 	void extractBoneWeightForVertices(std::vector<Vertex>& vertices, aiMesh* mesh);
 	void setVertexBoneData(Vertex& vertex, int bone_id, float weight) const;
 
 private:
 	static std::unordered_map<std::string, Assimp::Importer*> m_importers;
+	static std::unordered_map<std::string, ModelGeometryCacheEntry> m_geometry_cache;
 
 	const aiScene* m_scene{ nullptr };
 	std::map<std::string, BoneInfo> m_BoneInfoMap;
-	int m_BoneCounter;
+	int m_BoneCounter{ 0 };
 
 	std::string m_obj_filepath;
 	std::string m_directory;

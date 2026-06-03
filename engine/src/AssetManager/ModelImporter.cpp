@@ -9,6 +9,7 @@
 #include <cmath>
 
 std::unordered_map<std::string, Assimp::Importer *> ModelImporter::m_importers;
+std::unordered_map<std::string, ModelGeometryCacheEntry> ModelImporter::m_geometry_cache;
 
 static std::shared_ptr<Texture> textureOfUnknownType(aiMaterial* material, TextureType engine_type, const std::string& directory, bool gamma,
     std::initializer_list<const char*> keywords, std::initializer_list<const char*> rejected_keywords = {})
@@ -87,26 +88,32 @@ ModelImporter::~ModelImporter()
 
 bool ModelImporter::load(const std::string &file_path)
 {
-    m_obj_filepath = file_path;
-    m_directory = file_path.substr(0, file_path.find_last_of("/\\"));
+    m_obj_filepath = PathService::normalize(file_path);
+    m_directory = PathService::getDirectory(m_obj_filepath);
     m_BoneInfoMap.clear();
     m_BoneCounter = 0;
 
-    if (ModelImporter::m_importers.find(file_path) != ModelImporter::m_importers.end())
+    if (auto cache_it = ModelImporter::m_geometry_cache.find(m_obj_filepath); cache_it != ModelImporter::m_geometry_cache.end())
     {
-        m_scene = ModelImporter::m_importers.at(file_path)->GetScene();
+        m_BoneInfoMap = cache_it->second.bone_info_map;
+        m_BoneCounter = cache_it->second.bone_count;
+    }
+
+    if (ModelImporter::m_importers.find(m_obj_filepath) != ModelImporter::m_importers.end())
+    {
+        m_scene = ModelImporter::m_importers.at(m_obj_filepath)->GetScene();
     }
     else
     {
         auto importer = new Assimp::Importer();
-        m_scene = importer->ReadFile(file_path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+        m_scene = importer->ReadFile(m_obj_filepath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
         if (!m_scene || m_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !m_scene->mRootNode)
         {
             auto error_str = importer->GetErrorString();
             delete importer;
             return false;
         }
-        ModelImporter::m_importers.insert({file_path, importer});
+        ModelImporter::m_importers.insert({m_obj_filepath, importer});
     }
 
     return true;
@@ -115,7 +122,25 @@ bool ModelImporter::load(const std::string &file_path)
 std::shared_ptr<Mesh> ModelImporter::meshOfNode(int ai_mesh_idx)
 {
     aiMesh *ai_mesh = m_scene->mMeshes[ai_mesh_idx];
-    std::shared_ptr<Mesh> res = load_sub_mesh_data(ai_mesh);
+    auto& cache = ModelImporter::m_geometry_cache[m_obj_filepath];
+    m_BoneInfoMap = cache.bone_info_map;
+    m_BoneCounter = cache.bone_count;
+
+    std::shared_ptr<MeshGeometry> geometry;
+    auto geometry_it = cache.geometries.find(ai_mesh_idx);
+    if (geometry_it != cache.geometries.end())
+    {
+        geometry = geometry_it->second;
+    }
+    else
+    {
+        geometry = load_sub_mesh_geometry(ai_mesh);
+        cache.geometries[ai_mesh_idx] = geometry;
+        cache.bone_info_map = m_BoneInfoMap;
+        cache.bone_count = m_BoneCounter;
+    }
+
+    std::shared_ptr<Mesh> res = std::make_shared<Mesh>(geometry);
     res->sub_mesh_idx = ai_mesh_idx;
     aiMaterial *ai_material = m_scene->mMaterials[ai_mesh->mMaterialIndex];
     res->material = load_material(ai_material);
@@ -167,7 +192,7 @@ std::vector<aiMesh *> ModelImporter::collect_ai_meshes()
     return res;
 }
 
-std::shared_ptr<Mesh> ModelImporter::load_sub_mesh_data(aiMesh *mesh)
+std::shared_ptr<MeshGeometry> ModelImporter::load_sub_mesh_geometry(aiMesh *mesh)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -223,7 +248,7 @@ std::shared_ptr<Mesh> ModelImporter::load_sub_mesh_data(aiMesh *mesh)
 
     extractBoneWeightForVertices(vertices, mesh);
 
-    return std::make_shared<Mesh>(vertices, indices);
+    return std::make_shared<MeshGeometry>(vertices, indices);
 }
 
 void ModelImporter::setVertexBoneData(Vertex &vertex, int bone_id, float weight) const
