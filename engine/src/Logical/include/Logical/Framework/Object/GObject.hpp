@@ -28,6 +28,7 @@ namespace Meta {
 class GObject {
 public:
 	static GObject* create(GObject* parent, const std::string& name);
+	static GObject* createWithID(GObject* parent, const std::string& name, GObjectID id);
 	~GObject();
 	void append(GObject* node) { m_children.push_back(node); }
 	int index() const { return m_parent ? m_parent->indexOf(this) : -1; }
@@ -99,6 +100,14 @@ protected:
 		: m_parent(parent)
 		, m_name(name)
 		, m_id(GObjectID::next())
+	{
+		if (parent)
+			parent->append(this);
+	}
+	GObject(GObject* parent, const std::string& name, GObjectID id)
+		: m_parent(parent)
+		, m_name(name)
+		, m_id(GObjectID::restore(id.value()))
 	{
 		if (parent)
 			parent->append(this);

@@ -4,6 +4,12 @@
 #include "Base/Common.hpp"
 #include "Render/RHI/rhi.hpp"
 
+#include <memory>
+
+namespace Snapshot {
+class Transaction;
+}
+
 enum class ToolbarType : int {
     Translate,
     Rotate,
@@ -15,6 +21,7 @@ class ImGuiCanvas;
 class ImGuiToolbar {
 public:
     ImGuiToolbar(ImGuiCanvas* parent, std::shared_ptr<Scene> scene);
+    ~ImGuiToolbar();
     void render();
 
 protected:
@@ -28,6 +35,8 @@ protected:
     GL_HANDLE m_scale_icon_id{ 0 };
 
     std::shared_ptr<Scene> ref_scene;
+    std::unique_ptr<Snapshot::Transaction> m_gizmo_transaction;
+    bool m_gizmo_was_using{ false };
 };
 
 #endif

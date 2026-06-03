@@ -1,13 +1,28 @@
 #include "Logical/Framework/World/Scene.hpp"
 
+#include "Logical/Snapshot/UndoRedoStack.hpp"
+
 Scene::Scene()
 	: m_dirty_tracker()
 	, m_registry(m_dirty_tracker)
 	, m_selection(m_registry)
 	, m_serializer(m_registry, m_dirty_tracker, m_selection)
+	, m_undo_redo_stack(std::make_unique<Snapshot::UndoRedoStack>())
 {
 	m_registry.createCamera();
 	m_registry.createDirectionalLight();
+}
+
+Scene::~Scene() = default;
+
+Snapshot::UndoRedoStack& Scene::undoRedoStack()
+{
+	return *m_undo_redo_stack;
+}
+
+const Snapshot::UndoRedoStack& Scene::undoRedoStack() const
+{
+	return *m_undo_redo_stack;
 }
 
 // --- Object creation ---
@@ -46,17 +61,45 @@ void Scene::removeLastPointLight()
 
 bool Scene::loadProject(const std::string& project_filepath, bool clear_old)
 {
-	return m_serializer.loadProject(project_filepath, clear_old);
+	const bool result = m_serializer.loadProject(project_filepath, clear_old);
+	if (result && clear_old)
+		m_undo_redo_stack->clear();
+	return result;
 }
 
 bool Scene::saveProject(const std::string& project_filepath)
 {
-	return m_serializer.saveProject(project_filepath);
+	const bool result = m_serializer.saveProject(project_filepath);
+	if (result)
+		m_undo_redo_stack->setClean();
+	return result;
 }
 
 const std::string& Scene::currentProjectFilepath() const
 {
 	return m_serializer.currentProjectFilepath();
+}
+
+// --- Undo/redo history ---
+
+void Scene::undo()
+{
+	m_undo_redo_stack->undo(*this);
+}
+
+void Scene::redo()
+{
+	m_undo_redo_stack->redo(*this);
+}
+
+bool Scene::canUndo() const
+{
+	return m_undo_redo_stack->canUndo();
+}
+
+bool Scene::canRedo() const
+{
+	return m_undo_redo_stack->canRedo();
 }
 
 // --- Selection ---

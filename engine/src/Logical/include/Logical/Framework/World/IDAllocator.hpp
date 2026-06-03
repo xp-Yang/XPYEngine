@@ -37,6 +37,11 @@ public:
 	constexpr explicit GObjectID(int id) : m_id(id) {}
 
 	static GObjectID next() { return GObjectID(++s_global_id); }
+	static GObjectID restore(int id) {
+		if (id > s_global_id)
+			s_global_id = id;
+		return GObjectID(id);
+	}
 	static void resetCounter(int value = 0) { s_global_id = value; }
 
 	int value() const { return m_id; }

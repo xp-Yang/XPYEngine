@@ -156,6 +156,7 @@ void SceneObjectRegistry::registerObject(const std::shared_ptr<GObject>& obj, bo
 void SceneObjectRegistry::unregisterObject(GObjectID id)
 {
 	m_object_by_id.erase(id);
+	m_signal_bound_object_ids.erase(id);
 	removeID(m_directional_light_object_ids, id);
 	removeID(m_point_light_object_ids, id);
 	if (m_main_camera_object_id == id)
@@ -177,6 +178,7 @@ void SceneObjectRegistry::clear()
 {
 	m_objects.clear();
 	m_object_by_id.clear();
+	m_signal_bound_object_ids.clear();
 	m_directional_light_object_ids.clear();
 	m_point_light_object_ids.clear();
 }

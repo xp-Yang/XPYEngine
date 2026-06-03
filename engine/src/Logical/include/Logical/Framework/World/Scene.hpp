@@ -6,9 +6,16 @@
 #include "Logical/Framework/World/ProjectSerializer.hpp"
 #include "Logical/Framework/World/SelectionManager.hpp"
 
+#include <memory>
+
+namespace Snapshot {
+class UndoRedoStack;
+}
+
 class Scene {
 public:
 	Scene();
+	~Scene();
 
 	// --- Sub-system accessors ---
 	SceneObjectRegistry& registry() { return m_registry; }
@@ -16,6 +23,8 @@ public:
 	ProjectSerializer& serializer() { return m_serializer; }
 	SelectionManager& selection() { return m_selection; }
 	SceneDirtyTracker& dirtyTracker() { return m_dirty_tracker; }
+	Snapshot::UndoRedoStack& undoRedoStack();
+	const Snapshot::UndoRedoStack& undoRedoStack() const;
 
 	// --- Facade: object creation (delegates to SceneObjectRegistry) ---
 	GObject* createObject(const std::string& name, bool with_transform = true);
@@ -29,6 +38,12 @@ public:
 	bool loadProject(const std::string& project_filepath, bool clear_old = true);
 	bool saveProject(const std::string& project_filepath);
 	const std::string& currentProjectFilepath() const;
+
+	// --- Facade: undo/redo history ---
+	void undo();
+	void redo();
+	bool canUndo() const;
+	bool canRedo() const;
 
 	// --- Facade: selection (delegates to SelectionManager) ---
 	const std::vector<std::shared_ptr<GObject>>& getPickedObjects() const;
@@ -63,6 +78,7 @@ private:
 	SceneObjectRegistry m_registry;
 	SelectionManager m_selection;
 	ProjectSerializer m_serializer;
+	std::unique_ptr<Snapshot::UndoRedoStack> m_undo_redo_stack;
 };
 
 #endif // !Scene_hpp

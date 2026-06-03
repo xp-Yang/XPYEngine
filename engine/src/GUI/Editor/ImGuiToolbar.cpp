@@ -3,11 +3,14 @@
 #include "AssetManager/Texture.hpp"
 #include "Logical/Framework/World/SceneDirty.hpp"
 #include "Logical/Framework/World/Scene.hpp"
+#include "Logical/Snapshot/Transaction.hpp"
+#include "Logical/Snapshot/UndoRedoStack.hpp"
 #include "Render/RenderScene.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <ImGuizmo.h>
+#include <utility>
 
 ImGuiToolbar::ImGuiToolbar(ImGuiCanvas *parent, std::shared_ptr<Scene> scene)
     : m_parent(parent), ref_scene(scene)
@@ -20,6 +23,8 @@ ImGuiToolbar::ImGuiToolbar(ImGuiCanvas *parent, std::shared_ptr<Scene> scene)
     m_rotate_icon_id = RenderTextureData(rotate_icon).id;
     m_scale_icon_id = RenderTextureData(scale_icon).id;
 }
+
+ImGuiToolbar::~ImGuiToolbar() = default;
 
 void ImGuiToolbar::render()
 {
@@ -56,17 +61,21 @@ void ImGuiToolbar::renderToolbar()
 
 void ImGuiToolbar::renderGizmos()
 {
-    ImGuizmo::OPERATION imguizmo_operation;
+    ImGuizmo::OPERATION imguizmo_operation = ImGuizmo::TRANSLATE;
+    const char* history_label = "Move Objects";
     switch (m_toolbar_type)
     {
     case ToolbarType::Translate:
         imguizmo_operation = ImGuizmo::TRANSLATE;
+        history_label = "Move Objects";
         break;
     case ToolbarType::Rotate:
         imguizmo_operation = ImGuizmo::ROTATE;
+        history_label = "Rotate Objects";
         break;
     case ToolbarType::Scale:
         imguizmo_operation = ImGuizmo::SCALE;
+        history_label = "Scale Objects";
         break;
     default:
         break;
@@ -79,6 +88,30 @@ void ImGuiToolbar::renderGizmos()
     ImGuizmo::SetRect(main_canvas_rect.x, main_canvas_rect.y, main_canvas_rect.width, main_canvas_rect.height);
 
     auto &camera = ref_scene->getMainCamera();
+    auto beginGizmoTransaction = [&]()
+    {
+        if (m_gizmo_transaction || !ref_scene)
+            return;
+        m_gizmo_transaction = std::make_unique<Snapshot::Transaction>(*ref_scene, history_label);
+        for (const auto& object : ref_scene->getPickedObjects())
+        {
+            if (object)
+                m_gizmo_transaction->captureBefore(object->ID());
+        }
+    };
+    auto commitGizmoTransaction = [&]()
+    {
+        if (!m_gizmo_transaction || !ref_scene)
+            return;
+        for (const auto& object : ref_scene->getPickedObjects())
+        {
+            if (object)
+                m_gizmo_transaction->captureAfter(object->ID());
+        }
+        if (auto command = m_gizmo_transaction->commit())
+            ref_scene->undoRedoStack().pushExecuted(std::move(command));
+        m_gizmo_transaction.reset();
+    };
 
     for (const auto &object : ref_scene->getPickedObjects())
     {
@@ -89,6 +122,7 @@ void ImGuiToolbar::renderGizmos()
         const bool manipulated = ImGuizmo::Manipulate((float *)(&camera.view), (float *)(&camera.projection), imguizmo_operation, ImGuizmo::LOCAL, (float *)(&model_matrix), NULL, NULL, NULL, NULL);
         if (!manipulated)
             continue;
+        beginGizmoTransaction();
         float matrixTranslation[3], matrixRotation[3], matrixScale[3];
         ImGuizmo::DecomposeMatrixToComponents((float *)&model_matrix, matrixTranslation, matrixRotation, matrixScale);
         transform_component->translation = Vec3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
@@ -107,6 +141,13 @@ void ImGuiToolbar::renderGizmos()
         }
         object->markDirty(dirty_flags);
     }
+
+    const bool gizmo_using_now = ImGuizmo::IsUsing();
+    if (m_gizmo_was_using && !gizmo_using_now)
+        commitGizmoTransaction();
+    if (!gizmo_using_now && m_gizmo_transaction)
+        commitGizmoTransaction();
+    m_gizmo_was_using = gizmo_using_now;
 
     ImVec2 air_window_size = ImVec2(128, 128);
     ImVec2 air_window_pos = ImVec2(main_canvas_rect.x, main_canvas_rect.y);

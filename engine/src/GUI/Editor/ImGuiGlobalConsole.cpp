@@ -7,7 +7,43 @@
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "Render/RenderSystem.hpp"
 #include "Logical/Framework/World/Scene.hpp"
+#include "Logical/Snapshot/ObjectSnapshotCommand.hpp"
+#include "Logical/Snapshot/ObjectSnapshotService.hpp"
+#include "Logical/Snapshot/UndoRedoStack.hpp"
 #include "GlobalContext.hpp"
+
+#include <memory>
+#include <utility>
+#include <vector>
+
+namespace
+{
+void pushSnapshotCommand(Scene& scene, const std::string& label, Snapshot::ObjectSnapshot before, Snapshot::ObjectSnapshot after)
+{
+    if (Snapshot::ObjectSnapshotService::equals(before, after))
+        return;
+
+    std::vector<Snapshot::ObjectSnapshot> before_snapshots;
+    before_snapshots.push_back(std::move(before));
+    std::vector<Snapshot::ObjectSnapshot> after_snapshots;
+    after_snapshots.push_back(std::move(after));
+    scene.undoRedoStack().pushExecuted(std::make_unique<Snapshot::ObjectSnapshotCommand>(
+        label,
+        std::move(before_snapshots),
+        std::move(after_snapshots)));
+}
+
+std::shared_ptr<GObject> lastPointLightObject(Scene& scene)
+{
+    const auto& objects = scene.getObjects();
+    for (auto it = objects.rbegin(); it != objects.rend(); ++it)
+    {
+        if (*it && (*it)->hasComponent<PointLightComponent>())
+            return *it;
+    }
+    return nullptr;
+}
+}
 
 void ImGuiGlobalConsole::render() {
     ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoCollapse);
@@ -197,11 +233,27 @@ void ImGuiGlobalConsole::render() {
     float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
     ImGui::PushButtonRepeat(true);
     if (ImGui::Button("+##pointLight") && g_context.scene) {
-        g_context.scene->createPointLight();
+        GObject* object = g_context.scene->createPointLight();
+        if (object)
+        {
+            Snapshot::ObjectSnapshot before;
+            before.id = object->ID();
+            before.existed = false;
+            Snapshot::ObjectSnapshot after = Snapshot::ObjectSnapshotService::capture(*g_context.scene, object->ID());
+            pushSnapshotCommand(*g_context.scene, "Create Point Light", std::move(before), std::move(after));
+        }
     }
     ImGui::SameLine(0.0f, spacing);
     if (ImGui::Button("-##pointLight") && g_context.scene) {
-        g_context.scene->removeLastPointLight();
+        std::shared_ptr<GObject> object = lastPointLightObject(*g_context.scene);
+        if (object)
+        {
+            const GObjectID id = object->ID();
+            Snapshot::ObjectSnapshot before = Snapshot::ObjectSnapshotService::capture(*g_context.scene, id);
+            g_context.scene->removeObject(id);
+            Snapshot::ObjectSnapshot after = Snapshot::ObjectSnapshotService::capture(*g_context.scene, id);
+            pushSnapshotCommand(*g_context.scene, "Delete Point Light", std::move(before), std::move(after));
+        }
     }
     ImGui::PopButtonRepeat();
     ImGui::SameLine();

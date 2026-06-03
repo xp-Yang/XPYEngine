@@ -6,6 +6,12 @@ GObject *GObject::create(GObject *parent, const std::string &name)
 	return obj;
 }
 
+GObject *GObject::createWithID(GObject *parent, const std::string &name, GObjectID id)
+{
+	GObject *obj = new GObject(parent, name, id);
+	return obj;
+}
+
 GObject::~GObject()
 {
 	for (auto child : m_children)

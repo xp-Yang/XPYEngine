@@ -4,7 +4,11 @@
 
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "Logical/Framework/World/Scene.hpp"
+#include "Logical/Snapshot/Transaction.hpp"
+#include "Logical/Snapshot/UndoRedoStack.hpp"
 #include "GlobalContext.hpp"
+
+#include <utility>
 
 void ImGuiContextMenu::render()
 {
@@ -40,7 +44,13 @@ void ImGuiContextMenu::render()
             bool obj_visible = (*context_objs.begin())->visible();
             if (ImGui::MenuItem("Visible", "", obj_visible, true))
             {
-                (*context_objs.begin())->setVisible(!obj_visible);
+                auto object = *context_objs.begin();
+                Snapshot::Transaction transaction(*g_context.scene, "Toggle Visibility");
+                transaction.captureBefore(object->ID());
+                object->setVisible(!obj_visible);
+                transaction.captureAfter(object->ID());
+                if (auto command = transaction.commit())
+                    g_context.scene->undoRedoStack().pushExecuted(std::move(command));
             }
         }
 

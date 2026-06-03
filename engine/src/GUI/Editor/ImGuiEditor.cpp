@@ -58,6 +58,20 @@ ImGuiEditor::~ImGuiEditor()
 
 void ImGuiEditor::onUpdate()
 {
+    if (g_context.scene)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantTextInput && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z, false))
+        {
+            if (io.KeyShift)
+                g_context.scene->redo();
+            else
+                g_context.scene->undo();
+        }
+        if (!io.WantTextInput && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false))
+            g_context.scene->redo();
+    }
+
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -173,9 +187,13 @@ void ImGuiEditor::renderMenuBar()
         }
         if (ImGui::BeginMenu("Edit"))
         {
-            //if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-            //if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-            //ImGui::Separator();
+            const bool can_undo = g_context.scene && g_context.scene->canUndo();
+            const bool can_redo = g_context.scene && g_context.scene->canRedo();
+            if (ImGui::MenuItem("Undo", "Ctrl+Z", false, can_undo))
+                g_context.scene->undo();
+            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, can_redo))
+                g_context.scene->redo();
+            ImGui::Separator();
             //if (ImGui::MenuItem("Cut", "CTRL+X")) {}
             //if (ImGui::MenuItem("Copy", "CTRL+C")) {}
             //if (ImGui::MenuItem("Paste", "CTRL+V")) {}

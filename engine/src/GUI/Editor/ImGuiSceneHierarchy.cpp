@@ -6,8 +6,64 @@
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "Logical/Framework/World/SceneDirty.hpp"
 #include "Logical/Framework/World/Scene.hpp"
+#include "Logical/Snapshot/Transaction.hpp"
+#include "Logical/Snapshot/UndoRedoStack.hpp"
 #include "Render/RenderScene.hpp"
 #include "GlobalContext.hpp"
+
+#include <utility>
+
+void ImGuiSceneHierarchy::beginObjectTransaction(GObject* object, const std::string& label)
+{
+    if (!object || !g_context.scene)
+        return;
+
+    const GObjectID id = object->ID();
+    if (m_active_transaction && m_active_transaction_object_id != id)
+        endObjectTransaction(g_context.scene->objectOf(m_active_transaction_object_id));
+    if (m_active_transaction)
+        return;
+
+    m_active_transaction = std::make_unique<Snapshot::Transaction>(*g_context.scene, label);
+    m_active_transaction_object_id = id;
+    m_active_transaction->captureBefore(id);
+}
+
+void ImGuiSceneHierarchy::endObjectTransaction(GObject* object)
+{
+    if (!m_active_transaction || !g_context.scene)
+        return;
+
+    const GObjectID id = object ? object->ID() : m_active_transaction_object_id;
+    m_active_transaction->captureAfter(id);
+    if (auto command = m_active_transaction->commit())
+        g_context.scene->undoRedoStack().pushExecuted(std::move(command));
+
+    m_active_transaction.reset();
+    m_active_transaction_object_id = {};
+}
+
+void ImGuiSceneHierarchy::commitImmediateObjectEdit(GObject* object, const std::string& label, const std::function<void()>& edit)
+{
+    if (!object || !g_context.scene)
+    {
+        edit();
+        return;
+    }
+
+    if (m_active_transaction)
+        endObjectTransaction(g_context.scene->objectOf(m_active_transaction_object_id));
+
+    const GObjectID id = object->ID();
+    Snapshot::Transaction transaction(*g_context.scene, label);
+    transaction.captureBefore(id);
+    edit();
+    transaction.captureAfter(id);
+    if (auto command = transaction.commit())
+        g_context.scene->undoRedoStack().pushExecuted(std::move(command));
+}
+
+ImGuiSceneHierarchy::~ImGuiSceneHierarchy() = default;
 
 ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     : m_parent(parent)
@@ -25,7 +81,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         return node_open;
     };
 
-    auto DrawIntControl = [columnWidth](const std::string& label, int& value, float speed = 1.0f, int min = 0.0f, int max = 0.0f) {
+    auto DrawIntControl = [this, columnWidth](const std::string& label, int& value, float speed = 1.0f, int min = 0.0f, int max = 0.0f, GObject* undo_object = nullptr, const std::string& undo_label = "Edit Property") -> bool {
         ImGui::PushID(label.c_str());
 
         ImGui::Columns(2, nullptr, false);
@@ -33,13 +89,27 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
         ImGui::Text("%s", label.c_str());
         ImGui::NextColumn();
-        ImGui::DragInt(("##" + label).c_str(), &value, speed, min, max);
+        int next_value = value;
+        bool changed = ImGui::DragInt(("##" + label).c_str(), &next_value, speed, min, max);
+        bool should_end_transaction = false;
+        if (undo_object)
+        {
+            if (ImGui::IsItemActivated())
+                beginObjectTransaction(undo_object, undo_label);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                should_end_transaction = true;
+        }
+        if (changed)
+            value = next_value;
+        if (undo_object && should_end_transaction)
+            endObjectTransaction(undo_object);
 
         ImGui::Columns(1);
         ImGui::PopID();
+        return changed;
     };
 
-    auto DrawFloatControl = [columnWidth](const std::string& label, float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f) -> bool {
+    auto DrawFloatControl = [this, columnWidth](const std::string& label, float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f, GObject* undo_object = nullptr, const std::string& undo_label = "Edit Property") -> bool {
         ImGui::PushID(label.c_str());
 
         ImGui::Columns(2, nullptr, false);
@@ -47,7 +117,20 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
         ImGui::Text("%s", label.c_str());
         ImGui::NextColumn();
-        bool changed = ImGui::DragFloat(("##" + label).c_str(), &value, speed, min, max);
+        float next_value = value;
+        bool changed = ImGui::DragFloat(("##" + label).c_str(), &next_value, speed, min, max);
+        bool should_end_transaction = false;
+        if (undo_object)
+        {
+            if (ImGui::IsItemActivated())
+                beginObjectTransaction(undo_object, undo_label);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                should_end_transaction = true;
+        }
+        if (changed)
+            value = next_value;
+        if (undo_object && should_end_transaction)
+            endObjectTransaction(undo_object);
 
         ImGui::Columns(1);
         ImGui::PopID();
@@ -60,7 +143,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         COLOR3,
         COLOR4,
     };
-    auto DrawVecControl = [columnWidth](const std::string& label, const Meta::Instance& inst, const VecKind kind = VecKind::VEC4, float resetValue = 0.0f) -> bool
+    auto DrawVecControl = [this, columnWidth](const std::string& label, const Meta::Instance& inst, const VecKind kind = VecKind::VEC4, float resetValue = 0.0f, GObject* undo_object = nullptr, const std::string& undo_label = "Edit Property") -> bool
     {
         Vec4 values;
         std::string button_label = "X";
@@ -86,6 +169,8 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         }
 
         bool changed = false;
+        bool should_commit_immediately = false;
+        bool should_end_drag_transaction = false;
         ImGui::PushID(label.c_str());
 
         ImGui::Columns(2, nullptr, false);
@@ -105,13 +190,24 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         if (is_color_kind)
             button_label = "R";
         if (ImGui::Button(button_label.c_str(), buttonSize)) {
+            if (undo_object)
+                beginObjectTransaction(undo_object, undo_label);
             values.x = resetValue;
             changed = true;
+            should_commit_immediately = true;
         }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        changed |= ImGui::DragFloat("##btn1", &values.x, drag_speed, drag_range_min, drag_range_max, "%.2f");
+        bool axis_changed = ImGui::DragFloat("##btn1", &values.x, drag_speed, drag_range_min, drag_range_max, "%.2f");
+        changed |= axis_changed;
+        if (undo_object)
+        {
+            if (ImGui::IsItemActivated())
+                beginObjectTransaction(undo_object, undo_label);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                should_end_drag_transaction = true;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
@@ -123,13 +219,24 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         else
             button_label = "Y";
         if (ImGui::Button(button_label.c_str(), buttonSize)) {
+            if (undo_object)
+                beginObjectTransaction(undo_object, undo_label);
             values.y = resetValue;
             changed = true;
+            should_commit_immediately = true;
         }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        changed |= ImGui::DragFloat("##btn2", &values.y, drag_speed, drag_range_min, drag_range_max, "%.2f");
+        axis_changed = ImGui::DragFloat("##btn2", &values.y, drag_speed, drag_range_min, drag_range_max, "%.2f");
+        changed |= axis_changed;
+        if (undo_object)
+        {
+            if (ImGui::IsItemActivated())
+                beginObjectTransaction(undo_object, undo_label);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                should_end_drag_transaction = true;
+        }
         ImGui::PopItemWidth();
         ImGui::SameLine();
 
@@ -141,13 +248,24 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         else
             button_label = "Z";
         if (ImGui::Button(button_label.c_str(), buttonSize)) {
+            if (undo_object)
+                beginObjectTransaction(undo_object, undo_label);
             values.z = resetValue;
             changed = true;
+            should_commit_immediately = true;
         }
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
-        changed |= ImGui::DragFloat("##btn3", &values.z, drag_speed, drag_range_min, drag_range_max, "%.2f");
+        axis_changed = ImGui::DragFloat("##btn3", &values.z, drag_speed, drag_range_min, drag_range_max, "%.2f");
+        changed |= axis_changed;
+        if (undo_object)
+        {
+            if (ImGui::IsItemActivated())
+                beginObjectTransaction(undo_object, undo_label);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                should_end_drag_transaction = true;
+        }
         ImGui::PopItemWidth();
 
         if (is_dimension_4) {
@@ -155,13 +273,24 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.55f, 0.55f, 0.55f, 1.0f });
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.45f, 0.45f, 0.45f, 1.0f });
             if (ImGui::Button("W", buttonSize)) {
+                if (undo_object)
+                    beginObjectTransaction(undo_object, undo_label);
                 values.w = resetValue;
                 changed = true;
+                should_commit_immediately = true;
             }
             ImGui::PopStyleColor(3);
 
             ImGui::SameLine();
-            changed |= ImGui::DragFloat("##btn4", &values.w, drag_speed, drag_range_min, drag_range_max, "%.2f");
+            axis_changed = ImGui::DragFloat("##btn4", &values.w, drag_speed, drag_range_min, drag_range_max, "%.2f");
+            changed |= axis_changed;
+            if (undo_object)
+            {
+                if (ImGui::IsItemActivated())
+                    beginObjectTransaction(undo_object, undo_label);
+                if (ImGui::IsItemDeactivatedAfterEdit())
+                    should_end_drag_transaction = true;
+            }
             ImGui::PopItemWidth();
         }
 
@@ -178,6 +307,8 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 inst.getValue<Vec4&>() = values;
             }
         }
+        if (undo_object && (should_commit_immediately || should_end_drag_transaction))
+            endObjectTransaction(undo_object);
 
         return changed;
     };
@@ -217,23 +348,31 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
     m_widget_creator[Meta::MetaTypeOf<Vec4>().typeName()] = [this, DrawVecControl](const std::string& name, const Meta::Instance& inst) -> void
     {
-        DrawVecControl(name, inst, VecKind::COLOR4, 1.0f);
+        DrawVecControl(name, inst, VecKind::COLOR4, 1.0f, m_current_inspected_object, "Edit " + name);
     };
     m_widget_creator[Meta::MetaTypeOf<Vec3>().typeName()] = [this, DrawVecControl](const std::string& name, const Meta::Instance& inst) -> void
     {
-        DrawVecControl(name, inst, VecKind::VEC3);
+        DrawVecControl(name, inst, VecKind::VEC3, 0.0f, m_current_inspected_object, "Edit " + name);
     };
     m_widget_creator[Meta::MetaTypeOf<bool>().typeName()] = [this](const std::string& name, const Meta::Instance& inst) -> void
     {
-        ImGui::Checkbox(name.c_str(), &inst.getValue<bool&>());
+        bool& value = inst.getValue<bool&>();
+        bool next_value = value;
+        if (ImGui::Checkbox(name.c_str(), &next_value))
+        {
+            commitImmediateObjectEdit(m_current_inspected_object, "Edit " + name, [&value, next_value]()
+            {
+                value = next_value;
+            });
+        }
     };
     m_widget_creator[Meta::MetaTypeOf<int>().typeName()] = [this, DrawIntControl](const std::string& name, const Meta::Instance& inst) -> void
     {
-        DrawIntControl(name, inst.getValue<int&>());
+        DrawIntControl(name, inst.getValue<int&>(), 1.0f, 0, 0, m_current_inspected_object, "Edit " + name);
     };
     m_widget_creator[Meta::MetaTypeOf<float>().typeName()] = [this, DrawFloatControl](const std::string& name, const Meta::Instance& inst) -> void
     {
-        DrawFloatControl(name, inst.getValue<float&>());
+        DrawFloatControl(name, inst.getValue<float&>(), 1.0f, 0.0f, 0.0f, m_current_inspected_object, "Edit " + name);
     };
     m_widget_creator[Meta::MetaTypeOf<std::string>().typeName()] = [this, columnWidth](const std::string& name, const Meta::Instance& inst) -> void
     {
@@ -256,6 +395,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     m_widget_creator[Meta::MetaTypeOf<CameraComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
         auto& camera = inst.getValue<CameraComponent&>();
+        GObject* owner = camera.parent_object;
         bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
@@ -265,13 +405,13 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
             // 这里编辑的是 CameraComponent 的运行时相机状态。
             // TransformComponent 只负责场景对象位置，所以 pos 被修改时要同步回 Transform。
-            view_changed |= DrawVecControl("pos", camera.pos, VecKind::VEC3);
-            view_changed |= DrawVecControl("direction", camera.direction, VecKind::VEC3);
-            view_changed |= DrawVecControl("upDirection", camera.upDirection, VecKind::VEC3);
-            projection_changed |= DrawFloatControl("fov", camera.fov, 0.01f, Math::deg2rad(0.01f), Math::deg2rad(135.0f));
-            projection_changed |= DrawFloatControl("nearPlane", camera.nearPlane, 0.01f, 0.001f, camera.farPlane);
-            projection_changed |= DrawFloatControl("farPlane", camera.farPlane, 1.0f, camera.nearPlane, 10000.0f);
-            projection_changed |= DrawFloatControl("aspectRatio", camera.aspectRatio, 0.01f, 0.1f, 10.0f);
+            view_changed |= DrawVecControl("pos", camera.pos, VecKind::VEC3, 0.0f, owner, "Edit Camera Position");
+            view_changed |= DrawVecControl("direction", camera.direction, VecKind::VEC3, 0.0f, owner, "Edit Camera Direction");
+            view_changed |= DrawVecControl("upDirection", camera.upDirection, VecKind::VEC3, 0.0f, owner, "Edit Camera Up Direction");
+            projection_changed |= DrawFloatControl("fov", camera.fov, 0.01f, Math::deg2rad(0.01f), Math::deg2rad(135.0f), owner, "Edit Camera FOV");
+            projection_changed |= DrawFloatControl("nearPlane", camera.nearPlane, 0.01f, 0.001f, camera.farPlane, owner, "Edit Camera Near Plane");
+            projection_changed |= DrawFloatControl("farPlane", camera.farPlane, 1.0f, camera.nearPlane, 10000.0f, owner, "Edit Camera Far Plane");
+            projection_changed |= DrawFloatControl("aspectRatio", camera.aspectRatio, 0.01f, 0.1f, 10.0f, owner, "Edit Camera Aspect Ratio");
 
             if (view_changed)
             {
@@ -297,6 +437,8 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     };
     m_widget_creator[Meta::MetaTypeOf<TransformComponent>().typeName()] = [this, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
+        auto& transform = inst.getValue<TransformComponent&>();
+        GObject* owner = transform.parent_object;
         bool node_open = false;
         node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
@@ -307,14 +449,13 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             {
                 if (prop.isType<Vec3>()) {
                     if (prop.name == "scale")
-                        transform_changed |= DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3, 1.0f);
+                        transform_changed |= DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3, 1.0f, owner, "Edit Transform " + prop.name);
                     else
-                        transform_changed |= DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3);
+                        transform_changed |= DrawVecControl(prop.name, prop.getValue(inst), VecKind::VEC3, 0.0f, owner, "Edit Transform " + prop.name);
                 }
             }
             if (transform_changed)
             {
-                auto& transform = inst.getValue<TransformComponent&>();
                 if (transform.parent_object)
                 {
                     SceneDirtyFlags dirty_flags = SceneDirtyFlagBit(SceneDirtyFlag::Transform);
@@ -334,7 +475,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     };
     m_widget_creator[Meta::MetaTypeOf<MeshComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, DrawTexturePreview, columnWidth, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
-        auto DrawSubMeshControl = [DrawTexturePreview, DrawFloatControl, DrawVecControl, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh) -> SceneDirtyFlags
+        auto DrawSubMeshControl = [DrawTexturePreview, DrawFloatControl, DrawVecControl, columnWidth, TreeNodeExWithTitleFont](const std::string& label, Mesh& sub_mesh, GObject* owner) -> SceneDirtyFlags
         {
             SceneDirtyFlags dirty_flags = SceneDirtyFlagBit(SceneDirtyFlag::None);
             ImGui::PushID(label.c_str());
@@ -353,9 +494,9 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                 if (TreeNodeExWithTitleFont(("Local Transform##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
                 {
                     bool local_transform_changed = false;
-                    local_transform_changed |= DrawVecControl("translation", sub_mesh.translation, VecKind::VEC3);
-                    local_transform_changed |= DrawVecControl("rotation", sub_mesh.rotation, VecKind::VEC3);
-                    local_transform_changed |= DrawVecControl("scale", sub_mesh.scale, VecKind::VEC3, 1.0f);
+                    local_transform_changed |= DrawVecControl("translation", sub_mesh.translation, VecKind::VEC3, 0.0f, owner, "Edit Mesh Translation");
+                    local_transform_changed |= DrawVecControl("rotation", sub_mesh.rotation, VecKind::VEC3, 0.0f, owner, "Edit Mesh Rotation");
+                    local_transform_changed |= DrawVecControl("scale", sub_mesh.scale, VecKind::VEC3, 1.0f, owner, "Edit Mesh Scale");
                     if (local_transform_changed)
                         dirty_flags |= SceneDirtyFlagBit(SceneDirtyFlag::Mesh);
                     ImGui::TreePop();
@@ -365,14 +506,14 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                     if (TreeNodeExWithTitleFont(("Material##" + label).c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
                     {
                         bool material_changed = false;
-                        material_changed |= DrawVecControl("base_color_factor", sub_mesh.material->base_color_factor, VecKind::COLOR3, 1.0f);
-                        material_changed |= DrawFloatControl("metallic_factor", sub_mesh.material->metallic_factor, 0.01f, 0.0f, 1.0f);
-                        material_changed |= DrawFloatControl("roughness_factor", sub_mesh.material->roughness_factor, 0.01f, 0.0f, 1.0f);
-                        material_changed |= DrawFloatControl("ao_factor", sub_mesh.material->ao_factor, 0.01f, 0.0f, 1.0f);
-                        material_changed |= DrawVecControl("diffuse_factor", sub_mesh.material->diffuse_factor, VecKind::COLOR3, 1.0f);
-                        material_changed |= DrawVecControl("specular_factor", sub_mesh.material->specular_factor, VecKind::COLOR3, 1.0f);
-                        material_changed |= DrawFloatControl("shininess", sub_mesh.material->shininess, 1.0f, 1.0f, 1024.0f);
-                        material_changed |= DrawFloatControl("alpha", sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f);
+                        material_changed |= DrawVecControl("base_color_factor", sub_mesh.material->base_color_factor, VecKind::COLOR3, 1.0f, owner, "Edit Material Base Color");
+                        material_changed |= DrawFloatControl("metallic_factor", sub_mesh.material->metallic_factor, 0.01f, 0.0f, 1.0f, owner, "Edit Material Metallic");
+                        material_changed |= DrawFloatControl("roughness_factor", sub_mesh.material->roughness_factor, 0.01f, 0.0f, 1.0f, owner, "Edit Material Roughness");
+                        material_changed |= DrawFloatControl("ao_factor", sub_mesh.material->ao_factor, 0.01f, 0.0f, 1.0f, owner, "Edit Material AO");
+                        material_changed |= DrawVecControl("diffuse_factor", sub_mesh.material->diffuse_factor, VecKind::COLOR3, 1.0f, owner, "Edit Material Diffuse");
+                        material_changed |= DrawVecControl("specular_factor", sub_mesh.material->specular_factor, VecKind::COLOR3, 1.0f, owner, "Edit Material Specular");
+                        material_changed |= DrawFloatControl("shininess", sub_mesh.material->shininess, 1.0f, 1.0f, 1024.0f, owner, "Edit Material Shininess");
+                        material_changed |= DrawFloatControl("alpha", sub_mesh.material->alpha, 0.01f, 0.0f, 1.0f, owner, "Edit Material Alpha");
                         if (material_changed)
                         {
                             sub_mesh.material->markDirty();
@@ -414,7 +555,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                     SceneDirtyFlags dirty_flags = SceneDirtyFlagBit(SceneDirtyFlag::None);
                     for (auto& sub_mesh : mc.sub_meshes)
                     {
-                        dirty_flags |= DrawSubMeshControl(std::string("SubMesh id ") + std::to_string(sub_mesh->sub_mesh_idx), *sub_mesh);
+                        dirty_flags |= DrawSubMeshControl(std::string("SubMesh id ") + std::to_string(sub_mesh->sub_mesh_idx), *sub_mesh, mc.parent_object);
                     }
                     if (dirty_flags != SceneDirtyFlagBit(SceneDirtyFlag::None) && mc.parent_object)
                         mc.parent_object->markDirty(dirty_flags);
@@ -428,13 +569,15 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     };
     m_widget_creator[Meta::MetaTypeOf<AnimationComponent>().typeName()] = [this, DrawFloatControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
+        auto& animation = inst.getValue<AnimationComponent&>();
+        GObject* owner = animation.parent_object;
         bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
             for (auto& prop : inst.metaType().properties())
             {
                 if (prop.name == "speed") {
-                    DrawFloatControl(prop.name, prop.getValue(inst).getValue<float&>(), 0.01f, 0.0f, 2.0f);
+                    DrawFloatControl(prop.name, prop.getValue(inst).getValue<float&>(), 0.01f, 0.0f, 2.0f, owner, "Edit Animation Speed");
                 }
                 else if (m_widget_creator.find(prop.type_name) != m_widget_creator.end())
                     m_widget_creator[prop.type_name](prop.name, prop.getValue(inst));
@@ -446,12 +589,13 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     m_widget_creator[Meta::MetaTypeOf<PointLightComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
         auto& light = inst.getValue<PointLightComponent&>();
+        GObject* owner = light.parent_object;
         bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
             bool light_changed = false;
-            light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
-            light_changed |= DrawFloatControl("radius", light.radius, 0.1f, 0.01f, 1000.0f);
+            light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f, owner, "Edit Point Light Color");
+            light_changed |= DrawFloatControl("radius", light.radius, 0.1f, 0.01f, 1000.0f, owner, "Edit Point Light Radius");
             if (light_changed && light.parent_object)
                 light.parent_object->markDirty(SceneDirtyFlagBit(SceneDirtyFlag::Light));
             ImGui::TreePop();
@@ -460,13 +604,14 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
     m_widget_creator[Meta::MetaTypeOf<DirectionalLightComponent>().typeName()] = [this, DrawFloatControl, DrawVecControl, TreeNodeExWithTitleFont](const std::string& name, const Meta::Instance& inst) -> void
     {
         auto& light = inst.getValue<DirectionalLightComponent&>();
+        GObject* owner = light.parent_object;
         bool node_open = TreeNodeExWithTitleFont(inst.typeName().c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
         if (node_open)
         {
             bool light_changed = false;
-            light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f);
-            light_changed |= DrawVecControl("direction", light.direction, VecKind::VEC3);
-            light_changed |= DrawFloatControl("aspectRatio", light.aspectRatio, 0.01f, 0.1f, 10.0f);
+            light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f, owner, "Edit Directional Light Color");
+            light_changed |= DrawVecControl("direction", light.direction, VecKind::VEC3, 0.0f, owner, "Edit Directional Light Direction");
+            light_changed |= DrawFloatControl("aspectRatio", light.aspectRatio, 0.01f, 0.1f, 10.0f, owner, "Edit Directional Light Aspect Ratio");
             if (light_changed && light.parent_object)
                 light.parent_object->markDirty(SceneDirtyFlagBit(SceneDirtyFlag::Light));
             ImGui::TreePop();
@@ -497,6 +642,8 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         }
         if (node_open)
         {
+            GObject* previous_inspected_object = m_current_inspected_object;
+            m_current_inspected_object = &object;
             if (object.isLeaf())
             {
                 for (auto& com : object.getComponents())
@@ -514,6 +661,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
                     m_widget_creator[Meta::MetaTypeOf<GObject>().typeName()](inst.typeName(), inst);
                 }
             }
+            m_current_inspected_object = previous_inspected_object;
             ImGui::TreePop();
         }
     };
