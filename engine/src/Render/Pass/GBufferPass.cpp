@@ -41,19 +41,19 @@ void GBufferPass::draw(RenderPassContext& context)
             bindings.setFloat("metallic_factor", material.metallic_factor);
             bindings.setFloat("roughness_factor", material.roughness_factor);
             bindings.setFloat("ao_factor", material.ao_factor);
-            bindings.setTexture("albedo_map", 0, material.albedo_map);
-            bindings.setTexture("metallic_map", 1, material.metallic_map);
-            bindings.setTexture("roughness_map", 2, material.roughness_map);
-            bindings.setTexture("ao_map", 3, material.ao_map);
-            bindings.setTexture("normal_map", 4, material.normal_map);
+            bindings.setTexture("albedo_map", 0, material.albedoMap());
+            bindings.setTexture("metallic_map", 1, material.metallicMap());
+            bindings.setTexture("roughness_map", 2, material.roughnessMap());
+            bindings.setTexture("ao_map", 3, material.aoMap());
+            bindings.setTexture("normal_map", 4, material.normalMap());
             bindings.setBool("has_normal_map", material.has_normal_map);
         }
         else {
             bindings.setFloat3("diffuse_factor", material.diffuse_factor);
             bindings.setFloat3("specular_factor", material.specular_factor);
             bindings.setFloat("shininess", material.shininess);
-            bindings.setTexture("diffuse_map", 0, material.diffuse_map);
-            bindings.setTexture("specular_map", 1, material.specular_map);
+            bindings.setTexture("diffuse_map", 0, material.diffuseMap());
+            bindings.setTexture("specular_map", 1, material.specularMap());
         }
         m_command_buffer->setShaderResources(&bindings);
         m_command_buffer->setVertexInput(render_node->mesh.vertexLayout());

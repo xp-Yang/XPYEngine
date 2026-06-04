@@ -51,8 +51,8 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     const IBLResources& ibl = context.builtinResources().ibl;
     const bool ibl_ready = m_pbr && m_ibl && ibl.isReady();
     bindings.setBool("iblEnable", ibl_ready);
-    RhiTexture* default_cube = RenderTextureData::defaultCubeTexture().texture;
-    RhiTexture* default_2d = RenderTextureData::defaultTexture().texture;
+    RhiTexture* default_cube = RenderTextureResource::defaultCubeTexture()->texture();
+    RhiTexture* default_2d = RenderTextureResource::defaultTexture()->texture();
     bindings.setCubeTexture("irradianceMap", 11, ibl_ready ? ibl.irradiance_cube : default_cube);
     bindings.setCubeTexture("prefilterMap", 12, ibl_ready ? ibl.prefilter_cube : default_cube);
     bindings.setTexture("brdfLUT", 13, ibl_ready ? ibl.brdf_lut : default_2d);
@@ -69,11 +69,11 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
             bindings.setFloat("metallic_factor", material.metallic_factor);
             bindings.setFloat("roughness_factor", material.roughness_factor);
             bindings.setFloat("ao_factor", material.ao_factor);
-            bindings.setTexture("albedo_map", 0, material.albedo_map);
-            bindings.setTexture("metallic_map", 1, material.metallic_map);
-            bindings.setTexture("roughness_map", 2, material.roughness_map);
-            bindings.setTexture("ao_map", 3, material.ao_map);
-            bindings.setTexture("normal_map", 4, material.normal_map);
+            bindings.setTexture("albedo_map", 0, material.albedoMap());
+            bindings.setTexture("metallic_map", 1, material.metallicMap());
+            bindings.setTexture("roughness_map", 2, material.roughnessMap());
+            bindings.setTexture("ao_map", 3, material.aoMap());
+            bindings.setTexture("normal_map", 4, material.normalMap());
             bindings.setBool("has_normal_map", material.has_normal_map);
         }
         else
@@ -81,10 +81,10 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
             bindings.setFloat3("diffuse_factor", material.diffuse_factor);
             bindings.setFloat3("specular_factor", material.specular_factor);
             bindings.setFloat("shininess", material.shininess);
-            bindings.setTexture("material.diffuse_map", 0, material.diffuse_map);
-            bindings.setTexture("material.specular_map", 1, material.specular_map);
-            bindings.setTexture("material.normal_map", 2, material.normal_map);
-            bindings.setTexture("material.height_map", 3, material.height_map);
+            bindings.setTexture("material.diffuse_map", 0, material.diffuseMap());
+            bindings.setTexture("material.specular_map", 1, material.specularMap());
+            bindings.setTexture("material.normal_map", 2, material.normalMap());
+            bindings.setTexture("material.height_map", 3, material.heightMap());
         }
 
         bindings.setBool("useSkinning", render_node->use_skinning);

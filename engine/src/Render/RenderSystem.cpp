@@ -160,7 +160,8 @@ void RenderSystem::initializeRenderResources()
         asset_dir + "/images/skybox/bottom.jpg",
         asset_dir + "/images/skybox/front.jpg",
         asset_dir + "/images/skybox/back.jpg");
-    m_render_scene.skybox().skybox_cube_map = RenderTextureData(skybox_cube_texture).texture;
+    m_render_scene.skybox().skybox_cube_map = RenderTextureResource::cubeTextureOf(skybox_cube_texture);
+    m_render_scene.skybox().external_skybox_cube_map = nullptr;
     m_render_scene.skybox().mesh = std::make_shared<RenderMeshResource>(skybox_mesh);
 
     buildIBLResources(asset_dir);
@@ -195,13 +196,13 @@ void RenderSystem::buildIBLResources(const std::string& asset_dir)
     {
         built = preprocessor.buildFromEquirectHDR(hdr_path, m_builtin_resources.ibl);
         if (built)
-            m_render_scene.skybox().skybox_cube_map = m_builtin_resources.ibl.environment_cube;
+            m_render_scene.skybox().external_skybox_cube_map = m_builtin_resources.ibl.environment_cube;
     }
 
     if (!built)
     {
         // 回退：直接用 skybox 的 6 面 cubemap 派生 IBL（LDR 近似）。
-        preprocessor.buildFromEnvironmentCube(m_render_scene.skybox().skybox_cube_map, m_builtin_resources.ibl);
+        preprocessor.buildFromEnvironmentCube(m_render_scene.skybox().skyboxCubeMap(), m_builtin_resources.ibl);
     }
 }
 

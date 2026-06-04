@@ -51,9 +51,9 @@ void TransparentPass::draw(RenderPassContext& context)
         bindings.setFloat3("diffuse_factor", material.diffuse_factor);
         bindings.setFloat3("specular_factor", material.specular_factor);
         bindings.setFloat("shininess", material.shininess);
-        bindings.setTexture("material.diffuse_map", 0, material.diffuse_map);
-        bindings.setTexture("material.specular_map", 1, material.specular_map);
-        bindings.setTexture("material.normal_map", 2, material.normal_map);
+        bindings.setTexture("material.diffuse_map", 0, material.diffuseMap());
+        bindings.setTexture("material.specular_map", 1, material.specularMap());
+        bindings.setTexture("material.normal_map", 2, material.normalMap());
 
         bindings.setFloat3("cameraPos", context.frameData().camera_position);
 

@@ -27,7 +27,7 @@ void SkyBoxPass::draw(RenderPassContext& context)
     Mat4 view_without_translation = Mat4(Mat3(context.frameData().view_matrix));
     bindings.setMatrix("view", 1, view_without_translation);
     bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
-    bindings.setCubeTexture("skybox", 0, context.renderScene().skybox().skybox_cube_map);
+    bindings.setCubeTexture("skybox", 0, context.renderScene().skybox().skyboxCubeMap());
     m_command_buffer->setShaderResources(&bindings);
     m_command_buffer->setVertexInput(render_skybox_sub_mesh_data->vertexLayout());
     m_command_buffer->drawIndexed(static_cast<int>(render_skybox_sub_mesh_data->indicesCount()));

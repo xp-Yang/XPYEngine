@@ -14,15 +14,29 @@
 #include <unordered_set>
 #include <vector>
 
-struct RenderTextureData {
-    RenderTextureData(std::shared_ptr<Texture> texture_);
-    RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_);
+struct RenderTextureResource {
+    ~RenderTextureResource();
 
-    RhiTexture* texture{ nullptr };
-    GL_HANDLE id{ 0 };
+    RenderTextureResource(const RenderTextureResource&) = delete;
+    RenderTextureResource& operator=(const RenderTextureResource&) = delete;
+    RenderTextureResource(RenderTextureResource&&) = delete;
+    RenderTextureResource& operator=(RenderTextureResource&&) = delete;
 
-    static RenderTextureData& defaultTexture();
-    static RenderTextureData& defaultCubeTexture();
+    RhiTexture* texture() const { return m_texture; }
+    GL_HANDLE id() const { return m_texture ? m_texture->id() : 0; }
+
+    static std::shared_ptr<RenderTextureResource> textureOf(std::shared_ptr<Texture> texture_);
+    static std::shared_ptr<RenderTextureResource> cubeTextureOf(std::shared_ptr<CubeTexture> cube_texture_);
+    static std::shared_ptr<RenderTextureResource> defaultTexture();
+    static std::shared_ptr<RenderTextureResource> defaultCubeTexture();
+
+private:
+    explicit RenderTextureResource(std::shared_ptr<Texture> texture_);
+    explicit RenderTextureResource(std::shared_ptr<CubeTexture> cube_texture_);
+
+    std::shared_ptr<Texture> m_source_texture;
+    std::shared_ptr<CubeTexture> m_source_cube_texture;
+    RhiTexture* m_texture{ nullptr };
 };
 
 // Render-side material resource. It stores only GPU-ready material inputs.
@@ -36,20 +50,20 @@ public:
     bool isTransparent() const { return alpha != 1.0f; }
 
     // PBR inputs.
-    RhiTexture* albedo_map{ nullptr };
-    RhiTexture* metallic_map{ nullptr };
-    RhiTexture* roughness_map{ nullptr };
-    RhiTexture* ao_map{ nullptr };
+    RhiTexture* albedoMap() const { return rawTextureOf(m_albedo_map); }
+    RhiTexture* metallicMap() const { return rawTextureOf(m_metallic_map); }
+    RhiTexture* roughnessMap() const { return rawTextureOf(m_roughness_map); }
+    RhiTexture* aoMap() const { return rawTextureOf(m_ao_map); }
     Vec3 base_color_factor{ 1.0f, 1.0f, 1.0f };
     float metallic_factor{ 0.0f };
     float roughness_factor{ 1.0f };
     float ao_factor{ 1.0f };
 
     // Non-PBR / legacy shading inputs.
-    RhiTexture* diffuse_map{ nullptr };
-    RhiTexture* specular_map{ nullptr };
-    RhiTexture* normal_map{ nullptr };
-    RhiTexture* height_map{ nullptr };
+    RhiTexture* diffuseMap() const { return rawTextureOf(m_diffuse_map); }
+    RhiTexture* specularMap() const { return rawTextureOf(m_specular_map); }
+    RhiTexture* normalMap() const { return rawTextureOf(m_normal_map); }
+    RhiTexture* heightMap() const { return rawTextureOf(m_height_map); }
     Vec3 diffuse_factor{ 1.0f, 1.0f, 1.0f };
     Vec3 specular_factor{ 1.0f, 1.0f, 1.0f };
     float shininess{ 128.0f };
@@ -60,6 +74,21 @@ public:
     // Shared material state.
     float alpha{ 1.0f };
     uint64_t material_version{ 0 };
+
+private:
+    static RhiTexture* rawTextureOf(const std::shared_ptr<RenderTextureResource>& texture_data)
+    {
+        return texture_data ? texture_data->texture() : nullptr;
+    }
+
+    std::shared_ptr<RenderTextureResource> m_albedo_map;
+    std::shared_ptr<RenderTextureResource> m_metallic_map;
+    std::shared_ptr<RenderTextureResource> m_roughness_map;
+    std::shared_ptr<RenderTextureResource> m_ao_map;
+    std::shared_ptr<RenderTextureResource> m_diffuse_map;
+    std::shared_ptr<RenderTextureResource> m_specular_map;
+    std::shared_ptr<RenderTextureResource> m_normal_map;
+    std::shared_ptr<RenderTextureResource> m_height_map;
 };
 
 struct RenderGeometryGpuResource
@@ -170,8 +199,10 @@ struct RenderMeshSection {
 
 // Scene environment skybox data used by the skybox pass.
 struct RenderSkybox {
-    RhiTexture* skybox_cube_map{ nullptr };
+    RhiTexture* skyboxCubeMap() const { return external_skybox_cube_map ? external_skybox_cube_map : (skybox_cube_map ? skybox_cube_map->texture() : nullptr); }
 
+    std::shared_ptr<RenderTextureResource> skybox_cube_map;
+    RhiTexture* external_skybox_cube_map{ nullptr };
     std::shared_ptr<RenderMeshResource> mesh;
 };
 

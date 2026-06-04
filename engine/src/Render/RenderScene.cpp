@@ -11,6 +11,8 @@
 namespace
 {
 std::unordered_map<const MeshGeometry*, std::weak_ptr<RenderGeometryGpuResource>> s_render_geometry_gpu_cache;
+std::unordered_map<const Texture*, std::weak_ptr<RenderTextureResource>> s_render_texture_cache;
+std::unordered_map<const CubeTexture*, std::weak_ptr<RenderTextureResource>> s_render_cube_texture_cache;
 
 RenderAABB transformAABB(const RenderAABB& bounds, const Mat4& matrix)
 {
@@ -78,30 +80,26 @@ std::shared_ptr<RenderGeometryGpuResource> renderGeometryResourceOf(const std::s
 }
 }
 
-RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
+RenderTextureResource::RenderTextureResource(std::shared_ptr<Texture> texture_)
+    : m_source_texture(std::move(texture_))
 {
-    if (texture_.get() == nullptr)
-    {
-        *this = RenderTextureData::defaultTexture();
-        return;
-    }
+    assert(m_source_texture);
 
     const auto &rhi = Rhi::get();
 
-    unsigned char *data = texture_->data;
+    unsigned char *data = m_source_texture->data;
     if (data)
     {
-        RhiTexture::Format format;
-        if (texture_->channel_count == 1)
+        RhiTexture::Format format = RhiTexture::Format::RGB8;
+        if (m_source_texture->channel_count == 1)
             format = RhiTexture::Format::R8;
-        else if (texture_->channel_count == 3)
+        else if (m_source_texture->channel_count == 3)
             format = RhiTexture::Format::RGB8;
-        else if (texture_->channel_count == 4)
+        else if (m_source_texture->channel_count == 4)
             format = RhiTexture::Format::RGBA8;
 
-        texture = rhi->newTexture(format, Vec2(texture_->width, texture_->height), 1, RhiTexture::Flag::sRGB, data);
-        texture->create();
-        id = texture->id();
+        m_texture = rhi->newTexture(format, Vec2(m_source_texture->width, m_source_texture->height), 1, RhiTexture::Flag::sRGB, data);
+        m_texture->create();
     }
     else
     {
@@ -109,25 +107,73 @@ RenderTextureData::RenderTextureData(std::shared_ptr<Texture> texture_)
     }
 }
 
-RenderTextureData::RenderTextureData(std::shared_ptr<CubeTexture> cube_texture_)
+RenderTextureResource::RenderTextureResource(std::shared_ptr<CubeTexture> cube_texture_)
+    : m_source_cube_texture(std::move(cube_texture_))
 {
+    assert(m_source_cube_texture);
+
     RhiTexture::Format format = RhiTexture::Format::RGB8;
-    if (cube_texture_->channel_count == 4)
+    if (m_source_cube_texture->channel_count == 4)
         format = RhiTexture::Format::RGBA8;
 
-    texture = Rhi::get()->newCubeTexture(format, Vec2(cube_texture_->width, cube_texture_->height), 1, RhiTexture::CubeMap, cube_texture_->datas);
-    texture->create();
-    id = texture->id();
+    m_texture = Rhi::get()->newCubeTexture(format, Vec2(m_source_cube_texture->width, m_source_cube_texture->height), 1, RhiTexture::CubeMap, m_source_cube_texture->datas);
+    m_texture->create();
 }
 
-RenderTextureData &RenderTextureData::defaultTexture()
+RenderTextureResource::~RenderTextureResource()
+{
+    if (m_texture)
+    {
+        m_texture->destroy();
+        delete m_texture;
+        m_texture = nullptr;
+    }
+}
+
+std::shared_ptr<RenderTextureResource> RenderTextureResource::textureOf(std::shared_ptr<Texture> texture_)
+{
+    if (!texture_)
+        return defaultTexture();
+
+    auto cache_it = s_render_texture_cache.find(texture_.get());
+    if (cache_it != s_render_texture_cache.end())
+    {
+        if (auto cached = cache_it->second.lock())
+            return cached;
+        s_render_texture_cache.erase(cache_it);
+    }
+
+    auto texture_data = std::make_shared<RenderTextureResource>(texture_);
+    s_render_texture_cache[texture_.get()] = texture_data;
+    return texture_data;
+}
+
+std::shared_ptr<RenderTextureResource> RenderTextureResource::cubeTextureOf(std::shared_ptr<CubeTexture> cube_texture_)
+{
+    if (!cube_texture_)
+        return defaultCubeTexture();
+
+    auto cache_it = s_render_cube_texture_cache.find(cube_texture_.get());
+    if (cache_it != s_render_cube_texture_cache.end())
+    {
+        if (auto cached = cache_it->second.lock())
+            return cached;
+        s_render_cube_texture_cache.erase(cache_it);
+    }
+
+    auto texture_data = std::make_shared<RenderTextureResource>(cube_texture_);
+    s_render_cube_texture_cache[cube_texture_.get()] = texture_data;
+    return texture_data;
+}
+
+std::shared_ptr<RenderTextureResource> RenderTextureResource::defaultTexture()
 {
     static std::shared_ptr<Texture> diffuse_texture = std::make_shared<Texture>(TextureType::Custom, std::string(ASSET_DIR) + "/images/default_map.png", false);
-    static RenderTextureData texture(diffuse_texture);
+    static std::shared_ptr<RenderTextureResource> texture = std::make_shared<RenderTextureResource>(diffuse_texture);
     return texture;
 }
 
-RenderTextureData &RenderTextureData::defaultCubeTexture()
+std::shared_ptr<RenderTextureResource> RenderTextureResource::defaultCubeTexture()
 {
     static std::shared_ptr<CubeTexture> cube_texture;
     if (!cube_texture)
@@ -140,7 +186,7 @@ RenderTextureData &RenderTextureData::defaultCubeTexture()
         std::array<unsigned char *, 6> cube_data{};
         cube_texture->datas.fill(reinterpret_cast<unsigned char *>(&neutral_depth));
     }
-    static RenderTextureData texture(cube_texture);
+    static std::shared_ptr<RenderTextureResource> texture = std::make_shared<RenderTextureResource>(cube_texture);
     return texture;
 }
 
@@ -290,30 +336,21 @@ void RenderMaterialResource::updateFrom(std::shared_ptr<Material> material_)
     specular_factor = material_->specular_factor;
     shininess = material_->shininess;
 
-    // TODO reload texture handles when the source material changes texture assets.
-    if (!albedo_map)
-        albedo_map = RenderTextureData(material_->albedo_texture).texture;
-    if (!metallic_map)
-        metallic_map = RenderTextureData(material_->metallic_texture).texture;
-    if (!roughness_map)
-        roughness_map = RenderTextureData(material_->roughness_texture).texture;
-    if (!ao_map)
-        ao_map = RenderTextureData(material_->ao_texture).texture;
+    m_albedo_map = RenderTextureResource::textureOf(material_->albedo_texture);
+    m_metallic_map = RenderTextureResource::textureOf(material_->metallic_texture);
+    m_roughness_map = RenderTextureResource::textureOf(material_->roughness_texture);
+    m_ao_map = RenderTextureResource::textureOf(material_->ao_texture);
 
-    if (!diffuse_map)
-        diffuse_map = RenderTextureData(material_->diffuse_texture).texture;
-    if (!specular_map)
-        specular_map = RenderTextureData(material_->specular_texture).texture;
-    if (!normal_map)
-        normal_map = RenderTextureData(material_->normal_texture).texture;
+    m_diffuse_map = RenderTextureResource::textureOf(material_->diffuse_texture);
+    m_specular_map = RenderTextureResource::textureOf(material_->specular_texture);
+    m_normal_map = RenderTextureResource::textureOf(material_->normal_texture);
     // 仅当材质拥有“真实”法线贴图时才扰动法线。create_complete_default_material /
     // fillBlinnPhongFromPBR 会把 normal_texture 填成默认白图 pure_white_map.png（非空且非平面法线），
     // 直接按非空判断会把白图当法线图采样 (1,1,1)，导致整面法线歪斜、镜像 UV 中缝裂开。
     static const std::string kDefaultNormalPath = std::string(ASSET_DIR) + "/images/pure_white_map.png";
     has_normal_map = material_->normal_texture
         && material_->normal_texture->texture_filepath != kDefaultNormalPath;
-    if (!height_map)
-        height_map = RenderTextureData(material_->height_texture).texture;
+    m_height_map = RenderTextureResource::textureOf(material_->height_texture);
 }
 
 RenderMeshSection::RenderMeshSection(
@@ -617,6 +654,7 @@ void RenderScene::clear()
     clearObjectProxies();
     m_skybox.mesh.reset();
     m_skybox.skybox_cube_map = nullptr;
+    m_skybox.external_skybox_cube_map = nullptr;
 }
 
 void RenderFrameData::reset()

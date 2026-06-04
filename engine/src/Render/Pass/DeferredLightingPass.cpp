@@ -68,8 +68,8 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 		const IBLResources& ibl = context.builtinResources().ibl;
 		const bool ibl_ready = m_pbr && m_ibl && ibl.isReady();
 		bindings.setBool("iblEnable", ibl_ready);
-		RhiTexture* default_cube = RenderTextureData::defaultCubeTexture().texture;
-		RhiTexture* default_2d = RenderTextureData::defaultTexture().texture;
+		RhiTexture* default_cube = RenderTextureResource::defaultCubeTexture()->texture();
+		RhiTexture* default_2d = RenderTextureResource::defaultTexture()->texture();
 		bindings.setCubeTexture("irradianceMap", 7, ibl_ready ? ibl.irradiance_cube : default_cube);
 		bindings.setCubeTexture("prefilterMap", 8, ibl_ready ? ibl.prefilter_cube : default_cube);
 		bindings.setTexture("brdfLUT", 9, ibl_ready ? ibl.brdf_lut : default_2d);
@@ -80,7 +80,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
         RhiTexture* cube_shadow_map =
             i < static_cast<int>(cube_shadow_maps.size()) && cube_shadow_maps[i]
             ? cube_shadow_maps[i]
-            : RenderTextureData::defaultCubeTexture().texture;
+            : RenderTextureResource::defaultCubeTexture()->texture();
         std::string cube_map_id_str = std::string("cube_shadow_maps[") + std::to_string(i) + "]";
         bindings.setCubeTexture(cube_map_id_str, 10 + i, cube_shadow_map);
     }
@@ -109,7 +109,7 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 	const bool ssao_ready = m_pbr && m_ssao;
 	bindings.setBool("ssaoEnable", ssao_ready);
 	RhiTexture* ssao_map = (ssao_ready && hasSlot("inSSAO")) ? context.texture(slot("inSSAO")) : nullptr;
-	bindings.setTexture("ssaoMap", 15, ssao_map ? ssao_map : RenderTextureData::defaultTexture().texture);
+	bindings.setTexture("ssaoMap", 15, ssao_map ? ssao_map : RenderTextureResource::defaultTexture()->texture());
 
     m_command_buffer->setShaderResources(&bindings);
 	m_command_buffer->setVertexInput(context.builtinResources().screen_quad->vertexLayout());

@@ -314,7 +314,7 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         return changed;
     };
 
-    auto DrawTexturePreview = [columnWidth](const std::string& label, const std::shared_ptr<Texture>& tex)
+    auto DrawTexturePreview = [this, columnWidth](const std::string& label, const std::shared_ptr<Texture>& tex)
     {
         const float preview_size = 64.f;
         ImGui::Columns(2, nullptr, false);
@@ -327,14 +327,10 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             return;
         }
 
-        static std::unordered_map<const Texture*, GL_HANDLE> texture_preview_cache;
-        auto it = texture_preview_cache.find(tex.get());
-        if (it == texture_preview_cache.end()) {
-            const GL_HANDLE preview_id = RenderTextureData(tex).id;
-            it = texture_preview_cache.insert({ tex.get(), preview_id }).first;
-        }
+        auto texture_data = RenderTextureResource::textureOf(tex);
+        m_texture_preview_frame_resources.push_back(texture_data);
 
-        ImTextureID preview_tex = (ImTextureID)(intptr_t)it->second;
+        ImTextureID preview_tex = (ImTextureID)(intptr_t)texture_data->id();
         ImGui::Image(preview_tex, ImVec2(preview_size, preview_size), ImVec2(0, 1), ImVec2(1, 0));
         if (ImGui::IsItemHovered()) {
             ImGui::BeginTooltip();
@@ -691,6 +687,8 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
 
 void ImGuiSceneHierarchy::render()
 {
+    m_texture_preview_frame_resources.clear();
+
     if (ImGui::Begin(("Scene Hierarchy"), nullptr, ImGuiWindowFlags_NoCollapse))
     {
         ImGuiWindow *scene_hierarchy_window = ImGui::GetCurrentWindow();

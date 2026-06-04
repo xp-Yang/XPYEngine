@@ -5,6 +5,7 @@
 #include "Logical/Framework/World/IDAllocator.hpp"
 
 #include <memory>
+#include <vector>
 
 namespace Snapshot {
 class Transaction;
@@ -12,6 +13,7 @@ class Transaction;
 
 class GObject;
 class ImGuiEditor;
+struct RenderTextureResource;
 class ImGuiSceneHierarchy {
 public:
 	ImGuiSceneHierarchy(ImGuiEditor* parent);
@@ -27,6 +29,7 @@ private:
 	std::unique_ptr<Snapshot::Transaction> m_active_transaction;
 	GObjectID m_active_transaction_object_id{};
 	GObject* m_current_inspected_object{ nullptr };
+	std::vector<std::shared_ptr<RenderTextureResource>> m_texture_preview_frame_resources;
 	ImGuiEditor* m_parent;
 };
 

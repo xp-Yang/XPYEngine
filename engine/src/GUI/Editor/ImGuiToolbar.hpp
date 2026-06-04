@@ -17,6 +17,7 @@ enum class ToolbarType : int {
 };
 
 class Scene;
+struct RenderTextureResource;
 class ImGuiCanvas;
 class ImGuiToolbar {
 public:
@@ -33,6 +34,9 @@ protected:
     GL_HANDLE m_tranlate_icon_id{ 0 };
     GL_HANDLE m_rotate_icon_id{ 0 };
     GL_HANDLE m_scale_icon_id{ 0 };
+    std::shared_ptr<RenderTextureResource> m_tranlate_icon_texture;
+    std::shared_ptr<RenderTextureResource> m_rotate_icon_texture;
+    std::shared_ptr<RenderTextureResource> m_scale_icon_texture;
 
     std::shared_ptr<Scene> ref_scene;
     std::unique_ptr<Snapshot::Transaction> m_gizmo_transaction;

@@ -19,9 +19,13 @@ ImGuiToolbar::ImGuiToolbar(ImGuiCanvas *parent, std::shared_ptr<Scene> scene)
     auto rotate_icon = std::make_shared<Texture>(TextureType::Custom, std::string(ASSET_DIR) + "/images/toolbar_rotate.png", false);
     auto scale_icon = std::make_shared<Texture>(TextureType::Custom, std::string(ASSET_DIR) + "/images/toolbar_scale.png", false);
 
-    m_tranlate_icon_id = RenderTextureData(tranlate_icon).id;
-    m_rotate_icon_id = RenderTextureData(rotate_icon).id;
-    m_scale_icon_id = RenderTextureData(scale_icon).id;
+    m_tranlate_icon_texture = RenderTextureResource::textureOf(tranlate_icon);
+    m_rotate_icon_texture = RenderTextureResource::textureOf(rotate_icon);
+    m_scale_icon_texture = RenderTextureResource::textureOf(scale_icon);
+
+    m_tranlate_icon_id = m_tranlate_icon_texture->id();
+    m_rotate_icon_id = m_rotate_icon_texture->id();
+    m_scale_icon_id = m_scale_icon_texture->id();
 }
 
 ImGuiToolbar::~ImGuiToolbar() = default;
