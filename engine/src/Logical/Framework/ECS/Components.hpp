@@ -85,7 +85,7 @@ namespace ecs
 
 	struct PointLightComponent
 	{
-		Color4 luminousColor = {1.0f, 1.0f, 1.0f, 1.0f};
+		Color3 luminousColor = {1.0f, 1.0f, 1.0f};
 		float radius;
 		SubMesh mesh;
 		Vec3 position()
@@ -127,7 +127,7 @@ namespace ecs
 
 	struct DirectionalLightComponent
 	{
-		Color4 luminousColor = {1.0f, 1.0f, 1.0f, 1.0f};
+		Color3 luminousColor = {1.0f, 1.0f, 1.0f};
 		Vec3 direction;
 
 		Mat4 lightReferenceMatrix()

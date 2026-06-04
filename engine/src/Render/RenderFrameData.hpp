@@ -24,16 +24,9 @@ struct RenderPointLightData {
     Color3 color;
     Vec3 position;
     float radius;
+    int shadow_index{ -1 };
     std::array<Mat4, 6> lightViewMatrix;
     Mat4 lightProjMatrix;
-};
-
-struct RenderCameraData {
-    float fov;
-    Vec3 pos;
-    Vec3 direction;
-    Vec3 rightDirection;
-    Vec3 upDirection;
 };
 
 // Per-frame transient data built from the active view and the current scene state.
@@ -48,8 +41,6 @@ struct RenderFrameData {
     Vec3 camera_position;
     Mat4 view_matrix;
     Mat4 proj_matrix;
-
-    std::shared_ptr<RenderCameraData> render_camera;
 
     int point_light_inst_amount{ 0 };
 };

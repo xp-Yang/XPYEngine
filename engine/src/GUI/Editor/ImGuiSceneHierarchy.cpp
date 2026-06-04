@@ -550,8 +550,20 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
         {
             for (auto& prop : inst.metaType().properties())
             {
-                if (prop.name == "sub_meshes") {
-                    MeshComponent& mc = inst.getValue<MeshComponent&>();
+                MeshComponent& mc = inst.getValue<MeshComponent&>();
+                if (prop.name == "staticShadowCaster") {
+                    bool next_value = mc.staticShadowCaster;
+                    if (ImGui::Checkbox("staticShadowCaster", &next_value))
+                    {
+                        commitImmediateObjectEdit(mc.parent_object, "Edit Static Shadow Caster", [&mc, next_value]()
+                        {
+                            mc.staticShadowCaster = next_value;
+                        });
+                        if (mc.parent_object)
+                            mc.parent_object->markDirty(SceneDirtyFlagBit(SceneDirtyFlag::Mesh));
+                    }
+                }
+                else if (prop.name == "sub_meshes") {
                     SceneDirtyFlags dirty_flags = SceneDirtyFlagBit(SceneDirtyFlag::None);
                     for (auto& sub_mesh : mc.sub_meshes)
                     {
@@ -596,6 +608,15 @@ ImGuiSceneHierarchy::ImGuiSceneHierarchy(ImGuiEditor* parent)
             bool light_changed = false;
             light_changed |= DrawVecControl("luminousColor", light.luminousColor, VecKind::COLOR3, 1.0f, owner, "Edit Point Light Color");
             light_changed |= DrawFloatControl("radius", light.radius, 0.1f, 0.01f, 1000.0f, owner, "Edit Point Light Radius");
+            bool next_cast_shadow = light.castShadow;
+            if (ImGui::Checkbox("castShadow", &next_cast_shadow))
+            {
+                commitImmediateObjectEdit(owner, "Edit Point Light Shadow", [&light, next_cast_shadow]()
+                {
+                    light.castShadow = next_cast_shadow;
+                });
+                light_changed = true;
+            }
             if (light_changed && light.parent_object)
                 light.parent_object->markDirty(SceneDirtyFlagBit(SceneDirtyFlag::Light));
             ImGui::TreePop();

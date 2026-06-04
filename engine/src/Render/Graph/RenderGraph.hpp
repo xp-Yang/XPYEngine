@@ -35,6 +35,7 @@ struct RenderGraphRenderTarget {
     std::unique_ptr<RhiFrameBuffer> framebuffer;
 
     std::vector<std::array<std::unique_ptr<RhiFrameBuffer>, 6>> cube_shadow_framebuffers;
+    std::vector<std::array<std::unique_ptr<RhiFrameBuffer>, 6>> cube_shadow_static_cache_framebuffers;
 };
 
 // 声明 pass 的资源读写关系，编译依赖顺序，并负责执行与目标管理。
@@ -71,6 +72,7 @@ protected:
     void appendCubeShadowMap(RenderGraphRenderTarget& target);
     void destroyCubeShadowFrameBuffer(RenderGraphRenderTarget& target);
     RhiFrameBuffer* cubeShadowFaceFrameBufferOf(RenderPass::Type type, size_t cube_index, int face) const;
+    RhiFrameBuffer* cubeShadowStaticFaceFrameBufferOf(RenderPass::Type type, size_t cube_index, int face) const;
 
     void resolveResourceDependencies();
     void resolveReads(RenderGraphPassNode& node);

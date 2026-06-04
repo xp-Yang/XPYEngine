@@ -3,6 +3,8 @@
 #include "Render/RHI/rhi.hpp"
 
 #include <algorithm>
+#include <array>
+#include <limits>
 #include <unordered_map>
 
 struct RenderGeometryGpuResource
@@ -16,6 +18,36 @@ struct RenderGeometryGpuResource
 namespace
 {
 std::unordered_map<const MeshGeometry*, std::weak_ptr<RenderGeometryGpuResource>> s_render_geometry_gpu_cache;
+
+RenderAABB transformAABB(const RenderAABB& bounds, const Mat4& matrix)
+{
+    if (!bounds.valid)
+        return {};
+
+    const std::array<Vec3, 8> corners = {
+        Vec3(bounds.min.x, bounds.min.y, bounds.min.z),
+        Vec3(bounds.max.x, bounds.min.y, bounds.min.z),
+        Vec3(bounds.min.x, bounds.max.y, bounds.min.z),
+        Vec3(bounds.max.x, bounds.max.y, bounds.min.z),
+        Vec3(bounds.min.x, bounds.min.y, bounds.max.z),
+        Vec3(bounds.max.x, bounds.min.y, bounds.max.z),
+        Vec3(bounds.min.x, bounds.max.y, bounds.max.z),
+        Vec3(bounds.max.x, bounds.max.y, bounds.max.z),
+    };
+
+    RenderAABB result;
+    result.min = Vec3(std::numeric_limits<float>::max());
+    result.max = Vec3(std::numeric_limits<float>::lowest());
+    result.valid = true;
+    for (const Vec3& corner : corners)
+    {
+        const Vec4 transformed = matrix * Vec4(corner, 1.0f);
+        const Vec3 point = Vec3(transformed) / transformed.w;
+        result.min = glm::min(result.min, point);
+        result.max = glm::max(result.max, point);
+    }
+    return result;
+}
 
 std::shared_ptr<RenderGeometryGpuResource> renderGeometryResourceOf(const std::shared_ptr<MeshGeometry>& geometry)
 {
@@ -164,12 +196,14 @@ void RenderMeshResource::create_instancing(void *instancing_data, int instancing
         {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},   // uv
         {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},      // bone ids
         {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)}, // bone weights
-        {5, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 0},                            // matrix
-        {6, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), sizeof(Vec4)},
-        {7, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 2 * sizeof(Vec4)},
-        {8, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 3 * sizeof(Vec4)},
-        {9, RhiVertexAttribute::Format::Float4, 5 * sizeof(Vec4), 4 * sizeof(Vec4)}, // color
+        // instancing
+        {5, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), 0},                // matrix
+        {6, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), sizeof(Vec4)},     // matrix
+        {7, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), 2 * sizeof(Vec4)}, // matrix
+        {8, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), 3 * sizeof(Vec4)}, // matrix
+        {9, RhiVertexAttribute::Format::Float3, 4 * sizeof(Vec4) + sizeof(Vec3), 4 * sizeof(Vec4)}, // color
     });
+    // TODO 这段逻辑没看懂，上面setAttributes() 0-4 没看到apply？
     m_vertex_layout->createInstancing(m_instancing_buffer, 5);
 }
 
@@ -244,12 +278,15 @@ RenderMeshSection::RenderMeshSection(
     const RenderMeshResource& mesh_data,
     const RenderMaterialResource& material_data,
     Mat4 matrix,
+    const RenderAABB& local_bounds_,
     int source_index_offset_,
     int source_index_count_)
     : section_id(id)
     , mesh(mesh_data)
     , material(material_data)
     , model_matrix(matrix)
+    , local_bounds(local_bounds_)
+    , world_bounds(transformAABB(local_bounds_, matrix))
     , source_index_offset(source_index_offset_)
     , source_index_count(source_index_count_)
 {
@@ -271,7 +308,10 @@ void RenderObjectProxy::setModelMatrix(const Mat4& model_matrix)
     for (auto& mesh_section : m_mesh_sections)
     {
         if (mesh_section)
+        {
             mesh_section->model_matrix = m_model_matrix * mesh_section->local_matrix;
+            mesh_section->world_bounds = transformAABB(mesh_section->local_bounds, mesh_section->model_matrix);
+        }
     }
 }
 
@@ -292,6 +332,7 @@ RenderMeshSection* RenderObjectProxy::addMeshSection(std::unique_ptr<RenderMeshS
 
     section->owner = this;
     section->visible = m_visible;
+    section->world_bounds = transformAABB(section->local_bounds, section->model_matrix);
     RenderMeshSection* raw_section = section.get();
     m_mesh_sections.push_back(std::move(section));
     return raw_section;
@@ -315,6 +356,19 @@ const RenderMeshSection* RenderObjectProxy::meshSection(int sub_mesh_idx) const
             return mesh_section.get();
     }
     return nullptr;
+}
+
+bool RenderObjectProxy::hasVisibleStaticShadowCaster() const
+{
+    if (!m_visible)
+        return false;
+
+    for (const auto& mesh_section : m_mesh_sections)
+    {
+        if (mesh_section && mesh_section->visible && mesh_section->static_shadow_caster && !mesh_section->use_skinning)
+            return true;
+    }
+    return false;
 }
 
 RenderObjectProxy* RenderScene::objectProxy(GObjectID object_id)
@@ -355,6 +409,11 @@ RenderMeshSection* RenderScene::addMeshSection(const RenderMeshSectionID& id, st
 
 void RenderScene::removeObjectProxy(GObjectID object_id)
 {
+    if (const RenderObjectProxy* proxy = objectProxy(object_id))
+    {
+        if (proxy->hasVisibleStaticShadowCaster())
+            ++m_shadow_static_version;
+    }
     m_object_proxies.erase(object_id);
 }
 
@@ -363,7 +422,11 @@ void RenderScene::removeDeadObjectProxies(const std::unordered_set<GObjectID>& a
     for (auto it = m_object_proxies.begin(); it != m_object_proxies.end();)
     {
         if (alive_object_ids.find(it->first) == alive_object_ids.end())
+        {
+            if (it->second && it->second->hasVisibleStaticShadowCaster())
+                ++m_shadow_static_version;
             it = m_object_proxies.erase(it);
+        }
         else
             ++it;
     }
@@ -375,6 +438,7 @@ void RenderScene::removeDeadSubMeshesOfObject(GObjectID object_id, const std::un
     if (!proxy)
         return;
 
+    const bool affected_static_shadow = proxy->hasVisibleStaticShadowCaster();
     auto& mesh_sections = proxy->meshSections();
     mesh_sections.erase(
         std::remove_if(
@@ -388,20 +452,32 @@ void RenderScene::removeDeadSubMeshesOfObject(GObjectID object_id, const std::un
 
     if (mesh_sections.empty())
         removeObjectProxy(object_id);
+    else if (affected_static_shadow)
+        ++m_shadow_static_version;
 }
 
 void RenderScene::setObjectVisible(GObjectID object_id, bool visible)
 {
     RenderObjectProxy* proxy = objectProxy(object_id);
     if (proxy)
+    {
+        const bool affected_static_shadow = proxy->hasVisibleStaticShadowCaster();
         proxy->setVisible(visible);
+        if (affected_static_shadow || proxy->hasVisibleStaticShadowCaster())
+            ++m_shadow_static_version;
+    }
 }
 
 void RenderScene::updateObjectTransform(GObjectID object_id, const Mat4& model_matrix)
 {
     RenderObjectProxy* proxy = objectProxy(object_id);
     if (proxy)
+    {
+        const bool affected_static_shadow = proxy->hasVisibleStaticShadowCaster();
         proxy->setModelMatrix(model_matrix);
+        if (affected_static_shadow)
+            ++m_shadow_static_version;
+    }
 }
 
 void RenderScene::updateObjectMaterials(GObject& object)
@@ -430,6 +506,8 @@ void RenderScene::rebuildMeshSectionLists()
     m_opaque_sections.clear();
     m_transparent_sections.clear();
     m_skinned_sections.clear();
+    m_static_shadow_caster_sections.clear();
+    m_dynamic_shadow_caster_sections.clear();
     m_has_transparent = false;
 
     size_t mesh_section_count = 0;
@@ -440,6 +518,8 @@ void RenderScene::rebuildMeshSectionLists()
     m_opaque_sections.reserve(mesh_section_count);
     m_transparent_sections.reserve(mesh_section_count);
     m_skinned_sections.reserve(mesh_section_count);
+    m_static_shadow_caster_sections.reserve(mesh_section_count);
+    m_dynamic_shadow_caster_sections.reserve(mesh_section_count);
 
     for (auto& pair : m_object_proxies)
     {
@@ -466,8 +546,14 @@ void RenderScene::rebuildMeshSectionLists()
 
             if (section->use_skinning)
                 m_skinned_sections.push_back(section);
+
+            if (section->static_shadow_caster && !section->use_skinning)
+                m_static_shadow_caster_sections.push_back(section);
+            else
+                m_dynamic_shadow_caster_sections.push_back(section);
         }
     }
+    ++m_shadow_static_version;
 }
 
 void RenderScene::clearObjectProxies()
@@ -477,7 +563,10 @@ void RenderScene::clearObjectProxies()
     m_opaque_sections.clear();
     m_transparent_sections.clear();
     m_skinned_sections.clear();
+    m_static_shadow_caster_sections.clear();
+    m_dynamic_shadow_caster_sections.clear();
     m_has_transparent = false;
+    ++m_shadow_static_version;
 }
 
 void RenderScene::clear()

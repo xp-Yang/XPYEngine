@@ -15,6 +15,7 @@ struct PointLightComponent : public LightComponent {
     PointLightComponent(GObject* parent) : LightComponent(parent) {}
 
     float radius{ 30.0f };
+    bool castShadow{ true };
 
     Mat4 lightProjMatrix() const
     {

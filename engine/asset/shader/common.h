@@ -9,6 +9,7 @@ struct PointLight
     vec3 position;
     vec3 color;
     float radius;
+    int shadowIndex;
 };
 
 uniform DirectionalLight directionalLight;
@@ -69,6 +70,21 @@ float OmnidirectionalShadowCalculation(vec3 lightToFrag, samplerCube cube_map, f
     float shadowFactor = distance - worldDepth > bias ? 0 : 1.0;
 
     return shadowFactor;
+}
+
+float PointShadowCalculation(int shadowIndex, vec3 lightToFrag, float far_plane)
+{
+    if (shadowIndex == 0)
+        return OmnidirectionalShadowCalculation(lightToFrag, cube_shadow_maps[0], far_plane);
+    if (shadowIndex == 1)
+        return OmnidirectionalShadowCalculation(lightToFrag, cube_shadow_maps[1], far_plane);
+    if (shadowIndex == 2)
+        return OmnidirectionalShadowCalculation(lightToFrag, cube_shadow_maps[2], far_plane);
+    if (shadowIndex == 3)
+        return OmnidirectionalShadowCalculation(lightToFrag, cube_shadow_maps[3], far_plane);
+    if (shadowIndex == 4)
+        return OmnidirectionalShadowCalculation(lightToFrag, cube_shadow_maps[4], far_plane);
+    return 1.0;
 }
 
 vec3 ToneMapping(vec3 color, float exposure)

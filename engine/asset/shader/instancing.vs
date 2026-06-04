@@ -5,12 +5,12 @@ layout (location = 2) in vec2 vertex_uv;
 layout (location = 3) in ivec4 bone_ids;
 layout (location = 4) in vec4 bone_weights;
 layout (location = 5) in mat4 instance_matrix;
-layout (location = 9) in vec4 instance_color;
+layout (location = 9) in vec3 instance_color;
 
 uniform mat4 view;
 uniform mat4 projection;
 
-out vec4 color;
+out vec3 color;
 
 void main()
 {

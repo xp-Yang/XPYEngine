@@ -29,6 +29,7 @@ public:
 
     std::vector<RhiTexture*> cubeShadowMaps() const;
     RhiFrameBuffer* cubeShadowFaceFrameBufferOf(size_t cube_index, int face) const;
+    RhiFrameBuffer* cubeShadowStaticFaceFrameBufferOf(size_t cube_index, int face) const;
     void ensureCubeShadowMapsCount(size_t count);
 
 private:

@@ -122,7 +122,8 @@ inline void allMetaRegister()
 		.registerProperty(&SubMeshDTO::local_transform, "local_transform");
 	registerClass<PointLightDTO>("PointLightDTO")
 		.registerProperty(&PointLightDTO::luminous_color, "luminous_color")
-		.registerProperty(&PointLightDTO::radius, "radius");
+		.registerProperty(&PointLightDTO::radius, "radius")
+		.registerProperty(&PointLightDTO::cast_shadow, "cast_shadow");
 	registerClass<DirectionalLightDTO>("DirectionalLightDTO")
 		.registerProperty(&DirectionalLightDTO::luminous_color, "luminous_color")
 		.registerProperty(&DirectionalLightDTO::direction, "direction")
@@ -145,6 +146,7 @@ inline void allMetaRegister()
 		.registerProperty(&ObjectDTO::transform, "transform")
 		.registerProperty(&ObjectDTO::filepath, "filepath")
 		.registerProperty(&ObjectDTO::file_type, "file_type")
+		.registerProperty(&ObjectDTO::static_shadow_caster, "static_shadow_caster")
 		.registerProperty(&ObjectDTO::sub_meshes, "sub_meshes")
 		.registerProperty(&ObjectDTO::materials, "materials")
 		.registerProperty(&ObjectDTO::has_point_light, "has_point_light")
@@ -196,7 +198,8 @@ inline void allMetaRegister()
 
 	registerClass<::MeshComponent>("MeshComponent").
 		registerProperty(&::MeshComponent::source_filepath, "source_filepath").
-		registerProperty(&::MeshComponent::sub_meshes, "sub_meshes");
+		registerProperty(&::MeshComponent::sub_meshes, "sub_meshes").
+		registerProperty(&::MeshComponent::staticShadowCaster, "staticShadowCaster");
 
 	registerClass<::TransformComponent>("TransformComponent").
 		registerProperty(&::TransformComponent::translation, "translation").
@@ -229,7 +232,8 @@ inline void allMetaRegister()
 
 	registerClass<::PointLightComponent>("PointLightComponent")
 		.registerProperty(&::LightComponent::luminousColor, "luminousColor")
-		.registerProperty(&::PointLightComponent::radius, "radius");
+		.registerProperty(&::PointLightComponent::radius, "radius")
+		.registerProperty(&::PointLightComponent::castShadow, "castShadow");
 
 	registerClass<::DirectionalLightComponent>("DirectionalLightComponent")
 		.registerProperty(&::LightComponent::luminousColor, "luminousColor")

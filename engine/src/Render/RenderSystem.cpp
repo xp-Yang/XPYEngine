@@ -19,7 +19,50 @@
 
 #include "GlobalContext.hpp"
 
+#include <algorithm>
 #include <fstream>
+#include <limits>
+
+namespace
+{
+RenderAABB localBoundsOfMesh(const Mesh& mesh)
+{
+    const auto& vertices = mesh.vertices();
+    const auto& indices = mesh.indices();
+    if (vertices.empty())
+        return {};
+
+    RenderAABB bounds;
+    bounds.min = Vec3(std::numeric_limits<float>::max());
+    bounds.max = Vec3(std::numeric_limits<float>::lowest());
+
+    auto includeVertex = [&bounds, &vertices](int vertex_index)
+    {
+        if (vertex_index < 0 || vertex_index >= static_cast<int>(vertices.size()))
+            return;
+        bounds.min = glm::min(bounds.min, vertices[vertex_index].position);
+        bounds.max = glm::max(bounds.max, vertices[vertex_index].position);
+        bounds.valid = true;
+    };
+
+    if (!indices.empty())
+    {
+        const int index_start = std::max(0, mesh.index_offset);
+        const int requested_count = mesh.index_count > 0 ? mesh.index_count : static_cast<int>(indices.size()) - index_start;
+        const int index_end = std::min(static_cast<int>(indices.size()), index_start + requested_count);
+        for (int i = index_start; i < index_end; ++i)
+            includeVertex(indices[i]);
+    }
+
+    if (!bounds.valid)
+    {
+        for (int i = 0; i < static_cast<int>(vertices.size()); ++i)
+            includeVertex(i);
+    }
+
+    return bounds;
+}
+}
 
 RenderSystem::RenderSystem()
 {
@@ -261,11 +304,13 @@ void RenderSystem::rebuildObjectRenderProxy(GObject& object)
             RenderMeshResource(sub_mesh),
             RenderMaterialResource(sub_mesh->material),
             obj_transform * sub_mesh_transform,
+            localBoundsOfMesh(*sub_mesh),
             sub_mesh->index_offset,
             sub_mesh->index_count);
         render_section->local_matrix = sub_mesh_transform;
         render_section->visible = object.visible();
         render_section->use_skinning = use_skinning;
+        render_section->static_shadow_caster = mesh_component->staticShadowCaster;
         if (bone_matrices)
             render_section->bone_matrices = *bone_matrices;
         m_render_scene.addMeshSection(section_id, std::move(render_section));
@@ -369,17 +414,25 @@ void RenderSystem::buildRenderFrameData(Scene& scene)
     }
 
     auto& render_point_lights = m_frame_data.point_lights;
-    render_point_lights.reserve(active_point_light_objects.size());
+    render_point_lights.reserve(std::min(MAX_CUBE_SHADOW_MAP_COUNT, active_point_light_objects.size()));
+    int next_shadow_index = 0;
     for (auto* light_object : active_point_light_objects)
     {
+        if (render_point_lights.size() >= MAX_CUBE_SHADOW_MAP_COUNT)
+            break;
+
         const auto* transform = light_object->getComponent<TransformComponent>();
         const auto* point_light = light_object->getComponent<PointLightComponent>();
         const Vec3 position = transform->translation;
+        int shadow_index = -1;
+        if (point_light->castShadow && next_shadow_index < static_cast<int>(MAX_CUBE_SHADOW_MAP_COUNT))
+            shadow_index = next_shadow_index++;
         render_point_lights.emplace_back(RenderPointLightData{
             light_object->ID().value(),
             point_light->luminousColor,
             position,
             point_light->radius,
+            shadow_index,
             point_light->lightViewMatrix(position),
             point_light->lightProjMatrix()});
     }
@@ -394,12 +447,4 @@ void RenderSystem::buildRenderFrameData(Scene& scene)
     m_frame_data.camera_position = camera.pos;
     m_frame_data.view_matrix = camera.view;
     m_frame_data.proj_matrix = camera.projection;
-
-    if (!m_frame_data.render_camera)
-        m_frame_data.render_camera = std::make_shared<RenderCameraData>();
-    m_frame_data.render_camera->fov = camera.fov;
-    m_frame_data.render_camera->pos = camera.pos;
-    m_frame_data.render_camera->direction = camera.direction;
-    m_frame_data.render_camera->upDirection = camera.upDirection;
-    m_frame_data.render_camera->rightDirection = camera.getRightDirection();
 }

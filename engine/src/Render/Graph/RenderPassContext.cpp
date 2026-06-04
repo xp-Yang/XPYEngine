@@ -62,6 +62,11 @@ RhiFrameBuffer* RenderPassContext::cubeShadowFaceFrameBufferOf(size_t cube_index
     return m_graph && m_node ? m_graph->cubeShadowFaceFrameBufferOf(RenderPass::Type::Shadow, cube_index, face) : nullptr;
 }
 
+RhiFrameBuffer* RenderPassContext::cubeShadowStaticFaceFrameBufferOf(size_t cube_index, int face) const
+{
+    return m_graph && m_node ? m_graph->cubeShadowStaticFaceFrameBufferOf(RenderPass::Type::Shadow, cube_index, face) : nullptr;
+}
+
 void RenderPassContext::ensureCubeShadowMapsCount(size_t count)
 {
     if (m_graph && m_node)

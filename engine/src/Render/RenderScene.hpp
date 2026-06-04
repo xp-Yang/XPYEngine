@@ -5,8 +5,10 @@
 #include "AssetManager/Texture.hpp"
 #include "AssetManager/Mesh.hpp"
 #include "Logical/Framework/Object/GObject.hpp"
+#include "Render/RenderCulling.hpp"
 #include "Render/RHI/rhi.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -117,6 +119,7 @@ struct RenderMeshSection {
         const RenderMeshResource& mesh_data,
         const RenderMaterialResource& material_data,
         Mat4 matrix,
+        const RenderAABB& local_bounds,
         int source_index_offset_,
         int source_index_count_);
 
@@ -129,10 +132,13 @@ struct RenderMeshSection {
     RenderMaterialResource material;
     Mat4 local_matrix{ 1.0f };
     Mat4 model_matrix;
+    RenderAABB local_bounds;
+    RenderAABB world_bounds;
     int source_index_offset{ 0 };
     int source_index_count{ 0 };
     bool visible{ true };
     bool use_skinning{ false };
+    bool static_shadow_caster{ true };
     std::vector<Mat4> bone_matrices;
 };
 
@@ -164,6 +170,8 @@ public:
     // Find a section by subMesh index inside this object.
     RenderMeshSection* meshSection(int sub_mesh_idx);
     const RenderMeshSection* meshSection(int sub_mesh_idx) const;
+
+    bool hasVisibleStaticShadowCaster() const;
 
     std::vector<std::unique_ptr<RenderMeshSection>>& meshSections() { return m_mesh_sections; }
     const std::vector<std::unique_ptr<RenderMeshSection>>& meshSections() const { return m_mesh_sections; }
@@ -213,6 +221,10 @@ public:
     const std::vector<RenderMeshSection*>& opaqueMeshSections() const { return m_opaque_sections; }
     const std::vector<RenderMeshSection*>& transparentMeshSections() const { return m_transparent_sections; }
     const std::vector<RenderMeshSection*>& skinnedMeshSections() const { return m_skinned_sections; }
+    const std::vector<RenderMeshSection*>& staticShadowCasterSections() const { return m_static_shadow_caster_sections; }
+    const std::vector<RenderMeshSection*>& dynamicShadowCasterSections() const { return m_dynamic_shadow_caster_sections; }
+
+    uint64_t shadowStaticVersion() const { return m_shadow_static_version; }
 
     bool hasTransparent() const { return m_has_transparent; }
 
@@ -228,6 +240,9 @@ private:
     std::vector<RenderMeshSection*> m_opaque_sections;
     std::vector<RenderMeshSection*> m_transparent_sections;
     std::vector<RenderMeshSection*> m_skinned_sections;
+    std::vector<RenderMeshSection*> m_static_shadow_caster_sections;
+    std::vector<RenderMeshSection*> m_dynamic_shadow_caster_sections;
+    uint64_t m_shadow_static_version{ 1 };
     bool m_has_transparent{ false };
     RenderSkybox m_skybox;
 };

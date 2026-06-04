@@ -55,7 +55,6 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 
 	RhiTexture* dir_light_shadow_texture = context.texture(slot("inShadowDepth"));
 	bindings.setBool("directionalShadowEnable", m_directional_shadow && dir_light_shadow_texture != nullptr);
-	bindings.setBool("pointShadowEnable", m_point_shadow);
 	bindings.setFloat3("cameraPos", context.frameData().camera_position);
 	for (const auto& render_directional_light_data : context.frameData().directional_lights) {
 		bindings.setFloat3("directionalLight.direction", render_directional_light_data.direction);
@@ -77,7 +76,6 @@ void DeferredLightingPass::draw(RenderPassContext& context)
 
     std::vector<RhiTexture*> cube_shadow_maps = context.cubeShadowMaps();
     const int max_cube_shadow_maps = static_cast<int>(MAX_CUBE_SHADOW_MAP_COUNT);
-    int point_light_size = std::min(max_cube_shadow_maps, static_cast<int>(cube_shadow_maps.size()));
     for (int i = 0; i < max_cube_shadow_maps; i++) {
         RhiTexture* cube_shadow_map =
             i < static_cast<int>(cube_shadow_maps.size()) && cube_shadow_maps[i]
@@ -87,15 +85,25 @@ void DeferredLightingPass::draw(RenderPassContext& context)
         bindings.setCubeTexture(cube_map_id_str, 10 + i, cube_shadow_map);
     }
 
+    const int point_light_size = std::min(max_cube_shadow_maps, static_cast<int>(context.frameData().point_lights.size()));
+    bool has_point_shadow_slot = false;
 	int point_light_idx = 0;
 	for (const auto& render_point_light_data : context.frameData().point_lights) {
+        if (point_light_idx >= point_light_size)
+            break;
 		std::string light_id = std::string("pointLights[") + std::to_string(point_light_idx) + "]";
 		bindings.setFloat3(light_id + ".position", render_point_light_data.position);
 		bindings.setFloat3(light_id + ".color", render_point_light_data.color);
 		bindings.setFloat(light_id + ".radius", render_point_light_data.radius);
+		bindings.setInt(light_id + ".shadowIndex", render_point_light_data.shadow_index);
+        has_point_shadow_slot = has_point_shadow_slot ||
+            (render_point_light_data.shadow_index >= 0 &&
+             render_point_light_data.shadow_index < static_cast<int>(cube_shadow_maps.size()) &&
+             cube_shadow_maps[render_point_light_data.shadow_index]);
 		point_light_idx++;
 	}
 	bindings.setInt("point_lights_size", point_light_size);
+	bindings.setBool("pointShadowEnable", m_point_shadow && has_point_shadow_slot);
 
 	// SSAO（单元 15，关闭时绑定默认白图并由 ssaoEnable 门控）。
 	const bool ssao_ready = m_pbr && m_ssao;

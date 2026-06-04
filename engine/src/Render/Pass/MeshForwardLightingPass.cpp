@@ -36,12 +36,13 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     int k = 0;
     for (const auto &render_point_light_data : context.frameData().point_lights)
     {
-        if (k > MAX_CUBE_SHADOW_MAP_COUNT)
+        if (k >= static_cast<int>(MAX_CUBE_SHADOW_MAP_COUNT))
             break;
         std::string light_id = std::string("pointLights[") + std::to_string(k) + "]";
         bindings.setFloat3(light_id + ".position", render_point_light_data.position);
         bindings.setFloat3(light_id + ".color", render_point_light_data.color);
         bindings.setFloat(light_id + ".radius", render_point_light_data.radius);
+        bindings.setInt(light_id + ".shadowIndex", render_point_light_data.shadow_index);
         k++;
     }
     bindings.setInt("point_lights_size", k);

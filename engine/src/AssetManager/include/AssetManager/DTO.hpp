@@ -61,6 +61,7 @@ struct PointLightDTO
 {
 	Color3 luminous_color{1.0f, 1.0f, 1.0f};
 	float radius{30.0f};
+	bool cast_shadow{true};
 };
 
 struct DirectionalLightDTO
@@ -92,6 +93,7 @@ struct ObjectDTO
 	TransformDTO transform;
 	std::string filepath;
 	int file_type{static_cast<int>(FileType::OBJ)};
+	bool static_shadow_caster{true};
 	std::vector<SubMeshDTO> sub_meshes;
 	std::vector<MaterialDTO> materials;
 	bool has_point_light{false};

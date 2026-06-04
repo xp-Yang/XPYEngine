@@ -296,6 +296,14 @@ void RenderGraph::clearPassTargets(const RenderGraphPassNode& node)
                             framebuffer->clear(Color4(1.0f, 1.0f, 1.0f, 1.0f));
                     }
                 }
+                for (auto& face_framebuffers : target->cube_shadow_static_cache_framebuffers)
+                {
+                    for (auto& framebuffer : face_framebuffers)
+                    {
+                        if (framebuffer)
+                            framebuffer->clear(Color4(1.0f, 1.0f, 1.0f, 1.0f));
+                    }
+                }
             }
         }
     }
@@ -380,6 +388,17 @@ void RenderGraph::destroyCubeShadowFrameBuffer(RenderGraphRenderTarget& target)
     }
     target.cube_shadow_framebuffers.clear();
 
+    for (auto& face_framebuffers : target.cube_shadow_static_cache_framebuffers)
+    {
+        for (auto& framebuffer : face_framebuffers)
+        {
+            if (framebuffer)
+                framebuffer->destroyGPU();
+            framebuffer.reset();
+        }
+    }
+    target.cube_shadow_static_cache_framebuffers.clear();
+
     // TODO 释放cube_shadow_framebuffers的texture资源，因为cube_shadow_framebuffers.depthAttachment不是这些texture的owner，不会释放
     //for (RhiTexture* tex : cube_textures)
     //{
@@ -399,7 +418,8 @@ void RenderGraph::ensureCubeShadowMapsCount(RenderPass::Type type, size_t count)
     if (!target->cube_shadow_framebuffers.empty())
     {
         const int current_edge = static_cast<int>(target->cube_shadow_framebuffers[0][0]->pixelSize().x);
-        if (current_edge != m_point_cube_edge)
+        if (current_edge != m_point_cube_edge ||
+            target->cube_shadow_static_cache_framebuffers.size() != target->cube_shadow_framebuffers.size())
             destroyCubeShadowFrameBuffer(*target);
     }
 
@@ -410,23 +430,28 @@ void RenderGraph::ensureCubeShadowMapsCount(RenderPass::Type type, size_t count)
 void RenderGraph::appendCubeShadowMap(RenderGraphRenderTarget& target)
 {
     const int cube_edge = m_point_cube_edge;
-    RhiTexture* cube_texture = m_rhi->newTexture(
-        RhiTexture::Format::DEPTH,
-        Vec2(cube_edge),
-        1,
-        static_cast<RhiTexture::Flag>(RhiTexture::RenderTarget | RhiTexture::CubeMap));
-    cube_texture->create();
-
-    std::array<std::unique_ptr<RhiFrameBuffer>, 6> face_framebuffers;
-    for (int face = 0; face < 6; ++face)
+    auto createCubeFaceFramebuffers = [this, cube_edge]()
     {
-        std::unique_ptr<RhiFrameBuffer> framebuffer(m_rhi->newFrameBuffer(RhiAttachment(), Vec2(cube_edge), 1));
-        framebuffer->setDepthAttachment(RhiAttachment(cube_texture, face, 0, false));
-        framebuffer->create();
-        face_framebuffers[face] = std::move(framebuffer);
-    }
+        RhiTexture* cube_texture = m_rhi->newTexture(
+            RhiTexture::Format::DEPTH,
+            Vec2(cube_edge),
+            1,
+            static_cast<RhiTexture::Flag>(RhiTexture::RenderTarget | RhiTexture::CubeMap));
+        cube_texture->create();
 
-    target.cube_shadow_framebuffers.push_back(std::move(face_framebuffers));
+        std::array<std::unique_ptr<RhiFrameBuffer>, 6> face_framebuffers;
+        for (int face = 0; face < 6; ++face)
+        {
+            std::unique_ptr<RhiFrameBuffer> framebuffer(m_rhi->newFrameBuffer(RhiAttachment(), Vec2(cube_edge), 1));
+            framebuffer->setDepthAttachment(RhiAttachment(cube_texture, face, 0, false));
+            framebuffer->create();
+            face_framebuffers[face] = std::move(framebuffer);
+        }
+        return face_framebuffers;
+    };
+
+    target.cube_shadow_framebuffers.push_back(createCubeFaceFramebuffers());
+    target.cube_shadow_static_cache_framebuffers.push_back(createCubeFaceFramebuffers());
 }
 
 RhiFrameBuffer* RenderGraph::cubeShadowFaceFrameBufferOf(RenderPass::Type type, size_t cube_index, int face) const
@@ -439,6 +464,18 @@ RhiFrameBuffer* RenderGraph::cubeShadowFaceFrameBufferOf(RenderPass::Type type, 
         return nullptr;
 
     return target->cube_shadow_framebuffers[cube_index][face].get();
+}
+
+RhiFrameBuffer* RenderGraph::cubeShadowStaticFaceFrameBufferOf(RenderPass::Type type, size_t cube_index, int face) const
+{
+    if (face < 0 || face >= 6)
+        return nullptr;
+
+    const RenderGraphRenderTarget* target = findRenderTarget(type, RGTarget::ShadowPointDepth);
+    if (!target || cube_index >= target->cube_shadow_static_cache_framebuffers.size())
+        return nullptr;
+
+    return target->cube_shadow_static_cache_framebuffers[cube_index][face].get();
 }
 
 RhiTexture* RenderGraph::textureOf(const RGResourceName& resource_name) const
@@ -506,7 +543,7 @@ void RenderGraph::resolveReads(RenderGraphPassNode& node)
 void RenderGraph::resolveModifies(RenderGraphPassNode& node)
 {
     for (const RGResourceName& modify : node.m_modifies)
-    { 
+    {
         auto it = m_resources.find(modify);
         if (it == m_resources.end())
             throw std::runtime_error("RenderGraph resource is modified before it is produced: " + modify);

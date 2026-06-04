@@ -67,8 +67,8 @@ void main()
         vec3 radiance = pointLights[i].color.xyz * attenuation;  
 
         // Point Light Shadow:
-        float pointShadowFactor = pointShadowEnable
-            ? OmnidirectionalShadowCalculation(Position - pointLights[i].position, cube_shadow_maps[i], pointLights[i].radius)
+        float pointShadowFactor = pointShadowEnable && pointLights[i].shadowIndex >= 0
+            ? PointShadowCalculation(pointLights[i].shadowIndex, Position - pointLights[i].position, pointLights[i].radius)
             : 1.0;
 
         // add to outgoing radiance Lo

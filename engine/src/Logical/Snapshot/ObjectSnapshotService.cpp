@@ -63,7 +63,8 @@ bool equalSubMeshDTO(const SubMeshDTO& lhs, const SubMeshDTO& rhs)
 bool equalPointLightDTO(const PointLightDTO& lhs, const PointLightDTO& rhs)
 {
 	return equalVec3(lhs.luminous_color, rhs.luminous_color)
-		&& lhs.radius == rhs.radius;
+		&& lhs.radius == rhs.radius
+		&& lhs.cast_shadow == rhs.cast_shadow;
 }
 
 bool equalDirectionalLightDTO(const DirectionalLightDTO& lhs, const DirectionalLightDTO& rhs)
@@ -95,6 +96,7 @@ bool equalObjectDTO(const ObjectDTO& lhs, const ObjectDTO& rhs)
 		|| !equalTransformDTO(lhs.transform, rhs.transform)
 		|| lhs.filepath != rhs.filepath
 		|| lhs.file_type != rhs.file_type
+		|| lhs.static_shadow_caster != rhs.static_shadow_caster
 		|| lhs.has_point_light != rhs.has_point_light
 		|| lhs.has_directional_light != rhs.has_directional_light
 		|| lhs.has_camera != rhs.has_camera
@@ -218,6 +220,7 @@ ObjectDTO ObjectSnapshotService::buildDTOFromObject(GObject& object)
 		dto.has_point_light = true;
 		dto.point_light.luminous_color = point_light->luminousColor;
 		dto.point_light.radius = point_light->radius;
+		dto.point_light.cast_shadow = point_light->castShadow;
 	}
 	if (directional_light) {
 		dto.has_directional_light = true;
@@ -241,6 +244,7 @@ ObjectDTO ObjectSnapshotService::buildDTOFromObject(GObject& object)
 	}
 
 	if (mesh) {
+		dto.static_shadow_caster = mesh->staticShadowCaster;
 		for (const auto& sub_mesh : mesh->sub_meshes) {
 			if (!sub_mesh)
 				continue;
@@ -300,6 +304,7 @@ void ObjectSnapshotService::applyDTOToObject(SceneObjectRegistry& registry, GObj
 
 	if (auto* mesh = object.getComponent<MeshComponent>()) {
 		mesh->source_filepath = dto.filepath;
+		mesh->staticShadowCaster = dto.static_shadow_caster;
 		if (!dto.sub_meshes.empty()) {
 			std::vector<std::shared_ptr<Mesh>> filtered;
 			filtered.reserve(dto.sub_meshes.size());
@@ -338,6 +343,7 @@ void ObjectSnapshotService::applyDTOToObject(SceneObjectRegistry& registry, GObj
 			point_light = &object.addComponent<PointLightComponent>();
 		point_light->luminousColor = dto.point_light.luminous_color;
 		point_light->radius = dto.point_light.radius;
+		point_light->castShadow = dto.point_light.cast_shadow;
 	}
 
 	if (dto.has_directional_light) {
@@ -401,6 +407,7 @@ GObject* ObjectSnapshotService::createObjectFromDTO(Scene& scene, GObjectID id, 
 		if (model_importer.load(dto.filepath)) {
 			MeshComponent& mesh = object->addComponent<MeshComponent>();
 			mesh.source_filepath = dto.filepath;
+			mesh.staticShadowCaster = dto.static_shadow_caster;
 			for (int sub_mesh_id : model_importer.getSubMeshesIds()) {
 				std::shared_ptr<Mesh> sub_mesh = model_importer.meshOfNode(sub_mesh_id);
 				if (!sub_mesh)
