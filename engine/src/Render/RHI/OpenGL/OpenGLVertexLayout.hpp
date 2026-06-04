@@ -7,7 +7,7 @@ class OpenGLVertexLayout : public RhiVertexLayout {
 public:
 	OpenGLVertexLayout(RhiBuffer* vbuffer, RhiBuffer* ibuffer);
 	bool create() override;
-	bool createInstancing(RhiBuffer* inst_buffer, int instancin_location) override;
+	bool createInstancing(RhiBuffer* inst_buffer, std::initializer_list<RhiVertexAttribute> attributes) override;
 };
 
 

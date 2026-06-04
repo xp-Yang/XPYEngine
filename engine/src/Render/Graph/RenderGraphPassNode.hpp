@@ -66,7 +66,6 @@ enum class RGDisabledExecution {
     Clear,
 };
 
-// TODO 放进rhi?
 enum class RenderTargetType {
     FrameBuffer,
     ScreenFrameBuffer,

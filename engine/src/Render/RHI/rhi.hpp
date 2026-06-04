@@ -315,7 +315,7 @@ public:
 
     virtual bool create() = 0;
 
-    virtual bool createInstancing(RhiBuffer *inst_buffer, int instancin_location) = 0;
+    virtual bool createInstancing(RhiBuffer *inst_buffer, std::initializer_list<RhiVertexAttribute> attributes) = 0;
 
 protected:
     RhiVertexLayout() = default;

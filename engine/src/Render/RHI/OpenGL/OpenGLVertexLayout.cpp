@@ -89,20 +89,20 @@ bool OpenGLVertexLayout::create()
     return true;
 }
 
-bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, int instancing_location)
+bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, std::initializer_list<RhiVertexAttribute> attributes)
 {
     glBindVertexArray(m_id);
     glBindBuffer(GL_ARRAY_BUFFER, inst_buffer->id());
-    for (size_t i = static_cast<size_t>(instancing_location); i < m_attributes.size(); ++i) {
-        int location = m_attributes[i].location;
+    for (const RhiVertexAttribute& attribute : attributes) {
+        int location = attribute.location;
         if (location == -1)
             continue;
-        int stride = m_attributes[i].stride;
-        int offset = m_attributes[i].offset;
+        int stride = attribute.stride;
+        int offset = attribute.offset;
         int size = 1;
         GLenum type = GL_FLOAT;
         bool integer_attrib = false;
-        switch (m_attributes[i].format) {
+        switch (attribute.format) {
         case RhiVertexAttribute::Float4:
             type = GL_FLOAT;
             size = 4;

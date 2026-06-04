@@ -190,21 +190,13 @@ void RenderMeshResource::create_instancing(void *instancing_data, int instancing
     m_instancing_buffer->create();
     m_instancing_buffer->update(instancing_data, instancing_data_size);
 
-    m_vertex_layout->setAttributes({
-        {0, RhiVertexAttribute::Format::Float3, sizeof(Vertex), 0},                              // position
-        {1, RhiVertexAttribute::Format::Float3, sizeof(Vertex), offsetof(Vertex, normal)},       // normal
-        {2, RhiVertexAttribute::Format::Float2, sizeof(Vertex), offsetof(Vertex, texture_uv)},   // uv
-        {3, RhiVertexAttribute::Format::SInt4, sizeof(Vertex), offsetof(Vertex, bone_ids)},      // bone ids
-        {4, RhiVertexAttribute::Format::Float4, sizeof(Vertex), offsetof(Vertex, bone_weights)}, // bone weights
-        // instancing
+    m_vertex_layout->createInstancing(m_instancing_buffer, {
         {5, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), 0},                // matrix
         {6, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), sizeof(Vec4)},     // matrix
         {7, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), 2 * sizeof(Vec4)}, // matrix
         {8, RhiVertexAttribute::Format::Float4, 4 * sizeof(Vec4) + sizeof(Vec3), 3 * sizeof(Vec4)}, // matrix
         {9, RhiVertexAttribute::Format::Float3, 4 * sizeof(Vec4) + sizeof(Vec3), 4 * sizeof(Vec4)}, // color
     });
-    // TODO 这段逻辑没看懂，上面setAttributes() 0-4 没看到apply？
-    m_vertex_layout->createInstancing(m_instancing_buffer, 5);
 }
 
 void RenderMeshResource::update_instancing(void *instancing_data, int instancing_data_size)
