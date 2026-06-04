@@ -5,6 +5,11 @@ OpenGLBuffer::OpenGLBuffer(Type type_, UsageFlag usage_, void* data, int size_)
 {
 }
 
+OpenGLBuffer::~OpenGLBuffer()
+{
+    destroy();
+}
+
 bool OpenGLBuffer::create()
 {
     m_target_enum = GL_ARRAY_BUFFER;
@@ -22,6 +27,15 @@ bool OpenGLBuffer::create()
     glBindBuffer(m_target_enum, m_id);
     glBufferData(m_target_enum, m_size, m_data, m_type == Dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     return true;
+}
+
+void OpenGLBuffer::destroy()
+{
+    if (m_id != 0)
+    {
+        glDeleteBuffers(1, &m_id);
+        m_id = 0;
+    }
 }
 
 void OpenGLBuffer::update(void* data, int size, int offset)

@@ -26,11 +26,7 @@ public:
 	inline static const float ZoomUnit = 0.1f;
 
 protected:
-#if ENABLE_ECS
-	ecs::CameraComponent& camera;
-#else 
 	CameraComponent& camera;
-#endif
 
 	IntRect m_view_rect;
 

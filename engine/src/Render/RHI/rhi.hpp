@@ -39,6 +39,8 @@ public:
 class RhiBuffer
 {
 public:
+    virtual ~RhiBuffer() = default;
+
     enum Type
     {
         Immutable,
@@ -67,6 +69,7 @@ public:
 
     virtual bool create() = 0;
     virtual void update(void* data, int size, int offset = 0) = 0;
+    virtual void destroy() = 0;
 
 protected:
     RhiBuffer(Type type_, UsageFlag usage_, void *data, int size_);
@@ -299,6 +302,8 @@ struct RhiVertexAttribute
 class RhiVertexLayout
 {
 public:
+    virtual ~RhiVertexLayout() = default;
+
     void setAttributes(std::initializer_list<RhiVertexAttribute> list)
     {
         m_attributes.assign(list.begin(), list.end());
@@ -316,14 +321,15 @@ public:
     virtual bool create() = 0;
 
     virtual bool createInstancing(RhiBuffer *inst_buffer, std::initializer_list<RhiVertexAttribute> attributes) = 0;
+    virtual void destroy() = 0;
 
 protected:
     RhiVertexLayout() = default;
     RhiVertexLayout(RhiBuffer *vbuffer, RhiBuffer *ibuffer);
     std::vector<RhiVertexAttribute> m_attributes;
-    RhiBuffer *m_vbuffer;
-    RhiBuffer *m_ibuffer;
-    GL_HANDLE m_id;
+    RhiBuffer *m_vbuffer{ nullptr };
+    RhiBuffer *m_ibuffer{ nullptr };
+    GL_HANDLE m_id{ 0 };
 };
 
 // 一段 shader stage 的输入描述。

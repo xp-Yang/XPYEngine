@@ -5,11 +5,6 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#if ENABLE_ECS
-#include "Logical/FrameWork/ECS/World.hpp"
-#include "Logical/FrameWork/ECS/Components.hpp"
-#endif
-
 #include "Render/Graph/RenderGraph.hpp"
 #include "Render/RenderSystem.hpp"
 #include "Logical/Framework/World/Scene.hpp"

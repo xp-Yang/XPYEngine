@@ -5,6 +5,11 @@ OpenGLVertexLayout::OpenGLVertexLayout(RhiBuffer* vbuffer, RhiBuffer* ibuffer)
 {
 }
 
+OpenGLVertexLayout::~OpenGLVertexLayout()
+{
+    destroy();
+}
+
 bool OpenGLVertexLayout::create()
 {
     glGenVertexArrays(1, &m_id);
@@ -87,6 +92,15 @@ bool OpenGLVertexLayout::create()
             glVertexAttribPointer(location, size, type, false, stride, (GLvoid *)(offset));
     }
     return true;
+}
+
+void OpenGLVertexLayout::destroy()
+{
+    if (m_id != 0)
+    {
+        glDeleteVertexArrays(1, &m_id);
+        m_id = 0;
+    }
 }
 
 bool OpenGLVertexLayout::createInstancing(RhiBuffer* inst_buffer, std::initializer_list<RhiVertexAttribute> attributes)

@@ -5,15 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <utility>
 #include <unordered_map>
-
-struct RenderGeometryGpuResource
-{
-    RhiBuffer* vertex_buffer{ nullptr };
-    RhiBuffer* index_buffer{ nullptr };
-    size_t vertices_count{ 0 };
-    size_t indices_count{ 0 };
-};
 
 namespace
 {
@@ -173,9 +166,60 @@ RenderMeshResource::RenderMeshResource(std::shared_ptr<Mesh> mesh_data)
     m_vertex_layout->create();
 }
 
+RenderMeshResource::RenderMeshResource(RenderMeshResource&& other) noexcept
+    : m_geometry_resource(std::move(other.m_geometry_resource))
+    , m_vertex_layout(other.m_vertex_layout)
+    , m_vertices_count(other.m_vertices_count)
+    , m_indices_count(other.m_indices_count)
+    , m_instancing_buffer(other.m_instancing_buffer)
+    , m_instancing_capacity_bytes(other.m_instancing_capacity_bytes)
+{
+    other.m_vertex_layout = nullptr;
+    other.m_vertices_count = 0;
+    other.m_indices_count = 0;
+    other.m_instancing_buffer = nullptr;
+    other.m_instancing_capacity_bytes = 0;
+}
+
+RenderMeshResource& RenderMeshResource::operator=(RenderMeshResource&& other) noexcept
+{
+    if (this != &other)
+    {
+        reset();
+        m_geometry_resource = std::move(other.m_geometry_resource);
+        m_vertex_layout = other.m_vertex_layout;
+        m_vertices_count = other.m_vertices_count;
+        m_indices_count = other.m_indices_count;
+        m_instancing_buffer = other.m_instancing_buffer;
+        m_instancing_capacity_bytes = other.m_instancing_capacity_bytes;
+
+        other.m_vertex_layout = nullptr;
+        other.m_vertices_count = 0;
+        other.m_indices_count = 0;
+        other.m_instancing_buffer = nullptr;
+        other.m_instancing_capacity_bytes = 0;
+    }
+    return *this;
+}
+
 void RenderMeshResource::reset()
 {
-    // TODO release RHI resources when ownership is formalized.
+    if (m_vertex_layout)
+    {
+        m_vertex_layout->destroy();
+        delete m_vertex_layout;
+        m_vertex_layout = nullptr;
+    }
+    if (m_instancing_buffer)
+    {
+        m_instancing_buffer->destroy();
+        delete m_instancing_buffer;
+        m_instancing_buffer = nullptr;
+    }
+    m_instancing_capacity_bytes = 0;
+    m_geometry_resource.reset();
+    m_vertices_count = 0;
+    m_indices_count = 0;
 }
 
 void RenderMeshResource::create_instancing(void *instancing_data, int instancing_data_size, int buffer_capacity_size)
@@ -184,6 +228,13 @@ void RenderMeshResource::create_instancing(void *instancing_data, int instancing
         return;
 
     const auto &rhi = Rhi::get();
+
+    if (m_instancing_buffer)
+    {
+        m_instancing_buffer->destroy();
+        delete m_instancing_buffer;
+        m_instancing_buffer = nullptr;
+    }
 
     m_instancing_capacity_bytes = buffer_capacity_size > 0 ? buffer_capacity_size : instancing_data_size;
     m_instancing_buffer = rhi->newBuffer(RhiBuffer::Dynamic, RhiBuffer::VertexBuffer, nullptr, m_instancing_capacity_bytes);
@@ -267,14 +318,14 @@ void RenderMaterialResource::updateFrom(std::shared_ptr<Material> material_)
 
 RenderMeshSection::RenderMeshSection(
     const RenderMeshSectionID& id,
-    const RenderMeshResource& mesh_data,
+    RenderMeshResource&& mesh_data,
     const RenderMaterialResource& material_data,
     Mat4 matrix,
     const RenderAABB& local_bounds_,
     int source_index_offset_,
     int source_index_count_)
     : section_id(id)
-    , mesh(mesh_data)
+    , mesh(std::move(mesh_data))
     , material(material_data)
     , model_matrix(matrix)
     , local_bounds(local_bounds_)

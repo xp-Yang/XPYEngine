@@ -62,13 +62,39 @@ public:
     uint64_t material_version{ 0 };
 };
 
-struct RenderGeometryGpuResource;
+struct RenderGeometryGpuResource
+{
+    ~RenderGeometryGpuResource()
+    {
+        if (vertex_buffer)
+        {
+            vertex_buffer->destroy();
+            delete vertex_buffer;
+            vertex_buffer = nullptr;
+        }
+        if (index_buffer)
+        {
+            index_buffer->destroy();
+            delete index_buffer;
+            index_buffer = nullptr;
+        }
+    }
+
+    RhiBuffer* vertex_buffer{ nullptr };
+    RhiBuffer* index_buffer{ nullptr };
+    size_t vertices_count{ 0 };
+    size_t indices_count{ 0 };
+};
 
 // Render-side mesh resource that owns the RHI vertex/index layout for a mesh.
 class RenderMeshResource {
 public:
     RenderMeshResource(std::shared_ptr<Mesh> mesh_data);
     ~RenderMeshResource() { reset(); }
+    RenderMeshResource(const RenderMeshResource&) = delete;
+    RenderMeshResource& operator=(const RenderMeshResource&) = delete;
+    RenderMeshResource(RenderMeshResource&& other) noexcept;
+    RenderMeshResource& operator=(RenderMeshResource&& other) noexcept;
 
     void reset();
     GL_HANDLE getVAO() const { return m_vertex_layout ? m_vertex_layout->id() : 0; }
@@ -116,7 +142,7 @@ class RenderObjectProxy;
 struct RenderMeshSection {
     RenderMeshSection(
         const RenderMeshSectionID& id,
-        const RenderMeshResource& mesh_data,
+        RenderMeshResource&& mesh_data,
         const RenderMaterialResource& material_data,
         Mat4 matrix,
         const RenderAABB& local_bounds,
