@@ -8,6 +8,11 @@
 #include <algorithm>
 #include <imgui.h>
 
+namespace
+{
+	constexpr float kBoxSelectionMinDragDistance = 4.0f;
+}
+
 GUIInput::GUIInput(std::shared_ptr<ImGuiEditor> editor)
 	: ref_editor(editor)
 	, m_pick_solver(std::make_unique<PickSolver>(editor))
@@ -78,8 +83,11 @@ bool GUIInput::onUpdate(float delta_time)
 		return false;
 	}
 
-	if (m_last_mouse_state == MouseState::Holding && m_mouse_state == MouseState::Released) {
+	updateBoxSelection();
+
+	if (!m_box_selection_consumed_release && m_last_mouse_state == MouseState::Holding && m_mouse_state == MouseState::Released) {
 		m_pick_solver->onPicking(m_mouse_x, m_mouse_y, KeysDown[Key_LeftCtrl]);
+
 		if (m_mouse_button == MouseButton::Right) {
 			ref_editor->popUpMenu();
 		}
@@ -88,6 +96,8 @@ bool GUIInput::onUpdate(float delta_time)
 	if (m_mouse_state == MouseState::Dragging) {
 		m_camera_manipulator->onMouseUpdate(m_delta_mouse_x, m_delta_mouse_y, m_mouse_button);
 	}
+
+	renderBoxSelection();
 
 	if (!Math::isApproxZero(m_mouse_wheel))
 		m_camera_manipulator->onMouseWheelUpdate(m_mouse_wheel, m_mouse_x, m_mouse_y);
@@ -117,6 +127,66 @@ Vec2 GUIInput::mapToMainCanvasWindow(const Vec2& value)
 	pos.x -= main_canvas_rect.x;
 	pos.y -= main_canvas_rect.y;
 	return pos;
+}
+
+void GUIInput::updateBoxSelection()
+{
+	m_box_selection_consumed_release = false;
+	if (!m_camera_manipulator->isBoxSelectionEnabled())
+	{
+		m_box_selection_active = false;
+		m_box_selection_dragged = false;
+		return;
+	}
+
+	if (m_mouse_button != MouseButton::Left)
+		return;
+
+	const Vec2 mouse_pos(m_mouse_x, m_mouse_y);
+	if (m_mouse_state == MouseState::Clicked)
+	{
+		m_box_selection_start = mouse_pos;
+		m_box_selection_end = mouse_pos;
+		m_box_selection_active = true;
+		m_box_selection_dragged = false;
+	}
+
+	if (!m_box_selection_active)
+		return;
+
+	if (m_mouse_state == MouseState::Dragging || m_mouse_state == MouseState::Holding || m_mouse_state == MouseState::Released)
+	{
+		m_box_selection_end = mouse_pos;
+		const Vec2 drag_delta = m_box_selection_end - m_box_selection_start;
+		m_box_selection_dragged = m_box_selection_dragged || Math::Length(drag_delta) >= kBoxSelectionMinDragDistance;
+	}
+
+	if (m_mouse_state == MouseState::Released)
+	{
+		if (m_box_selection_dragged)
+		{
+			m_camera_manipulator->selectObjectsInRect(m_box_selection_start, m_box_selection_end, KeysDown[Key_LeftCtrl]);
+			m_box_selection_consumed_release = true;
+		}
+		m_box_selection_active = false;
+		m_box_selection_dragged = false;
+	}
+}
+
+void GUIInput::renderBoxSelection() const
+{
+	if (!m_box_selection_active || !m_box_selection_dragged)
+		return;
+
+	const auto main_canvas_rect = ref_editor->mainCanvasRect();
+	const Vec2 start = Vec2(main_canvas_rect.x, main_canvas_rect.y) + m_box_selection_start;
+	const Vec2 end = Vec2(main_canvas_rect.x, main_canvas_rect.y) + m_box_selection_end;
+	const ImVec2 min_pos(std::min(start.x, end.x), std::min(start.y, end.y));
+	const ImVec2 max_pos(std::max(start.x, end.x), std::max(start.y, end.y));
+
+	ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+	draw_list->AddRectFilled(min_pos, max_pos, IM_COL32(90, 140, 255, 32));
+	draw_list->AddRect(min_pos, max_pos, IM_COL32(90, 140, 255, 210), 0.0f, 0, 1.0f);
 }
 
 void PickSolver::onPicking(float mouse_x, float mouse_y, bool retain_old)

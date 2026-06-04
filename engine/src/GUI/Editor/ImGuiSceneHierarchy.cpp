@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include "GUI/Editor/ImGuiContextMenu.hpp"
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "Logical/Framework/World/SceneDirty.hpp"
 #include "Logical/Framework/World/Scene.hpp"
@@ -702,6 +703,11 @@ void ImGuiSceneHierarchy::render()
             Meta::Instance inst{*object};
             if (m_widget_creator.find(Meta::MetaTypeOf<GObject>().typeName()) != m_widget_creator.end())
                 m_widget_creator[Meta::MetaTypeOf<GObject>().typeName()](child_name, inst);
+        }
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !ImGui::IsAnyItemHovered())
+        {
+            g_context.scene->onPickedChanged({}, g_context.scene->getPickedObjectIDs());
+            m_parent->popUpMenu();
         }
     }
     ImGui::End();

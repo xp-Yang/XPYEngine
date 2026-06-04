@@ -1,10 +1,156 @@
 #include "CameraManipulator.hpp"
-
-#if ENABLE_ECS
-#include "Logical/Framework/ECS/Components.hpp"
-#else
 #include "Logical/Framework/World/Scene.hpp"
-#endif
+#include "GlobalContext.hpp"
+
+#include <algorithm>
+#include <array>
+#include <limits>
+#include <utility>
+#include <vector>
+
+namespace
+{
+    struct SelectionRect
+    {
+        Vec2 min{ 0.0f };
+        Vec2 max{ 0.0f };
+
+        bool contains(const Vec2& point) const
+        {
+            return min.x <= point.x && point.x <= max.x &&
+                min.y <= point.y && point.y <= max.y;
+        }
+    };
+
+    struct LocalBounds
+    {
+        Vec3 min{ 0.0f };
+        Vec3 max{ 0.0f };
+        bool valid{ false };
+    };
+
+    SelectionRect selectionRectOf(const Vec2& start, const Vec2& end)
+    {
+        return {
+            glm::min(start, end),
+            glm::max(start, end)
+        };
+    }
+
+    LocalBounds localBoundsOfMesh(const Mesh& mesh)
+    {
+        const auto& vertices = mesh.vertices();
+        const auto& indices = mesh.indices();
+        if (vertices.empty())
+            return {};
+
+        LocalBounds bounds;
+        bounds.min = Vec3(std::numeric_limits<float>::max());
+        bounds.max = Vec3(std::numeric_limits<float>::lowest());
+
+        auto includeVertex = [&bounds, &vertices](int vertex_index)
+        {
+            if (vertex_index < 0 || vertex_index >= static_cast<int>(vertices.size()))
+                return;
+            bounds.min = glm::min(bounds.min, vertices[vertex_index].position);
+            bounds.max = glm::max(bounds.max, vertices[vertex_index].position);
+            bounds.valid = true;
+        };
+
+        if (!indices.empty())
+        {
+            const int index_start = std::max(0, mesh.index_offset);
+            const int requested_count = mesh.index_count > 0 ? mesh.index_count : static_cast<int>(indices.size()) - index_start;
+            const int index_end = std::min(static_cast<int>(indices.size()), index_start + requested_count);
+            for (int i = index_start; i < index_end; ++i)
+                includeVertex(indices[i]);
+        }
+
+        if (!bounds.valid)
+        {
+            for (int i = 0; i < static_cast<int>(vertices.size()); ++i)
+                includeVertex(i);
+        }
+
+        return bounds;
+    }
+
+    std::array<Vec3, 8> cornersOf(const LocalBounds& bounds)
+    {
+        return {
+            Vec3(bounds.min.x, bounds.min.y, bounds.min.z),
+            Vec3(bounds.max.x, bounds.min.y, bounds.min.z),
+            Vec3(bounds.min.x, bounds.max.y, bounds.min.z),
+            Vec3(bounds.max.x, bounds.max.y, bounds.min.z),
+            Vec3(bounds.min.x, bounds.min.y, bounds.max.z),
+            Vec3(bounds.max.x, bounds.min.y, bounds.max.z),
+            Vec3(bounds.min.x, bounds.max.y, bounds.max.z),
+            Vec3(bounds.max.x, bounds.max.y, bounds.max.z),
+        };
+    }
+
+    bool projectToScreen(const Vec3& world_position, const Mat4& view_projection, const IntRect& view_rect, Vec2& screen_position)
+    {
+        const Vec4 clip = view_projection * Vec4(world_position, 1.0f);
+        if (clip.w <= Math::Constant::epsilon)
+            return false;
+
+        const Vec3 ndc = Vec3(clip) / clip.w;
+        if (ndc.z < -1.0f || ndc.z > 1.0f)
+            return false;
+
+        screen_position.x = (ndc.x * 0.5f + 0.5f) * static_cast<float>(view_rect.width);
+        screen_position.y = (0.5f - ndc.y * 0.5f) * static_cast<float>(view_rect.height);
+        return true;
+    }
+
+    bool meshObjectFullyInsideRect(GObject& object, const MeshComponent& mesh_component, const CameraComponent& camera, const IntRect& view_rect, const SelectionRect& selection_rect)
+    {
+        const auto* transform = object.getComponent<TransformComponent>();
+        if (!transform)
+            return false;
+
+        bool has_bounds = false;
+        const Mat4 object_transform = transform->transform();
+        const Mat4 view_projection = camera.projection * camera.view;
+        for (const auto& sub_mesh : mesh_component.sub_meshes)
+        {
+            if (!sub_mesh)
+                continue;
+
+            const LocalBounds bounds = localBoundsOfMesh(*sub_mesh);
+            if (!bounds.valid)
+                continue;
+
+            has_bounds = true;
+            const Mat4 sub_mesh_transform = Math::composeMatrix(sub_mesh->scale, sub_mesh->rotation, sub_mesh->translation);
+            const Mat4 model = object_transform * sub_mesh_transform;
+            for (const Vec3& corner : cornersOf(bounds))
+            {
+                const Vec4 world = model * Vec4(corner, 1.0f);
+                Vec2 screen_position;
+                if (!projectToScreen(Vec3(world) / world.w, view_projection, view_rect, screen_position))
+                    return false;
+                if (!selection_rect.contains(screen_position))
+                    return false;
+            }
+        }
+        return has_bounds;
+    }
+
+    bool pointObjectInsideRect(GObject& object, const CameraComponent& camera, const IntRect& view_rect, const SelectionRect& selection_rect)
+    {
+        const auto* transform = object.getComponent<TransformComponent>();
+        if (!transform)
+            return false;
+
+        const Mat4 view_projection = camera.projection * camera.view;
+        const Vec4 world = transform->transform() * Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        Vec2 screen_position;
+        return projectToScreen(Vec3(world) / world.w, view_projection, view_rect, screen_position) &&
+            selection_rect.contains(screen_position);
+    }
+}
 
 static void syncCameraObjectTransform(CameraComponent& camera)
 {
@@ -86,7 +232,7 @@ void CameraManipulator::onMouseUpdate(double delta_x, double delta_y, MouseButto
     {
         if (mouse_button == MouseButton::Left)
         {
-            // TODO 框选多选
+            // Box selection is driven by GUIInput because it owns mouse start/end positions.
         }
         if (mouse_button == MouseButton::Right)
         {
@@ -241,4 +387,47 @@ Vec3 CameraManipulator::rayCastPlaneZero(double mouse_x, double mouse_y)
     Vec3 p0 = plane_normal * zero_plane[3];
     float t = (Math::Dot(plane_normal, p0) - Math::Dot(plane_normal, camera.pos) / Math::Dot(plane_normal, ray_direction));
     return Vec3(camera.pos + t * ray_direction);
+}
+
+bool CameraManipulator::isBoxSelectionEnabled() const
+{
+    return camera.mode == Mode::Orbit;
+}
+
+void CameraManipulator::selectObjectsInRect(const Vec2& start, const Vec2& end, bool retain_old)
+{
+    if (!g_context.scene || !isBoxSelectionEnabled())
+        return;
+
+    const SelectionRect selection_rect = selectionRectOf(start, end);
+    std::vector<GObjectID> selected_ids;
+    for (const auto& object : g_context.scene->getObjects())
+    {
+        if (!object || !object->visible())
+            continue;
+
+        bool selected = false;
+        if (auto* mesh_component = object->getComponent<MeshComponent>())
+            selected = meshObjectFullyInsideRect(*object, *mesh_component, camera, m_view_rect, selection_rect);
+        else
+            selected = pointObjectInsideRect(*object, camera, m_view_rect, selection_rect);
+
+        if (selected)
+            selected_ids.push_back(object->ID());
+    }
+
+    const std::vector<GObjectID> old_selected_ids = g_context.scene->getPickedObjectIDs();
+    if (retain_old)
+    {
+        selected_ids.erase(std::remove_if(selected_ids.begin(), selected_ids.end(),
+            [&old_selected_ids](GObjectID id)
+            {
+                return std::find(old_selected_ids.begin(), old_selected_ids.end(), id) != old_selected_ids.end();
+            }), selected_ids.end());
+        g_context.scene->onPickedChanged(std::move(selected_ids), {});
+    }
+    else
+    {
+        g_context.scene->onPickedChanged(std::move(selected_ids), old_selected_ids);
+    }
 }

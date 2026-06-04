@@ -4,11 +4,49 @@
 
 #include "GUI/Editor/ImGuiEditor.hpp"
 #include "Logical/Framework/World/Scene.hpp"
+#include "Logical/Snapshot/ObjectSnapshotCommand.hpp"
+#include "Logical/Snapshot/ObjectSnapshotService.hpp"
 #include "Logical/Snapshot/Transaction.hpp"
 #include "Logical/Snapshot/UndoRedoStack.hpp"
 #include "GlobalContext.hpp"
 
+#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
+
+namespace
+{
+    void pushCreateObjectCommand(Scene& scene, GObject& object, const std::string& label)
+    {
+        Snapshot::ObjectSnapshot before;
+        before.id = object.ID();
+        before.existed = false;
+
+        Snapshot::ObjectSnapshot after = Snapshot::ObjectSnapshotService::capture(scene, object.ID());
+        if (!after.existed)
+            return;
+
+        scene.undoRedoStack().pushExecuted(
+            std::make_unique<Snapshot::ObjectSnapshotCommand>(
+                label,
+                std::vector<Snapshot::ObjectSnapshot>{ before },
+                std::vector<Snapshot::ObjectSnapshot>{ std::move(after) }));
+    }
+
+    void addBasicModelObject(const std::string& name, const std::string& model_relative_path, const std::string& command_label)
+    {
+        if (!g_context.scene)
+            return;
+
+        GObject* object = g_context.scene->loadModel(std::string(ASSET_DIR) + model_relative_path);
+        if (!object)
+            return;
+
+        object->setName(name);
+        pushCreateObjectCommand(*g_context.scene, *object, command_label);
+    }
+}
 
 void ImGuiContextMenu::render()
 {
@@ -24,11 +62,10 @@ void ImGuiContextMenu::render()
         {
             if (ImGui::BeginMenu("Add"))
             {
-                // TODO
                 if (ImGui::MenuItem("Add Cube", "", false, true))
-                    ;
+                    addBasicModelObject("Cube", "/model/basic/cube.obj", "Add Cube");
                 if (ImGui::MenuItem("Add Sphere", "", false, true))
-                    ;
+                    addBasicModelObject("Sphere", "/model/basic/sphere.obj", "Add Sphere");
                 ImGui::EndMenu();
             }
         }

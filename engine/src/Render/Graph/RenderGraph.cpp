@@ -8,7 +8,6 @@ static bool samePixelSize(const Vec2& lhs, const Vec2& rhs)
 
 RenderGraph::~RenderGraph()
 {
-    // TODO 移除gl依赖
     for (auto& pair : m_render_targets)
         destroyCubeShadowFrameBuffer(pair.second);
 }

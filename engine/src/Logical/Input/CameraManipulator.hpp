@@ -5,13 +5,7 @@
 #include "Base/Math/Math.hpp"
 #include "Logical/Input/InputEnums.hpp"
 
-#if ENABLE_ECS
-namespace ecs {
-	struct CameraComponent;
-}
-#else
 struct CameraComponent;
-#endif
 
 class CameraManipulator{
 public:
@@ -23,6 +17,8 @@ public:
 	void orbitRotate(Vec3 start, Vec3 end);
 	void onMouseWheelUpdate(double yoffset, double mouse_x, double mouse_y);
 	Vec3 rayCastPlaneZero(double mouse_x, double mouse_y);
+	bool isBoxSelectionEnabled() const;
+	void selectObjectsInRect(const Vec2& start, const Vec2& end, bool retain_old = false);
 
 	inline static const float CameraMovementSpeed = 20.0f;
 	inline static const float RatationSensitivity = 0.01f;

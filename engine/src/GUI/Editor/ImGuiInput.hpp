@@ -16,6 +16,8 @@ public:
 protected:
 	bool refreshState();
 	Vec2 mapToMainCanvasWindow(const Vec2& value);
+	void updateBoxSelection();
+	void renderBoxSelection() const;
 
 	MouseState m_last_mouse_state{ MouseState::None };
 	MouseState m_mouse_state{ MouseState::None };
@@ -27,6 +29,11 @@ protected:
 	float m_delta_mouse_x;
 	float m_delta_mouse_y;
 	float m_mouse_wheel;
+	Vec2 m_box_selection_start{ 0.0f };
+	Vec2 m_box_selection_end{ 0.0f };
+	bool m_box_selection_active{ false };
+	bool m_box_selection_dragged{ false };
+	bool m_box_selection_consumed_release{ false };
 
 	bool KeysDown[Key_COUNT];
 
