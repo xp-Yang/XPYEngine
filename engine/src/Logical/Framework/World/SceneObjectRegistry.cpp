@@ -107,23 +107,13 @@ GObject *SceneObjectRegistry::loadModel(const std::string &filepath)
 	ModelImporter model_importer;
 	if (!model_importer.load(filepath))
 		return nullptr;
-	std::vector<int> obj_sub_meshes_idx = model_importer.getSubMeshesIds();
-	if (obj_sub_meshes_idx.empty())
-	{
-		return nullptr;
-	}
 	std::string name = PathService::getFileName(filepath);
 
 	auto res = GObject::create(nullptr, name);
 	res->addComponent<TransformComponent>();
 	MeshComponent &mesh = res->addComponent<MeshComponent>();
 	mesh.source_filepath = filepath;
-	for (int idx : obj_sub_meshes_idx)
-	{
-		std::shared_ptr<Mesh> sub_mesh = model_importer.meshOfNode(idx);
-		sub_mesh->sub_mesh_idx = idx;
-		mesh.sub_meshes.push_back(sub_mesh);
-	}
+	mesh.sub_meshes = model_importer.meshes();
 	if (model_importer.hasAnimation())
 	{
 		AnimationComponent &animation = res->addComponent<AnimationComponent>();

@@ -20,3 +20,7 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT $
 target_link_libraries(${SAMPLES_EXEC_NAME} PUBLIC EngineRuntime)
 
 target_compile_features(${SAMPLES_EXEC_NAME} PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(${SAMPLES_EXEC_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/utf-8>")
+endif()

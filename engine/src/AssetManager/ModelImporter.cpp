@@ -1,5 +1,6 @@
 #include "AssetManager/ModelImporter.hpp"
 #include <assimp/Importer.hpp>
+#include <assimp/GltfMaterial.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include "AssetManager/Mesh.hpp"
@@ -7,28 +8,70 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <filesystem>
 
 std::unordered_map<std::string, Assimp::Importer *> ModelImporter::m_importers;
-std::unordered_map<std::string, ModelGeometryCacheEntry> ModelImporter::m_geometry_cache;
 
-static std::shared_ptr<Texture> textureOfUnknownType(aiMaterial* material, TextureType engine_type, const std::string& directory, bool gamma,
-    std::initializer_list<const char*> keywords, std::initializer_list<const char*> rejected_keywords = {})
+static std::string lowerString(std::string text)
+{
+    std::transform(text.begin(), text.end(), text.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return text;
+}
+
+static bool containsAny(std::string text, std::initializer_list<const char*> needles)
+{
+    text = lowerString(text);
+    for (const char* needle : needles)
+    {
+        if (text.find(needle) != std::string::npos)
+            return true;
+    }
+    return false;
+}
+
+static bool isGltfModelFile(const std::string& filepath)
+{
+    const std::string ext = lowerString(PathService::getFileSuffix(filepath));
+    return ext == "gltf" || ext == "glb";
+}
+
+static std::shared_ptr<Texture> textureFromAssimpPath(const aiScene* scene, TextureType engine_type, const std::string& directory,
+    const aiString& aiPath, bool gamma)
+{
+    const std::string path = aiPath.C_Str();
+    if (path.empty())
+        return nullptr;
+
+    if (scene && scene->GetEmbeddedTexture(path.c_str()))
+    {
+        Logger::warn("ModelImporter: embedded texture '{}' is not loaded yet.", path);
+        return nullptr;
+    }
+
+    if (path.rfind("data:", 0) == 0)
+    {
+        Logger::warn("ModelImporter: data URI texture is not loaded yet.");
+        return nullptr;
+    }
+
+    const std::string resolved_path = PathService::join(directory, path);
+    std::error_code ec;
+    if (!std::filesystem::exists(resolved_path, ec))
+    {
+        Logger::warn("ModelImporter: texture file not found: {}", resolved_path);
+        return nullptr;
+    }
+
+    return std::make_shared<Texture>(engine_type, resolved_path, gamma);
+}
+
+static std::shared_ptr<Texture> textureOfUnknownType(const aiScene* scene, aiMaterial* material, TextureType engine_type,
+    const std::string& directory, bool gamma, std::initializer_list<const char*> keywords,
+    std::initializer_list<const char*> rejected_keywords = {})
 {
     if (!material)
         return nullptr;
-
-    auto containsAny = [](std::string text, std::initializer_list<const char*> needles)
-    {
-        std::transform(text.begin(), text.end(), text.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-
-        for (const char* needle : needles)
-        {
-            if (text.find(needle) != std::string::npos)
-                return true;
-        }
-        return false;
-    };
 
     const unsigned int count = material->GetTextureCount(aiTextureType_UNKNOWN);
     for (unsigned int i = 0; i < count; ++i)
@@ -41,13 +84,13 @@ static std::shared_ptr<Texture> textureOfUnknownType(aiMaterial* material, Textu
         if (!containsAny(path, keywords) || containsAny(path, rejected_keywords))
             continue;
 
-        const std::string resolved_path = directory + '/' + path;
-        return resolved_path.empty() ? nullptr : std::make_shared<Texture>(engine_type, resolved_path, gamma);
+        return textureFromAssimpPath(scene, engine_type, directory, aiPath, gamma);
     }
     return nullptr;
 }
 
-static std::shared_ptr<Texture> textureOfType(aiMaterial* material, aiTextureType ai_type, TextureType engine_type, const std::string& directory, bool gamma)
+static std::shared_ptr<Texture> textureOfType(const aiScene* scene, aiMaterial* material, aiTextureType ai_type, TextureType engine_type,
+    const std::string& directory, bool gamma)
 {
     if (!material || material->GetTextureCount(ai_type) == 0)
         return nullptr;
@@ -56,8 +99,7 @@ static std::shared_ptr<Texture> textureOfType(aiMaterial* material, aiTextureTyp
     if (material->GetTexture(ai_type, 0, &aiPath) != AI_SUCCESS)
         return nullptr;
 
-    const std::string resolved_path = directory + '/' + aiPath.C_Str();
-    return resolved_path.empty() ? nullptr : std::make_shared<Texture>(engine_type, resolved_path, gamma);
+    return textureFromAssimpPath(scene, engine_type, directory, aiPath, gamma);
 };
 
 static Mat4 toMat4(const aiMatrix4x4 &mat)
@@ -93,12 +135,6 @@ bool ModelImporter::load(const std::string &file_path)
     m_BoneInfoMap.clear();
     m_BoneCounter = 0;
 
-    if (auto cache_it = ModelImporter::m_geometry_cache.find(m_obj_filepath); cache_it != ModelImporter::m_geometry_cache.end())
-    {
-        m_BoneInfoMap = cache_it->second.bone_info_map;
-        m_BoneCounter = cache_it->second.bone_count;
-    }
-
     if (ModelImporter::m_importers.find(m_obj_filepath) != ModelImporter::m_importers.end())
     {
         m_scene = ModelImporter::m_importers.at(m_obj_filepath)->GetScene();
@@ -106,64 +142,27 @@ bool ModelImporter::load(const std::string &file_path)
     else
     {
         auto importer = new Assimp::Importer();
-        m_scene = importer->ReadFile(m_obj_filepath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+        constexpr unsigned int import_flags =
+            aiProcess_Triangulate |
+            aiProcess_FlipUVs |
+            aiProcess_GenNormals |
+            aiProcess_CalcTangentSpace |
+            aiProcess_JoinIdenticalVertices |
+            aiProcess_ImproveCacheLocality;
+        m_scene = importer->ReadFile(m_obj_filepath, import_flags);
         if (!m_scene || m_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !m_scene->mRootNode)
         {
             auto error_str = importer->GetErrorString();
+            Logger::error("Assimp failed to load model: {}, error: {}", m_obj_filepath, error_str);
             delete importer;
             return false;
         }
         ModelImporter::m_importers.insert({m_obj_filepath, importer});
     }
 
+    m_meshes = collectMeshes();
+
     return true;
-}
-
-std::shared_ptr<Mesh> ModelImporter::meshOfNode(int ai_mesh_idx)
-{
-    aiMesh *ai_mesh = m_scene->mMeshes[ai_mesh_idx];
-    auto& cache = ModelImporter::m_geometry_cache[m_obj_filepath];
-    m_BoneInfoMap = cache.bone_info_map;
-    m_BoneCounter = cache.bone_count;
-
-    std::shared_ptr<MeshGeometry> geometry;
-    auto geometry_it = cache.geometries.find(ai_mesh_idx);
-    if (geometry_it != cache.geometries.end())
-    {
-        geometry = geometry_it->second;
-    }
-    else
-    {
-        geometry = load_sub_mesh_geometry(ai_mesh);
-        cache.geometries[ai_mesh_idx] = geometry;
-        cache.bone_info_map = m_BoneInfoMap;
-        cache.bone_count = m_BoneCounter;
-    }
-
-    std::shared_ptr<Mesh> res = std::make_shared<Mesh>(geometry);
-    res->sub_mesh_idx = ai_mesh_idx;
-    aiMaterial *ai_material = m_scene->mMaterials[ai_mesh->mMaterialIndex];
-    res->material = load_material(ai_material);
-    return res;
-}
-
-std::shared_ptr<Material> ModelImporter::materialOfNode(int ai_mesh_idx)
-{
-    auto ai_mesh = m_scene->mMeshes[ai_mesh_idx];
-    assert(ai_mesh->mMaterialIndex >= 0);
-    aiMaterial *material = m_scene->mMaterials[ai_mesh->mMaterialIndex];
-    return load_material(material);
-}
-
-// TODO 可以这样吗？
-std::vector<int> ModelImporter::getSubMeshesIds() const
-{
-    std::vector<int> res;
-    for (int i = 0; i < m_scene->mNumMeshes; i++)
-    {
-        res.push_back(i);
-    }
-    return res;
 }
 
 bool ModelImporter::hasAnimation() const
@@ -171,9 +170,9 @@ bool ModelImporter::hasAnimation() const
     return m_scene && m_scene->mNumAnimations > 0;
 }
 
-std::vector<aiMesh *> ModelImporter::collect_ai_meshes()
+std::vector<std::shared_ptr<Mesh>> ModelImporter::collectMeshes()
 {
-    std::vector<aiMesh *> res;
+    std::vector<aiMesh *> ai_meshes;
 
     std::vector<aiNode *> nodes{m_scene->mRootNode};
     while (!nodes.empty())
@@ -182,17 +181,30 @@ std::vector<aiMesh *> ModelImporter::collect_ai_meshes()
         nodes.erase(nodes.begin());
         for (int i = 0; i < node->mNumMeshes; i++)
         {
-            res.push_back(m_scene->mMeshes[node->mMeshes[i]]);
+            ai_meshes.push_back(m_scene->mMeshes[node->mMeshes[i]]);
         }
         for (int i = 0; i < node->mNumChildren; i++)
         {
             nodes.push_back(node->mChildren[i]);
         }
     }
-    return res;
+
+    std::vector<std::shared_ptr<Mesh>> meshes;
+    for (int i = 0; i < ai_meshes.size(); i++)
+    {
+        aiMesh *ai_mesh = ai_meshes[i];
+        std::shared_ptr<MeshGeometry> geometry = loadMeshGeometry(ai_mesh);
+        aiMaterial *ai_material = m_scene->mMaterials[ai_mesh->mMaterialIndex];
+        std::shared_ptr<Material> material = loadMaterial(ai_material);
+        std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(geometry, material);
+        mesh->sub_mesh_idx = i;
+        meshes.push_back(mesh);
+    }
+
+    return meshes;
 }
 
-std::shared_ptr<MeshGeometry> ModelImporter::load_sub_mesh_geometry(aiMesh *mesh)
+std::shared_ptr<MeshGeometry> ModelImporter::loadMeshGeometry(aiMesh *mesh)
 {
     std::vector<Vertex> vertices;
     std::vector<int> indices;
@@ -289,14 +301,28 @@ void ModelImporter::extractBoneWeightForVertices(std::vector<Vertex> &vertices, 
     }
 }
 
-std::shared_ptr<Material> ModelImporter::load_material(aiMaterial *material)
+std::shared_ptr<Material> ModelImporter::loadMaterial(aiMaterial *material)
 {
     std::shared_ptr<Material> res = Material::create_complete_default_material();
+    if (!material)
+        return res;
 
     auto materialLooksLikePBR = [](aiMaterial* material, const std::string& filepath)
     {
-        const std::string ext = PathService::getFileSuffix(filepath);
-        if (ext == "gltf" || ext == "glb")
+        if (isGltfModelFile(filepath))
+            return true;
+
+        float factor = 0.0f;
+        aiColor4D base_color(1.0f, 1.0f, 1.0f, 1.0f);
+        if (material && material->Get(AI_MATKEY_BASE_COLOR, base_color) == AI_SUCCESS)
+            return true;
+        if (material && material->Get(AI_MATKEY_METALLIC_FACTOR, factor) == AI_SUCCESS)
+            return true;
+        if (material && material->Get(AI_MATKEY_ROUGHNESS_FACTOR, factor) == AI_SUCCESS)
+            return true;
+        if (material && (material->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
+            material->GetTextureCount(aiTextureType_METALNESS) > 0 ||
+            material->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS) > 0))
             return true;
 
         int shading_model = aiShadingMode_NoShading;
@@ -308,31 +334,79 @@ std::shared_ptr<Material> ModelImporter::load_material(aiMaterial *material)
 
     if (materialLooksLikePBR(material, m_obj_filepath))
     {
-        res->base_color_factor = res->diffuse_factor;
-        auto albedo_texture = textureOfUnknownType(material, TextureType::Albedo, m_directory, true,
-            { "basecolor", "base_color", "albedo" });
+        aiColor4D base_color(1.0f, 1.0f, 1.0f, 1.0f);
+        if (material->Get(AI_MATKEY_BASE_COLOR, base_color) == AI_SUCCESS)
+        {
+            res->base_color_factor = Vec3(base_color.r, base_color.g, base_color.b);
+            res->diffuse_factor = res->base_color_factor;
+            res->alpha = base_color.a;
+        }
+        else
+        {
+            aiColor3D diffuse_color(1.0f, 1.0f, 1.0f);
+            if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color) == AI_SUCCESS)
+            {
+                res->base_color_factor = Vec3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
+                res->diffuse_factor = res->base_color_factor;
+            }
+        }
+
+        float opacity = res->alpha;
+        if (material->Get(AI_MATKEY_OPACITY, opacity) == AI_SUCCESS)
+            res->alpha = std::clamp(opacity, 0.0f, 1.0f);
+
+        res->metallic_factor = isGltfModelFile(m_obj_filepath) ? 1.0f : 0.0f;
+        res->roughness_factor = isGltfModelFile(m_obj_filepath) ? 1.0f : 0.8f;
+
+        float metallic_factor = res->metallic_factor;
+        if (material->Get(AI_MATKEY_METALLIC_FACTOR, metallic_factor) == AI_SUCCESS)
+            res->metallic_factor = std::clamp(metallic_factor, 0.0f, 1.0f);
+
+        float roughness_factor = res->roughness_factor;
+        if (material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness_factor) == AI_SUCCESS)
+            res->roughness_factor = std::clamp(roughness_factor, 0.04f, 1.0f);
+
+        auto albedo_texture = textureOfType(m_scene, material, aiTextureType_BASE_COLOR, TextureType::Albedo, m_directory, true);
         if (!albedo_texture)
-            albedo_texture = textureOfType(material, aiTextureType_DIFFUSE, TextureType::Albedo, m_directory, true);
+            albedo_texture = textureOfType(m_scene, material, aiTextureType_DIFFUSE, TextureType::Albedo, m_directory, true);
+        if (!albedo_texture)
+            albedo_texture = textureOfUnknownType(m_scene, material, TextureType::Albedo, m_directory, true,
+                { "basecolor", "base_color", "albedo", "diffuse" });
         if (albedo_texture)
             res->albedo_texture = albedo_texture;
 
-        auto metallic_texture = textureOfUnknownType(material, TextureType::Metallic, m_directory, false,
-            { "metallic", "metalness" }, { "roughness" });
+        auto metallic_texture = textureOfType(m_scene, material, aiTextureType_METALNESS, TextureType::Metallic, m_directory, false);
+        if (!metallic_texture)
+            metallic_texture = textureOfType(m_scene, material, aiTextureType_GLTF_METALLIC_ROUGHNESS, TextureType::Metallic, m_directory, false);
+        if (!metallic_texture)
+            metallic_texture = textureOfUnknownType(m_scene, material, TextureType::Metallic, m_directory, false,
+                { "metallic", "metalness" }, { "roughness" });
         if (metallic_texture)
             res->metallic_texture = metallic_texture;
-        auto roughness_texture = textureOfUnknownType(material, TextureType::Roughness, m_directory, false,
-            { "roughness" }, { "metallic", "metalness" });
+
+        auto roughness_texture = textureOfType(m_scene, material, aiTextureType_DIFFUSE_ROUGHNESS, TextureType::Roughness, m_directory, false);
+        if (!roughness_texture)
+            roughness_texture = textureOfType(m_scene, material, aiTextureType_GLTF_METALLIC_ROUGHNESS, TextureType::Roughness, m_directory, false);
+        if (!roughness_texture)
+            roughness_texture = textureOfUnknownType(m_scene, material, TextureType::Roughness, m_directory, false,
+                { "roughness" }, { "metallic", "metalness" });
         if (roughness_texture)
             res->roughness_texture = roughness_texture;
-        auto ao_texture = textureOfType(material, aiTextureType_LIGHTMAP, TextureType::AO, m_directory, false);
+
+        auto ao_texture = textureOfType(m_scene, material, aiTextureType_AMBIENT_OCCLUSION, TextureType::AO, m_directory, false);
         if (!ao_texture)
-            ao_texture = textureOfUnknownType(material, TextureType::AO, m_directory, false,
+            ao_texture = textureOfType(m_scene, material, aiTextureType_LIGHTMAP, TextureType::AO, m_directory, false);
+        if (!ao_texture)
+            ao_texture = textureOfUnknownType(m_scene, material, TextureType::AO, m_directory, false,
                 { "ao", "occlusion", "ambientocclusion", "ambient_occlusion" });
         if (ao_texture)
             res->ao_texture = ao_texture;
 
-        res->metallic_factor = metallic_texture ? 1.0f : 0.0f;
-        res->roughness_factor = roughness_texture ? 1.0f : 0.8f;
+        if (auto texture = textureOfType(m_scene, material, aiTextureType_NORMALS, TextureType::Normal, m_directory, false))
+            res->normal_texture = texture;
+        else if (auto texture = textureOfType(m_scene, material, aiTextureType_HEIGHT, TextureType::Normal, m_directory, false))
+            res->normal_texture = texture;
+
         res->ao_factor = 1.0f;
 
         res->fillBlinnPhongFromPBR();
@@ -351,17 +425,21 @@ std::shared_ptr<Material> ModelImporter::load_material(aiMaterial *material)
         if (material->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
             res->shininess = std::max(1.0f, std::min(shininess, 1024.0f));
 
-        if (auto texture = textureOfType(material, aiTextureType_DIFFUSE, TextureType::Diffuse, m_directory, true))
+        float opacity = res->alpha;
+        if (material->Get(AI_MATKEY_OPACITY, opacity) == AI_SUCCESS)
+            res->alpha = std::clamp(opacity, 0.0f, 1.0f);
+
+        if (auto texture = textureOfType(m_scene, material, aiTextureType_DIFFUSE, TextureType::Diffuse, m_directory, true))
             res->diffuse_texture = texture;
-        if (auto texture = textureOfType(material, aiTextureType_SPECULAR, TextureType::Specular, m_directory, false))
+        if (auto texture = textureOfType(m_scene, material, aiTextureType_SPECULAR, TextureType::Specular, m_directory, false))
             res->specular_texture = texture;
-        if (auto texture = textureOfType(material, aiTextureType_NORMALS, TextureType::Normal, m_directory, false))
+        if (auto texture = textureOfType(m_scene, material, aiTextureType_NORMALS, TextureType::Normal, m_directory, false))
             res->normal_texture = texture;
-        else if (auto texture = textureOfType(material, aiTextureType_HEIGHT, TextureType::Normal, m_directory, false))
+        else if (auto texture = textureOfType(m_scene, material, aiTextureType_HEIGHT, TextureType::Normal, m_directory, false))
             res->normal_texture = texture;
-        if (auto texture = textureOfType(material, aiTextureType_DISPLACEMENT, TextureType::Height, m_directory, false))
+        if (auto texture = textureOfType(m_scene, material, aiTextureType_DISPLACEMENT, TextureType::Height, m_directory, false))
             res->height_texture = texture;
-        else if (auto texture = textureOfType(material, aiTextureType_HEIGHT, TextureType::Height, m_directory, false))
+        else if (auto texture = textureOfType(m_scene, material, aiTextureType_HEIGHT, TextureType::Height, m_directory, false))
             res->height_texture = texture;
 
         res->fillPBRFromBlinnPhong();

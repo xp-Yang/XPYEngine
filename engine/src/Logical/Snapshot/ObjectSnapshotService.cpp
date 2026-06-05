@@ -408,13 +408,7 @@ GObject* ObjectSnapshotService::createObjectFromDTO(Scene& scene, GObjectID id, 
 			MeshComponent& mesh = object->addComponent<MeshComponent>();
 			mesh.source_filepath = dto.filepath;
 			mesh.staticShadowCaster = dto.static_shadow_caster;
-			for (int sub_mesh_id : model_importer.getSubMeshesIds()) {
-				std::shared_ptr<Mesh> sub_mesh = model_importer.meshOfNode(sub_mesh_id);
-				if (!sub_mesh)
-					continue;
-				sub_mesh->sub_mesh_idx = sub_mesh_id;
-				mesh.sub_meshes.push_back(sub_mesh);
-			}
+			mesh.sub_meshes = model_importer.meshes();
 			if (model_importer.hasAnimation()) {
 				AnimationComponent& animation = object->addComponent<AnimationComponent>();
 				animation.clip_path = dto.filepath;

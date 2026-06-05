@@ -61,3 +61,7 @@ target_compile_definitions(EngineRuntime PUBLIC ASSET_DIR="${ENGINE_ASSET_DIR}")
 target_compile_definitions(EngineRuntime PUBLIC ENABLE_ECS=false)
 target_compile_definitions(EngineRuntime PUBLIC NO_TITLE_BAR=false)
 target_compile_features(${LIB_NAME} PRIVATE cxx_std_17)
+
+if(MSVC)
+	target_compile_options(${LIB_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/utf-8>")
+endif()

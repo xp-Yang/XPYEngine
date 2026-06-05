@@ -240,12 +240,7 @@ void MaterialBallTest::spawnGallery(Scene *scene)
     if (!shader_ball_importer.load(m_mesh_path))
         return;
 
-    std::vector<std::shared_ptr<Mesh>> shader_ball_sub_meshes;
-    for (int idx : shader_ball_importer.getSubMeshesIds())
-    {
-        if (auto sub_mesh = shader_ball_importer.meshOfNode(idx))
-            shader_ball_sub_meshes.push_back(sub_mesh);
-    }
+    std::vector<std::shared_ptr<Mesh>> shader_ball_sub_meshes = shader_ball_importer.meshes();
     if (shader_ball_sub_meshes.empty())
         return;
 

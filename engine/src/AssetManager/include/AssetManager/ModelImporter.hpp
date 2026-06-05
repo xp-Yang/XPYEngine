@@ -25,37 +25,28 @@ struct BoneInfo
 	Mat4 offset;
 };
 
-struct ModelGeometryCacheEntry
-{
-	std::unordered_map<int, std::shared_ptr<MeshGeometry>> geometries;
-	std::map<std::string, BoneInfo> bone_info_map;
-	int bone_count{ 0 };
-};
-
 class ModelImporter {
 public:
     ModelImporter() = default;
 	~ModelImporter();
 	bool load(const std::string& obj_file_path);
-	std::shared_ptr<Mesh> meshOfNode(int ai_mesh_idx);
-	std::shared_ptr<Material> materialOfNode(int ai_mesh_idx);
-	std::vector<int> getSubMeshesIds() const;
+	std::vector<std::shared_ptr<Mesh>> meshes() const { return m_meshes; }
 	bool hasAnimation() const;
 	const std::map<std::string, BoneInfo>& getBoneInfoMap() const { return m_BoneInfoMap; }
 	int getBoneCount() const { return m_BoneCounter; }
 
 protected:
-	std::vector<aiMesh*> collect_ai_meshes();
-	std::shared_ptr<MeshGeometry> load_sub_mesh_geometry(aiMesh* mesh);
-	std::shared_ptr<Material> load_material(aiMaterial* material);
+	std::vector<std::shared_ptr<Mesh>> collectMeshes();
+	std::shared_ptr<MeshGeometry> loadMeshGeometry(aiMesh* mesh);
+	std::shared_ptr<Material> loadMaterial(aiMaterial* material);
 	void extractBoneWeightForVertices(std::vector<Vertex>& vertices, aiMesh* mesh);
 	void setVertexBoneData(Vertex& vertex, int bone_id, float weight) const;
 
 private:
 	static std::unordered_map<std::string, Assimp::Importer*> m_importers;
-	static std::unordered_map<std::string, ModelGeometryCacheEntry> m_geometry_cache;
 
 	const aiScene* m_scene{ nullptr };
+	std::vector<std::shared_ptr<Mesh>> m_meshes;
 	std::map<std::string, BoneInfo> m_BoneInfoMap;
 	int m_BoneCounter{ 0 };
 

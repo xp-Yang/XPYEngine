@@ -10,9 +10,9 @@
 #include "../Pass/SSAOPass.hpp"
 #include "../Pass/TransparentPass.hpp"
 #include "../Pass/SkyBoxPass.hpp"
-#include "../Pass/BloomPass.hpp"
 #include "../Pass/PickingPass.hpp"
 #include "../Pass/OutlinePass.hpp"
+#include "../Pass/BloomPass.hpp"
 #include "../Pass/FXAAPass.hpp"
 #include "../Pass/ToneMappingPass.hpp"
 #include "../Pass/FinalPass.hpp"
@@ -31,8 +31,8 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
     m_render_passes[RenderPass::Type::DeferredLighting] = std::make_unique<DeferredLightingPass>();
     m_render_passes[RenderPass::Type::SSAO] = std::make_unique<SSAOPass>();
     m_render_passes[RenderPass::Type::Transparent] = std::make_unique<TransparentPass>();
-    m_render_passes[RenderPass::Type::Bloom] = std::make_unique<BloomPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
+    m_render_passes[RenderPass::Type::Bloom] = std::make_unique<BloomPass>();
     m_render_passes[RenderPass::Type::FXAA] = std::make_unique<FXAAPass>();
     m_render_passes[RenderPass::Type::ToneMapping] = std::make_unique<ToneMappingPass>();
     m_render_passes[RenderPass::Type::WireFrame] = std::make_unique<WireFramePass>();

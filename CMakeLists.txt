@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.13)
 
 project(XPYEngine VERSION 0.9.0)
 
-if(MSVC)
-  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/utf-8>")
-endif()
 #导致assimp 编译失败
 #set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_STANDARD_REQUIRED ON)
