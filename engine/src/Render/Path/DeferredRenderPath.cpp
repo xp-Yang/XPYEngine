@@ -204,7 +204,7 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         });
 
     m_render_graph.addPass(RenderPass::Type::Transparent, pass(RenderPass::Type::Transparent))
-        .setEnabled(render_scene.hasTransparent())
+        .setEnabled(render_scene.mainCameraHasTransparent())
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
         .setSetup([](RenderPass& p)

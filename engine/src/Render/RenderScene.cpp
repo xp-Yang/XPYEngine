@@ -585,10 +585,15 @@ void RenderScene::rebuildMeshSectionLists()
     m_visible_sections.clear();
     m_opaque_sections.clear();
     m_transparent_sections.clear();
+    m_main_camera_visible_sections.clear();
+    m_main_camera_opaque_sections.clear();
+    m_main_camera_transparent_sections.clear();
     m_skinned_sections.clear();
     m_static_shadow_caster_sections.clear();
     m_dynamic_shadow_caster_sections.clear();
     m_has_transparent = false;
+    m_main_camera_has_transparent = false;
+    m_main_camera_culling_enabled = false;
 
     size_t mesh_section_count = 0;
     for (const auto& pair : m_object_proxies)
@@ -636,16 +641,59 @@ void RenderScene::rebuildMeshSectionLists()
     ++m_shadow_static_version;
 }
 
+void RenderScene::updateMainCameraCulling(const RenderFrustum& frustum, bool enabled)
+{
+    m_main_camera_culling_enabled = enabled;
+    m_main_camera_visible_sections.clear();
+    m_main_camera_opaque_sections.clear();
+    m_main_camera_transparent_sections.clear();
+    m_main_camera_has_transparent = false;
+
+    if (!enabled)
+        return;
+
+    m_main_camera_visible_sections.reserve(m_visible_sections.size());
+    m_main_camera_opaque_sections.reserve(m_opaque_sections.size());
+    m_main_camera_transparent_sections.reserve(m_transparent_sections.size());
+
+    for (RenderMeshSection* section : m_visible_sections)
+    {
+        if (!section)
+            continue;
+
+        // Skinned vertices may move outside the static section bounds; keep them visible
+        // until animated bounds or bone-aware bounds are available.
+        if (!section->use_skinning && !frustum.intersects(section->world_bounds))
+            continue;
+
+        m_main_camera_visible_sections.push_back(section);
+        if (section->material.isTransparent())
+        {
+            m_main_camera_transparent_sections.push_back(section);
+            m_main_camera_has_transparent = true;
+        }
+        else
+        {
+            m_main_camera_opaque_sections.push_back(section);
+        }
+    }
+}
+
 void RenderScene::clearObjectProxies()
 {
     m_object_proxies.clear();
     m_visible_sections.clear();
     m_opaque_sections.clear();
     m_transparent_sections.clear();
+    m_main_camera_visible_sections.clear();
+    m_main_camera_opaque_sections.clear();
+    m_main_camera_transparent_sections.clear();
     m_skinned_sections.clear();
     m_static_shadow_caster_sections.clear();
     m_dynamic_shadow_caster_sections.clear();
     m_has_transparent = false;
+    m_main_camera_has_transparent = false;
+    m_main_camera_culling_enabled = false;
     ++m_shadow_static_version;
 }
 

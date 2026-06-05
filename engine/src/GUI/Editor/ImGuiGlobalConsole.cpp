@@ -146,7 +146,8 @@ void ImGuiGlobalConsole::render() {
     ImGui::Checkbox("grid", &render_params.effect_params.grid); ImGui::SameLine();
     ImGui::Checkbox("wireframe", &render_params.effect_params.wireframe); ImGui::SameLine();
     ImGui::Checkbox("normal", &render_params.effect_params.show_normal); ImGui::SameLine();
-    ImGui::Checkbox("SSAO", &render_params.ssao.enable);
+    ImGui::Checkbox("SSAO", &render_params.ssao.enable); ImGui::SameLine();
+    ImGui::Checkbox("frustum culling", &render_params.effect_params.frustum_culling);
     if (render_params.shadow_params.directional_enable)
     {
         ImGui::PushItemWidth(150.0f);

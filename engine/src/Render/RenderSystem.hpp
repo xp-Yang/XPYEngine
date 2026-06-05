@@ -35,6 +35,7 @@ protected:
     void rebuildObjectRenderProxy(GObject& object);
     void updateSkinnedMeshSections();
     void buildRenderFrameData(Scene& scene);
+    void updateMainCameraCulling();
 
 private:
     RenderParams m_render_params;

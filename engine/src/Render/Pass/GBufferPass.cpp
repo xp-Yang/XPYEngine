@@ -18,7 +18,7 @@ void GBufferPass::draw(RenderPassContext& context)
     ShaderResourceBindings bindings;
     bindings.setMatrix("view", 1, context.frameData().view_matrix);
     bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
-    for (const RenderMeshSection* render_node : context.renderScene().opaqueMeshSections()) {
+    for (const RenderMeshSection* render_node : context.renderScene().mainCameraOpaqueMeshSections()) {
         if (!render_node)
             continue;
 

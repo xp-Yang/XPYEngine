@@ -57,7 +57,7 @@ void MeshForwardLightingPass::draw(RenderPassContext& context)
     bindings.setCubeTexture("prefilterMap", 12, ibl_ready ? ibl.prefilter_cube : default_cube);
     bindings.setTexture("brdfLUT", 13, ibl_ready ? ibl.brdf_lut : default_2d);
 
-    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections())
+    for (const RenderMeshSection* render_node : context.renderScene().mainCameraVisibleMeshSections())
     {
         if (!render_node)
             continue;

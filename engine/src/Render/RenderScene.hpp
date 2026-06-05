@@ -273,9 +273,15 @@ public:
     // Rebuild visible/opaque/transparent/skinned lists consumed by render passes.
     void rebuildMeshSectionLists();
 
+    // Rebuild the main-camera visible lists from the current section lists.
+    void updateMainCameraCulling(const RenderFrustum& frustum, bool enabled);
+
     const std::vector<RenderMeshSection*>& visibleMeshSections() const { return m_visible_sections; }
     const std::vector<RenderMeshSection*>& opaqueMeshSections() const { return m_opaque_sections; }
     const std::vector<RenderMeshSection*>& transparentMeshSections() const { return m_transparent_sections; }
+    const std::vector<RenderMeshSection*>& mainCameraVisibleMeshSections() const { return m_main_camera_culling_enabled ? m_main_camera_visible_sections : m_visible_sections; }
+    const std::vector<RenderMeshSection*>& mainCameraOpaqueMeshSections() const { return m_main_camera_culling_enabled ? m_main_camera_opaque_sections : m_opaque_sections; }
+    const std::vector<RenderMeshSection*>& mainCameraTransparentMeshSections() const { return m_main_camera_culling_enabled ? m_main_camera_transparent_sections : m_transparent_sections; }
     const std::vector<RenderMeshSection*>& skinnedMeshSections() const { return m_skinned_sections; }
     const std::vector<RenderMeshSection*>& staticShadowCasterSections() const { return m_static_shadow_caster_sections; }
     const std::vector<RenderMeshSection*>& dynamicShadowCasterSections() const { return m_dynamic_shadow_caster_sections; }
@@ -283,6 +289,7 @@ public:
     uint64_t shadowStaticVersion() const { return m_shadow_static_version; }
 
     bool hasTransparent() const { return m_has_transparent; }
+    bool mainCameraHasTransparent() const { return m_main_camera_culling_enabled ? m_main_camera_has_transparent : m_has_transparent; }
 
     RenderSkybox& skybox() { return m_skybox; }
     const RenderSkybox& skybox() const { return m_skybox; }
@@ -295,11 +302,16 @@ private:
     std::vector<RenderMeshSection*> m_visible_sections;
     std::vector<RenderMeshSection*> m_opaque_sections;
     std::vector<RenderMeshSection*> m_transparent_sections;
+    std::vector<RenderMeshSection*> m_main_camera_visible_sections;
+    std::vector<RenderMeshSection*> m_main_camera_opaque_sections;
+    std::vector<RenderMeshSection*> m_main_camera_transparent_sections;
     std::vector<RenderMeshSection*> m_skinned_sections;
     std::vector<RenderMeshSection*> m_static_shadow_caster_sections;
     std::vector<RenderMeshSection*> m_dynamic_shadow_caster_sections;
     uint64_t m_shadow_static_version{ 1 };
     bool m_has_transparent{ false };
+    bool m_main_camera_has_transparent{ false };
+    bool m_main_camera_culling_enabled{ false };
     RenderSkybox m_skybox;
 };
 

@@ -71,6 +71,7 @@ struct EffectParams {
     bool show_normal = false;
     bool checkerboard = false;
     bool grid = true; // FinalPass pristine grid overlay
+    bool frustum_culling = true;
     //int pixelate_level = 1;
 };
 

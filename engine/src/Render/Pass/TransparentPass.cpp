@@ -28,7 +28,7 @@ void TransparentPass::draw(RenderPassContext& context)
     ShaderResourceBindings bindings;
     bindings.setMatrix("view", 1, context.frameData().view_matrix);
     bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
-    for (const RenderMeshSection* render_node : context.renderScene().transparentMeshSections()) {
+    for (const RenderMeshSection* render_node : context.renderScene().mainCameraTransparentMeshSections()) {
         if (!render_node)
             continue;
 

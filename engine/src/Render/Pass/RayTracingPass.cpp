@@ -22,7 +22,7 @@ void RayTracingPass::draw(RenderPassContext &context)
 		// bindings.setFloat3("camera.pos", camera->pos);
 		// bindings.setFloat("camera.distance", 1.0f /*camera->focal_length*/);
 		// bindings.setFloat("camera.fov", camera->fov);
-		// bindings.setFloat("camera.aspect_ratio", 16.0f / 9.0f); // todo 需要一种方法不会拉伸纹理也不影响fov
+		// bindings.setFloat("camera.aspect_ratio", 16.0f / 9.0f);
 
 		// bindings.setFloat3("camera.front", camera->direction);
 		// bindings.setFloat3("camera.right", camera->rightDirection);

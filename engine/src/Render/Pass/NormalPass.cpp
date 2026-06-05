@@ -23,7 +23,7 @@ void NormalPass::draw(RenderPassContext& context)
     bindings.setMatrix("view", 1, context.frameData().view_matrix);
     bindings.setMatrix("projection", 1, context.frameData().proj_matrix);
     bindings.setMatrix("projectionView", 1, context.frameData().proj_matrix * context.frameData().view_matrix);
-    for (const RenderMeshSection* render_node : context.renderScene().visibleMeshSections()) {
+    for (const RenderMeshSection* render_node : context.renderScene().mainCameraVisibleMeshSections()) {
         if (!render_node)
             continue;
 

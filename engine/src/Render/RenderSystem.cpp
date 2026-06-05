@@ -137,6 +137,7 @@ void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)
     syncRenderSceneChanges(*scene);
     updateSkinnedMeshSections();
     buildRenderFrameData(*scene);
+    updateMainCameraCulling();
     m_curr_path->render(m_render_scene, m_frame_data, m_builtin_resources);
 }
 
@@ -448,4 +449,10 @@ void RenderSystem::buildRenderFrameData(Scene& scene)
     m_frame_data.camera_position = camera.pos;
     m_frame_data.view_matrix = camera.view;
     m_frame_data.proj_matrix = camera.projection;
+}
+
+void RenderSystem::updateMainCameraCulling()
+{
+    const RenderFrustum frustum = RenderFrustum::fromViewProjection(m_frame_data.proj_matrix * m_frame_data.view_matrix);
+    m_render_scene.updateMainCameraCulling(frustum, m_render_params.effect_params.frustum_culling);
 }
