@@ -5,6 +5,9 @@
 #include "../Pass/PickingPass.hpp"
 #include "../Pass/SkyBoxPass.hpp"
 #include "../Pass/OutlinePass.hpp"
+#include "../Pass/BloomPass.hpp"
+#include "../Pass/FXAAPass.hpp"
+#include "../Pass/ToneMappingPass.hpp"
 #include "../Pass/FinalPass.hpp"
 #include "../Pass/UIPass.hpp"
 
@@ -18,6 +21,9 @@ ForwardRenderPath::ForwardRenderPath(RenderSystem *render_system)
     m_render_passes[RenderPass::Type::Shadow] = std::make_unique<ShadowPass>();
     m_render_passes[RenderPass::Type::Forward] = std::make_unique<MeshForwardLightingPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
+    m_render_passes[RenderPass::Type::Bloom] = std::make_unique<BloomPass>();
+    m_render_passes[RenderPass::Type::FXAA] = std::make_unique<FXAAPass>();
+    m_render_passes[RenderPass::Type::ToneMapping] = std::make_unique<ToneMappingPass>();
     m_render_passes[RenderPass::Type::Final] = std::make_unique<FinalPass>();
     m_render_passes[RenderPass::Type::UI] = std::make_unique<UIPass>();
 
@@ -67,8 +73,8 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
     m_render_graph.addPass(RenderPass::Type::Forward, pass(RenderPass::Type::Forward))
         .read(RGResource::ShadowDirectionalDepth)
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
-        .color(RGResource::SceneColor, RhiTexture::Format::RGB8, 0, 4)
-        .depthStencil(RGResource::SceneDepth, RhiTexture::Format::DEPTH24STENCIL8, 4)
+        .color(RGResource::SceneColor, RhiTexture::Format::RGB8)
+        .depthStencil(RGResource::SceneDepth, RhiTexture::Format::DEPTH24STENCIL8)
         .setSetup([this, &render_params](RenderPass& p)
         {
             auto& main_pass = static_cast<MeshForwardLightingPass&>(p);
@@ -100,13 +106,83 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
             p.bindSlot("inMaskDepth", RGResource::OutlineMaskDepth);
         });
 
+    // --- Post-processing chain: read(in) + write(out) ---
+    RGResourceName currentColor = RGResource::SceneColor;
+    const bool bloom_used = render_params.post_processing_params.bloom;
+    const bool tone_mapping_used = render_params.post_processing_params.tone_mapping
+        && render_params.post_processing_params.hdr;
+    if (bloom_used)
+    {
+        const RGResourceName bloomIn = currentColor;
+        const RGResourceName bloomOut = RGResource::BloomColor;
+        m_render_graph.addPass(RenderPass::Type::Bloom, pass(RenderPass::Type::Bloom))
+            .setEnabled(true)
+            .read(bloomIn)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(bloomOut, RhiTexture::Format::RGBA16F)
+            .setSetup([&render_params, bloomIn, bloomOut](RenderPass& p)
+                {
+                    auto& bloom_pass = static_cast<BloomPass&>(p);
+                    const auto& pp = render_params.post_processing_params;
+                    bloom_pass.setParams({
+                        pp.bloom_threshold,
+                        pp.bloom_soft_knee,
+                        pp.bloom_intensity,
+                        pp.bloom_mip_levels
+                        });
+                    p.bindSlot("inColor", bloomIn);
+                    p.bindSlot("outColor", bloomOut);
+                });
+        currentColor = bloomOut;
+    }
+
+    if (render_params.post_processing_params.fxaa)
+    {
+        const RGResourceName fxaaIn = currentColor;
+        const RGResourceName fxaaOut = RGResource::FXAAColor;
+        m_render_graph.addPass(RenderPass::Type::FXAA, pass(RenderPass::Type::FXAA))
+            .setEnabled(true)
+            .read(fxaaIn)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(fxaaOut, RhiTexture::Format::RGBA16F)
+            .setSetup([fxaaIn, fxaaOut](RenderPass& p)
+                {
+                    p.bindSlot("inColor", fxaaIn);
+                    p.bindSlot("outColor", fxaaOut);
+                });
+        currentColor = fxaaOut;
+    }
+
+    if (tone_mapping_used)
+    {
+        const RGResourceName tmIn = currentColor;
+        const RGResourceName tmOut = RGResource::ToneMappingColor;
+        m_render_graph.addPass(RenderPass::Type::ToneMapping, pass(RenderPass::Type::ToneMapping))
+            .setEnabled(true)
+            .read(tmIn)
+            .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+            .color(tmOut, RhiTexture::Format::RGBA16F)
+            .setSetup([&render_params, tmIn, tmOut](RenderPass& p)
+                {
+                    auto& tone_pass = static_cast<ToneMappingPass&>(p);
+                    tone_pass.setExposure(render_params.post_processing_params.exposure);
+                    p.bindSlot("inColor", tmIn);
+                    p.bindSlot("outColor", tmOut);
+                });
+        currentColor = tmOut;
+    }
+
     m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
-        .modify(RGResource::SceneColor)
-        .modify(RGResource::SceneDepth)
-        .setSetup([&render_params](RenderPass& p)
+        .read(currentColor)
+        .read(RGResource::SceneDepth)
+        .target(RGTarget::Main, RenderTargetType::FrameBuffer)
+        .color(RGResource::FinalColor, RhiTexture::Format::RGB16F)
+        .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
+        .setSetup([&render_params, currentColor](RenderPass& p)
         {
             static_cast<FinalPass&>(p).setDrawGrid(render_params.effect_params.grid);
-            p.bindSlot("inColor", RGResource::SceneColor);
+            p.bindSlot("inColor", currentColor);
+            p.bindSlot("inDepth", RGResource::SceneDepth);
             p.bindSlot("outTarget", RGTarget::Main);
         });
 
@@ -115,7 +191,7 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
         .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
 
     m_render_graph.markOutput(RGResource::PickingColor);
-    m_render_graph.markOutput(RGResource::SceneColor);
+    m_render_graph.markOutput(RGResource::FinalColor);
     m_render_graph.markOutputPass(RenderPass::Type::UI);
 
     m_render_graph.compile();
