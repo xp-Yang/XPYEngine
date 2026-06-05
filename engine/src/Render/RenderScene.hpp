@@ -15,6 +15,8 @@
 #include <vector>
 
 struct RenderTextureResource {
+    explicit RenderTextureResource(std::shared_ptr<Texture> texture_);
+    explicit RenderTextureResource(std::shared_ptr<CubeTexture> cube_texture_);
     ~RenderTextureResource();
 
     RenderTextureResource(const RenderTextureResource&) = delete;
@@ -31,9 +33,6 @@ struct RenderTextureResource {
     static std::shared_ptr<RenderTextureResource> defaultCubeTexture();
 
 private:
-    explicit RenderTextureResource(std::shared_ptr<Texture> texture_);
-    explicit RenderTextureResource(std::shared_ptr<CubeTexture> cube_texture_);
-
     std::shared_ptr<Texture> m_source_texture;
     std::shared_ptr<CubeTexture> m_source_cube_texture;
     RhiTexture* m_texture{ nullptr };
