@@ -47,6 +47,7 @@ public:
         ColorGrading,
         
         Final,
+        UI,
 	};
 
 	RenderPass()

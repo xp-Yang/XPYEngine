@@ -48,6 +48,7 @@ public:
     void setShadowTargetSizes(const Vec2& directional_size, int point_cube_edge);
     RenderGraphPassNode& addPass(RenderPass::Type type, RenderPass* pass);
     void markOutput(const RGResourceName& resource_name);
+    void markOutputPass(RenderPass::Type type);
     void compile();
     void execute(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources);
 
@@ -92,6 +93,7 @@ private:
     std::vector<RenderGraphPassNode> m_nodes;
     std::vector<RenderGraphPassNode*> m_ordered_nodes;
     std::vector<RGResourceName> m_outputs;
+    std::vector<RenderPass::Type> m_output_passes;
     std::unordered_map<RGResourceName, RenderGraphResource> m_resources;
     std::unordered_map<TargetKey, RenderGraphRenderTarget, TargetKeyHasher> m_render_targets;
 };

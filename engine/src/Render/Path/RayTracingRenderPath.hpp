@@ -18,6 +18,7 @@ public:
 protected:
     std::unique_ptr<RenderPass> m_ray_tracing_pass;
     std::unique_ptr<RenderPass> m_final_pass;
+    std::unique_ptr<RenderPass> m_ui_pass;
 };
 
 #endif // !RayTracingRenderPath_hpp

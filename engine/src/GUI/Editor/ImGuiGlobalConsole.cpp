@@ -102,7 +102,7 @@ void ImGuiGlobalConsole::render() {
 
     separator();
 
-    // TODO
+    // TODO MSAA
     //ImGui::Text("MSAA:");
     //if (render_params.render_path_type == RenderPathType::Forward) {
     //    ImGui::PushItemWidth(50.0f);

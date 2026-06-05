@@ -16,6 +16,7 @@
 #include "../Pass/FXAAPass.hpp"
 #include "../Pass/ToneMappingPass.hpp"
 #include "../Pass/FinalPass.hpp"
+#include "../Pass/UIPass.hpp"
 
 #include "Render/Graph/RenderGraphDumper.hpp"
 #include "../RenderSystem.hpp"
@@ -38,6 +39,7 @@ DeferredRenderPath::DeferredRenderPath(RenderSystem* render_system)
     m_render_passes[RenderPass::Type::CheckerBoard] = std::make_unique<CheckerBoardPass>();
     m_render_passes[RenderPass::Type::Normal] = std::make_unique<NormalPass>();
     m_render_passes[RenderPass::Type::Final] = std::make_unique<FinalPass>();
+    m_render_passes[RenderPass::Type::UI] = std::make_unique<UIPass>();
 
     ref_render_system = render_system;
 }
@@ -326,7 +328,6 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
         .target(RGTarget::Main, RenderTargetType::FrameBuffer)
         .color(RGResource::FinalColor, RhiTexture::Format::RGB16F)
         .depth(RGResource::FinalDepth, RhiTexture::Format::DEPTH)
-        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
         .setSetup([&render_params, beforeFinalColor, beforeFinalDepth](RenderPass& p)
         {
             static_cast<FinalPass&>(p).setDrawGrid(render_params.effect_params.grid);
@@ -335,8 +336,13 @@ void DeferredRenderPath::render(RenderScene& render_scene, RenderFrameData& fram
             p.bindSlot("outTarget", RGTarget::Main);
         });
 
+    m_render_graph.addPass(RenderPass::Type::UI, pass(RenderPass::Type::UI))
+        .read(RGResource::FinalColor)
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
+
     m_render_graph.markOutput(RGResource::PickingColor);
     m_render_graph.markOutput(RGResource::FinalColor);
+    m_render_graph.markOutputPass(RenderPass::Type::UI);
 
     m_render_graph.compile();
     m_render_graph.execute(render_scene, frame_data, builtin_resources);

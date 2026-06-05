@@ -6,6 +6,7 @@
 #include "../Pass/SkyBoxPass.hpp"
 #include "../Pass/OutlinePass.hpp"
 #include "../Pass/FinalPass.hpp"
+#include "../Pass/UIPass.hpp"
 
 #include "Render/Graph/RenderGraphDumper.hpp"
 #include "../RenderSystem.hpp"
@@ -18,6 +19,7 @@ ForwardRenderPath::ForwardRenderPath(RenderSystem *render_system)
     m_render_passes[RenderPass::Type::Forward] = std::make_unique<MeshForwardLightingPass>();
     m_render_passes[RenderPass::Type::Outline] = std::make_unique<OutlinePass>();
     m_render_passes[RenderPass::Type::Final] = std::make_unique<FinalPass>();
+    m_render_passes[RenderPass::Type::UI] = std::make_unique<UIPass>();
 
     ref_render_system = render_system;
 }
@@ -101,7 +103,6 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
     m_render_graph.addPass(RenderPass::Type::Final, pass(RenderPass::Type::Final))
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
-        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
         .setSetup([&render_params](RenderPass& p)
         {
             static_cast<FinalPass&>(p).setDrawGrid(render_params.effect_params.grid);
@@ -109,8 +110,13 @@ void ForwardRenderPath::render(RenderScene& render_scene, RenderFrameData& frame
             p.bindSlot("outTarget", RGTarget::Main);
         });
 
+    m_render_graph.addPass(RenderPass::Type::UI, pass(RenderPass::Type::UI))
+        .read(RGResource::SceneColor)
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
+
     m_render_graph.markOutput(RGResource::PickingColor);
     m_render_graph.markOutput(RGResource::SceneColor);
+    m_render_graph.markOutputPass(RenderPass::Type::UI);
 
     m_render_graph.compile();
     m_render_graph.execute(render_scene, frame_data, builtin_resources);

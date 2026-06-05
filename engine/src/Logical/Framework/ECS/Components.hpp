@@ -105,8 +105,6 @@ namespace ecs
 			Mat4 light_projection = Perspective(deg2rad(90.0f), 1.0f, 0.1f, radius);
 			Vec3 light_pos = position();
 
-			// 这里up向量朝下，因为cubeMap从内部采样，是反过来的
-			// todo 点阴影贴图up矢量朝下，那么上下不也颠倒了
 			Mat4 light_view_right = LookAt(light_pos, light_pos + Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f)); // 右
 			Mat4 light_view_left = LookAt(light_pos, light_pos + Vec3(-1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f)); // 左
 			Mat4 light_view_up = LookAt(light_pos, light_pos + Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f));		// 上

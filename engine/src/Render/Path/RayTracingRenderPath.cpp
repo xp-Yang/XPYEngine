@@ -2,6 +2,7 @@
 
 #include "../Pass/RayTracingPass.hpp"
 #include "../Pass/FinalPass.hpp"
+#include "../Pass/UIPass.hpp"
 #include "../RenderSystem.hpp"
 #include "Render/Graph/RenderGraphDumper.hpp"
 #include "GlobalContext.hpp"
@@ -10,6 +11,7 @@ RayTracingRenderPath::RayTracingRenderPath()
 {
     m_ray_tracing_pass = std::make_unique<RayTracingPass>();
     m_final_pass = std::make_unique<FinalPass>();
+    m_ui_pass = std::make_unique<UIPass>();
 }
 
 void RayTracingRenderPath::render(RenderScene& render_scene, RenderFrameData& frame_data, RenderBuiltinResources& builtin_resources)
@@ -25,7 +27,6 @@ void RayTracingRenderPath::render(RenderScene& render_scene, RenderFrameData& fr
     m_render_graph.addPass(RenderPass::Type::Final, m_final_pass.get())
         .modify(RGResource::SceneColor)
         .modify(RGResource::SceneDepth)
-        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer)
         .setSetup([](RenderPass& p)
         {
             const auto& effect = g_context.render_system->renderParams().effect_params;
@@ -34,7 +35,12 @@ void RayTracingRenderPath::render(RenderScene& render_scene, RenderFrameData& fr
             p.bindSlot("outTarget", RGTarget::Main);
         });
 
+    m_render_graph.addPass(RenderPass::Type::UI, m_ui_pass.get())
+        .read(RGResource::SceneColor)
+        .target(RGTarget::ScreenFrameBuffer, RenderTargetType::ScreenFrameBuffer);
+
     m_render_graph.markOutput(RGResource::SceneColor);
+    m_render_graph.markOutputPass(RenderPass::Type::UI);
     m_render_graph.compile();
     m_render_graph.execute(render_scene, frame_data, builtin_resources);
 }

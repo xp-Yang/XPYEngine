@@ -24,27 +24,16 @@ struct PointLightComponent : public LightComponent {
 
     std::array<Mat4, 6> lightViewMatrix(const Vec3& position) const
     {
-        // 原 LightManager.hpp 里的 TODO：
-        // “这里up向量向下，因为cubeMap从内部采样，是反过来的”
-        // “点阴影贴图 up 向量朝下，那么上下不也颠倒了吗？”
-        //
-        // 答案：不会在最终采样意义上颠倒。点光阴影写入的是 cubemap，
-        // 每个 face 都有 OpenGL/图形 API 约定的局部坐标方向。对 +X/-X/+Z/-Z
-        // 这些 face 使用 (0, -1, 0) 作为 up，并不是把世界整体倒过来，而是为了让
-        // light-space view 矩阵和 cubemap face 的采样方向保持一致，避免 face 之间
-        // 出现旋转错位或接缝。
-        //
-        // 单独把某一张 face 当 2D 图预览时，它可能看起来是“倒的”；但 shader 用
-        // fragPos - lightPos 这样的 3D 方向向量采样 cubemap 时，采样和写入都遵守
-        // 同一套 face 方向约定，所以世界里的上下关系不会因此错乱。真正需要小心的是：
-        // 下面 6 个矩阵的顺序必须和创建/绑定 cubemap face 的顺序完全一致。
+        // “点阴影贴图 up 向量朝下，那么上下不是颠倒了吗？”
+        // 答案：https://wikis.khronos.org/opengl/Cubemap_Texture
+        // 立方体纹理的坐标系是左旋的。对 +X/-X/+Z/-Z 这些 face 使用 (0, -1, 0) 作为 up
         std::array<Mat4, 6> result;
-        result[0] = Math::LookAt(position, position + Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f));
-        result[1] = Math::LookAt(position, position + Vec3(-1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f));
-        result[2] = Math::LookAt(position, position + Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f));
-        result[3] = Math::LookAt(position, position + Vec3(0.0f, -1.0f, 0.0f), Vec3(0.0f, 0.0f, -1.0f));
-        result[4] = Math::LookAt(position, position + Vec3(0.0f, 0.0f, 1.0f), Vec3(0.0f, -1.0f, 0.0f));
-        result[5] = Math::LookAt(position, position + Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, -1.0f, 0.0f));
+        result[0] = Math::LookAt(position, position + Vec3(1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f)); // +X
+        result[1] = Math::LookAt(position, position + Vec3(-1.0f, 0.0f, 0.0f), Vec3(0.0f, -1.0f, 0.0f));// -X
+        result[2] = Math::LookAt(position, position + Vec3(0.0f, 1.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f));  // +Y
+        result[3] = Math::LookAt(position, position + Vec3(0.0f, -1.0f, 0.0f), Vec3(0.0f, 0.0f, -1.0f));// -Y
+        result[4] = Math::LookAt(position, position + Vec3(0.0f, 0.0f, 1.0f), Vec3(0.0f, -1.0f, 0.0f)); // +Z
+        result[5] = Math::LookAt(position, position + Vec3(0.0f, 0.0f, -1.0f), Vec3(0.0f, -1.0f, 0.0f));// -Z
         return result;
     }
 };
@@ -57,7 +46,7 @@ struct DirectionalLightComponent : public LightComponent {
 
     Mat4 lightProjMatrix() const
     {
-        // 原 LightManager.hpp 里的 TODO：
+        // TODO
         // “方向光阴影覆盖过窄/过宽、边缘裁剪、分辨率利用率变差，怎么解决？”
         //
         // 答案：当前固定正交投影盒只是一个简单默认值。它的缺点很明确：

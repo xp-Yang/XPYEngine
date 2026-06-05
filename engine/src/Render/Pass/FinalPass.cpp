@@ -12,7 +12,6 @@ void FinalPass::draw(RenderPassContext& context)
 
     RhiFrameBuffer* source_color_framebuffer = context.frameBuffer(slot("inColor"));
     RhiFrameBuffer* source_depth_framebuffer = context.frameBuffer(slot("inDepth"));
-    // TODO //downSample if msaa?
     m_command_buffer->blit(source_color_framebuffer, framebuffer, RhiTexture::Format::RGB16F);
     m_command_buffer->blit(source_depth_framebuffer, framebuffer, RhiTexture::Format::DEPTH);
     if (m_draw_grid) {
@@ -29,9 +28,4 @@ void FinalPass::draw(RenderPassContext& context)
         m_command_buffer->drawIndexed(static_cast<int>(context.builtinResources().screen_quad->indicesCount()));
         m_command_buffer->endPass();
     }
-
-
-    RhiFrameBuffer* default_framebuffer = context.defaultFrameBuffer();
-    m_command_buffer->beginPass(default_framebuffer, Color4(0.45f, 0.55f, 0.60f, 1.00f));
-    m_command_buffer->endPass();
 }

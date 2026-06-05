@@ -17,6 +17,7 @@ void RenderGraph::reset()
     m_nodes.clear();
     m_ordered_nodes.clear();
     m_outputs.clear();
+    m_output_passes.clear();
     m_resources.clear();
     // TODO m_targets释放
 }
@@ -64,6 +65,12 @@ void RenderGraph::markOutput(const RGResourceName& resource_name)
         m_outputs.push_back(resource_name);
 }
 
+void RenderGraph::markOutputPass(RenderPass::Type type)
+{
+    if (std::find(m_output_passes.begin(), m_output_passes.end(), type) == m_output_passes.end())
+        m_output_passes.push_back(type);
+}
+
 void RenderGraph::visit(RenderPass::Type type, std::unordered_set<RenderPass::Type>& visiting, std::unordered_set<RenderPass::Type>& visited)
 {
     if (visited.find(type) != visited.end())
@@ -99,7 +106,7 @@ void RenderGraph::compile()
 
     // 如果没有标记 output，它会尝试编译所有 pass。
     // 如果标记了 output，它只从 output 反向找依赖，所以没被最终输出用到的 pass 会被裁剪掉。
-    if (!m_outputs.empty())
+    if (!m_outputs.empty() || !m_output_passes.empty())
     {
         for (const RGResourceName& resource_name : m_outputs)
         {
@@ -107,6 +114,10 @@ void RenderGraph::compile()
             if (it == m_resources.end())
                 throw std::runtime_error("RenderGraph output resource is not written: " + resource_name);
             visit(it->second.last_modifier_pass, visiting, visited);
+        }
+        for (RenderPass::Type type : m_output_passes)
+        {
+            visit(type, visiting, visited);
         }
     }
     else

@@ -46,6 +46,8 @@ const char* passTypeName(RenderPass::Type type)
         return "RayTracing";
     case RenderPass::Type::Final:
         return "Final";
+    case RenderPass::Type::UI:
+        return "UI";
     default:
         return "Unknown";
     }
