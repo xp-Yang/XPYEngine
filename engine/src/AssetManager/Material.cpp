@@ -3,9 +3,24 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+bool defaultTextureUsesGamma(TextureType type)
+{
+    return type == TextureType::Albedo
+        || type == TextureType::Diffuse
+        || type == TextureType::Specular;
+}
+
 static std::shared_ptr<Texture> defaultWhiteTexture(TextureType type)
 {
-    return std::make_shared<Texture>(type, std::string(ASSET_DIR) + "/images/pure_white_map.png", false);
+    return std::make_shared<Texture>(type, std::string(ASSET_DIR) + "/images/pure_white_map.png", defaultTextureUsesGamma(type));
+}
+
+static std::shared_ptr<Texture> defaultNormalTexture()
+{
+    return std::make_shared<Texture>(TextureType::Normal, std::string(ASSET_DIR) + "/images/default_normal_map.png", false);
+}
 }
 
 std::shared_ptr<Material> Material::create_complete_default_material()
@@ -13,7 +28,7 @@ std::shared_ptr<Material> Material::create_complete_default_material()
     auto default_material = std::make_shared<Material>();
     default_material->diffuse_texture = defaultWhiteTexture(TextureType::Diffuse);
     default_material->specular_texture = defaultWhiteTexture(TextureType::Specular);
-    default_material->normal_texture = defaultWhiteTexture(TextureType::Normal);
+    default_material->normal_texture = defaultNormalTexture();
     default_material->height_texture = defaultWhiteTexture(TextureType::Height);
     default_material->albedo_texture = defaultWhiteTexture(TextureType::Albedo);
     default_material->metallic_texture = defaultWhiteTexture(TextureType::Metallic);
@@ -61,7 +76,7 @@ void Material::fillBlinnPhongFromPBR()
     if (!this->specular_texture)
         this->specular_texture = defaultWhiteTexture(TextureType::Specular);
     if (!this->normal_texture)
-        this->normal_texture = defaultWhiteTexture(TextureType::Normal);
+        this->normal_texture = defaultNormalTexture();
     if (!this->height_texture)
         this->height_texture = defaultWhiteTexture(TextureType::Height);
 

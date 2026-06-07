@@ -41,30 +41,56 @@ static void setRenderTargetWrapClamp2D()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
-static bool getTextureFormatDesc(RhiTexture::Format format, TextureFormatDesc& desc)
+static bool getTextureFormatDesc(RhiTexture::Format format, RhiTexture::Flag flags, TextureFormatDesc& desc)
 {
     switch (format)
     {
     case RhiTexture::Format::R8:
-        desc = { GL_RED, GL_RED, GL_UNSIGNED_BYTE, 1, 1, false };
-        return true;
+        desc = { GL_R8, GL_RED, GL_UNSIGNED_BYTE, 1, 1, false };
+        break;
     case RhiTexture::Format::RGB8:
         desc = { GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, 3, 1, false };
-        return true;
+        break;
     case RhiTexture::Format::RGB16F:
         desc = { GL_RGB16F, GL_RGB, GL_FLOAT, 3, 4, false };
-        return true;
+        break;
     case RhiTexture::Format::RGBA8:
         desc = { GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 4, 1, false };
-        return true;
+        break;
     case RhiTexture::Format::RGBA16F:
         desc = { GL_RGBA16F, GL_RGBA, GL_FLOAT, 4, 4, false };
-        return true;
+        break;
     case RhiTexture::Format::DEPTH:
         desc = { GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT, 1, 4, true };
-        return true;
+        break;
     case RhiTexture::Format::DEPTH24STENCIL8:
         desc = { GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 1, 4, true };
+        break;
+    default:
+        return false;
+    }
+
+    if ((flags & RhiTexture::sRGB) != 0)
+    {
+        if (format == RhiTexture::Format::RGB8)
+            desc.internal_format = GL_SRGB8;
+        else if (format == RhiTexture::Format::RGBA8)
+            desc.internal_format = GL_SRGB8_ALPHA8;
+    }
+    return true;
+}
+
+static bool getClientUploadType(RhiTexture::Format format, GLenum& type)
+{
+    switch (format)
+    {
+    case RhiTexture::Format::R8:
+    case RhiTexture::Format::RGB8:
+    case RhiTexture::Format::RGB16F:
+    case RhiTexture::Format::RGBA8:
+    case RhiTexture::Format::RGBA16F:
+        // RHI texture client data is currently unsigned char* from image loading.
+        type = GL_UNSIGNED_BYTE;
         return true;
     default:
         return false;
@@ -80,7 +106,7 @@ bool OpenGLTexture::create()
         assert(m_sampleCount == 1);
 
         TextureFormatDesc desc;
-        if (!getTextureFormatDesc(m_format, desc))
+        if (!getTextureFormatDesc(m_format, m_flags, desc))
         {
             assert(false);
             return false;
@@ -122,6 +148,13 @@ bool OpenGLTexture::create()
     }
     else
     {
+        TextureFormatDesc desc;
+        if (!getTextureFormatDesc(m_format, m_flags, desc))
+        {
+            assert(false);
+            return false;
+        }
+
         switch (m_format)
         {
         case RhiTexture::Format::R8:
@@ -130,7 +163,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_R8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -138,7 +171,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 setRenderTargetWrapClamp2D();
@@ -151,7 +184,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGB8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -159,7 +192,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_FLOAT, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 setRenderTargetWrapClamp2D();
@@ -172,7 +205,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGB16F, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -180,7 +213,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_FLOAT, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 setRenderTargetWrapClamp2D();
@@ -193,7 +226,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGBA8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -201,7 +234,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 setRenderTargetWrapClamp2D();
@@ -214,7 +247,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_RGBA16F, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -222,7 +255,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 setRenderTargetWrapClamp2D();
@@ -241,7 +274,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_DEPTH24_STENCIL8, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -249,7 +282,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             }
@@ -261,7 +294,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureID);
-                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, GL_DEPTH_COMPONENT, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
+                glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, m_sampleCount, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, GL_TRUE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -273,7 +306,7 @@ bool OpenGLTexture::create()
             {
                 glGenTextures(1, &textureID);
                 glBindTexture(GL_TEXTURE_2D, textureID);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+                glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, desc.type, NULL);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -294,29 +327,15 @@ bool OpenGLTexture::create()
 
         if (m_data)
         {
-            GLenum internal_format;
-            if (m_format == R8)
-                internal_format = GL_RED;
-            else if (m_format == RGB8)
-                internal_format = GL_RGB;
-            else if (m_format == RGB16F)
-                internal_format = GL_RGB16F;
-            else if (m_format == RGBA8)
-                internal_format = GL_RGBA;
-            else if (m_format == RGBA16F)
-                internal_format = GL_RGBA16F;
-            else
+            GLenum upload_type = GL_UNSIGNED_BYTE;
+            if (!getClientUploadType(m_format, upload_type))
+            {
                 assert(false);
+                return false;
+            }
 
             glBindTexture(GL_TEXTURE_2D, textureID);
-            if (m_format == R8)
-                glTexImage2D(GL_TEXTURE_2D, 0, internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RED, GL_UNSIGNED_BYTE, m_data);
-            else if (m_format == RGB8 || m_format == RGB16F)
-                glTexImage2D(GL_TEXTURE_2D, 0, internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, m_data);
-            else if (m_format == RGBA8 || m_format == RGBA16F)
-                glTexImage2D(GL_TEXTURE_2D, 0, internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_data);
-            else
-                assert(false);
+            glTexImage2D(GL_TEXTURE_2D, 0, desc.internal_format, (int)m_pixelSize.x, (int)m_pixelSize.y, 0, desc.format, upload_type, m_data);
             glGenerateMipmap(GL_TEXTURE_2D);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

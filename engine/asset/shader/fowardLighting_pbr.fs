@@ -16,7 +16,6 @@ uniform sampler2D metallic_map;
 uniform sampler2D roughness_map;
 uniform sampler2D ao_map;
 uniform sampler2D normal_map;
-uniform bool has_normal_map;
 
 uniform vec3 base_color_factor;
 uniform float metallic_factor;
@@ -30,12 +29,10 @@ out vec4 FragColor;
 void main()
 {		
     vec3 N = normalize(fs_in.fragWorldNormal);
-    if (has_normal_map) {
-        vec3 T = normalize(vWorldTangent.xyz - dot(vWorldTangent.xyz, N) * N); // Gram-Schmidt
-        vec3 B = cross(N, T) * vWorldTangent.w; // handedness for mirrored UV
-        vec3 sampledNormal = texture(normal_map, fs_in.fragUV).rgb * 2.0 - 1.0;
-        N = normalize(mat3(T, B, N) * sampledNormal);
-    }
+    vec3 T = normalize(vWorldTangent.xyz - dot(vWorldTangent.xyz, N) * N); // Gram-Schmidt
+    vec3 B = cross(N, T) * vWorldTangent.w; // handedness for mirrored UV
+    vec3 sampledNormal = texture(normal_map, fs_in.fragUV).rgb * 2.0 - 1.0;
+    N = normalize(mat3(T, B, N) * sampledNormal);
     vec3 V = normalize(cameraPos - fs_in.fragWorldPos);
 
     vec3 albedo = texture(albedo_map, fs_in.fragUV).rgb * base_color_factor.rgb;

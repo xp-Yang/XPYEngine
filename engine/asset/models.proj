@@ -31,7 +31,7 @@
             "diffuse": "images/pure_white_map.png",
             "height": "images/pure_white_map.png",
             "metallic": "images/pure_white_map.png",
-            "normal": "images/pure_white_map.png",
+            "normal": "images/default_normal_map.png",
             "roughness": "images/pure_white_map.png",
             "specular": "images/pure_white_map.png"
           }

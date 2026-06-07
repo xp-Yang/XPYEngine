@@ -25,19 +25,16 @@ uniform sampler2D metallic_map;
 uniform sampler2D roughness_map;
 uniform sampler2D ao_map;
 uniform sampler2D normal_map;
-uniform bool has_normal_map;
 
 void main()
 {    
     gPosition = vec4(fs_in.fragWorldPos, 1.0);
 
     vec3 N = normalize(fs_in.fragWorldNormal);
-    if (has_normal_map) {
-        vec3 T = normalize(vWorldTangent.xyz - dot(vWorldTangent.xyz, N) * N); // Gram-Schmidt 正交化
-        vec3 B = cross(N, T) * vWorldTangent.w; // 手性修正镜像 UV
-        vec3 sampledNormal = texture(normal_map, fs_in.fragUV).rgb * 2.0 - 1.0;
-        N = normalize(mat3(T, B, N) * sampledNormal);
-    }
+    vec3 T = normalize(vWorldTangent.xyz - dot(vWorldTangent.xyz, N) * N); // Gram-Schmidt 正交化
+    vec3 B = cross(N, T) * vWorldTangent.w; // 手性修正镜像 UV
+    vec3 sampledNormal = texture(normal_map, fs_in.fragUV).rgb * 2.0 - 1.0;
+    N = normalize(mat3(T, B, N) * sampledNormal);
     gNormal = vec4(N, 1.0);
 
     vec3 albedo = texture(albedo_map, fs_in.fragUV).rgb * base_color_factor;

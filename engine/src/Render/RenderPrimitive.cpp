@@ -15,6 +15,19 @@ std::unordered_map<const MeshGeometry*, std::weak_ptr<RenderGeometryGpuResource>
 std::unordered_map<const Texture*, std::weak_ptr<RenderTextureResource>> s_render_texture_cache;
 std::unordered_map<const CubeTexture*, std::weak_ptr<RenderTextureResource>> s_render_cube_texture_cache;
 
+bool textureTypeDefaultsToSrgb(TextureType type)
+{
+    return type == TextureType::Albedo
+        || type == TextureType::Diffuse;
+}
+
+RhiTexture::Flag textureFlagsOf(const Texture& texture)
+{
+    return (texture.gamma || textureTypeDefaultsToSrgb(texture.texture_type))
+        ? RhiTexture::Flag::sRGB
+        : RhiTexture::Flag{};
+}
+
 std::shared_ptr<RenderGeometryGpuResource> renderGeometryResourceOf(const std::shared_ptr<MeshGeometry>& geometry)
 {
     assert(geometry && !geometry->vertices.empty() && !geometry->indices.empty());
@@ -115,7 +128,7 @@ RenderTextureResource::RenderTextureResource(std::shared_ptr<Texture> texture_)
         else if (m_source_texture->channel_count == 4)
             format = RhiTexture::Format::RGBA8;
 
-        m_texture = rhi->newTexture(format, Vec2(m_source_texture->width, m_source_texture->height), 1, RhiTexture::Flag::sRGB, data);
+        m_texture = rhi->newTexture(format, Vec2(m_source_texture->width, m_source_texture->height), 1, textureFlagsOf(*m_source_texture), data);
         m_texture->create();
     }
     else
@@ -360,12 +373,6 @@ void RenderMaterialResource::updateFrom(std::shared_ptr<Material> material_)
     m_diffuse_map = RenderTextureResource::textureOf(material_->diffuse_texture);
     m_specular_map = RenderTextureResource::textureOf(material_->specular_texture);
     m_normal_map = RenderTextureResource::textureOf(material_->normal_texture);
-    // 仅当材质拥有“真实”法线贴图时才扰动法线。create_complete_default_material /
-    // fillBlinnPhongFromPBR 会把 normal_texture 填成默认白图 pure_white_map.png（非空且非平面法线），
-    // 直接按非空判断会把白图当法线图采样 (1,1,1)，导致整面法线歪斜、镜像 UV 中缝裂开。
-    static const std::string kDefaultNormalPath = std::string(ASSET_DIR) + "/images/pure_white_map.png";
-    has_normal_map = material_->normal_texture
-        && material_->normal_texture->texture_filepath != kDefaultNormalPath;
     m_height_map = RenderTextureResource::textureOf(material_->height_texture);
 }
 
