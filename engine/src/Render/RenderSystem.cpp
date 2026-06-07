@@ -138,6 +138,7 @@ void RenderSystem::onUpdate(std::shared_ptr<Scene> scene)
     updateSkinnedMeshSections();
     buildRenderFrameData(*scene);
     updateMainCameraCulling();
+    
     m_curr_path->render(m_render_scene, m_frame_data, m_builtin_resources);
 }
 
@@ -223,6 +224,7 @@ void RenderSystem::syncRenderSceneChanges(Scene& scene)
         if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Removed))
         {
             m_render_scene.removeObjectProxy(change.object_id);
+            m_render_scene.removeLightProxy(change.object_id);
             section_lists_dirty = true;
             continue;
         }
@@ -231,6 +233,7 @@ void RenderSystem::syncRenderSceneChanges(Scene& scene)
         if (!object)
         {
             m_render_scene.removeObjectProxy(change.object_id);
+            m_render_scene.removeLightProxy(change.object_id);
             section_lists_dirty = true;
             continue;
         }
@@ -240,19 +243,28 @@ void RenderSystem::syncRenderSceneChanges(Scene& scene)
         {
             rebuildObjectRenderProxy(*object);
             section_lists_dirty = true;
-            continue;
+        }
+
+        if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Created) ||
+            HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Light))
+        {
+            m_render_scene.syncLightProxy(*object);
         }
 
         if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Visibility))
         {
             m_render_scene.setObjectVisible(change.object_id, object->visible());
+            m_render_scene.setLightVisible(change.object_id, object->visible());
             section_lists_dirty = true;
         }
 
         if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Transform))
         {
             if (auto* transform = object->getComponent<TransformComponent>())
+            {
                 m_render_scene.updateObjectTransform(change.object_id, transform->transform());
+                m_render_scene.updateLightTransform(change.object_id, *transform);
+            }
         }
 
         if (HasSceneDirtyFlag(change.flags, SceneDirtyFlag::Material))
@@ -264,17 +276,23 @@ void RenderSystem::syncRenderSceneChanges(Scene& scene)
 
     if (section_lists_dirty)
         m_render_scene.rebuildMeshSectionLists();
+    m_render_scene.rebuildLightListsAndData();
 }
 
 void RenderSystem::rebuildRenderSceneFromScene(Scene& scene)
 {
     m_render_scene.clearObjectProxies();
+    m_render_scene.clearLightProxies();
     for (const auto& object : scene.getObjects())
     {
         if (object)
+        {
             rebuildObjectRenderProxy(*object);
+            m_render_scene.syncLightProxy(*object);
+        }
     }
     m_render_scene.rebuildMeshSectionLists();
+    m_render_scene.rebuildLightListsAndData();
 }
 
 void RenderSystem::rebuildObjectRenderProxy(GObject& object)
@@ -353,90 +371,21 @@ void RenderSystem::buildRenderFrameData(Scene& scene)
 {
     m_frame_data.reset();
 
-    auto& render_dir_lights = m_frame_data.directional_lights;
-    for (const GObjectID& light_id : scene.directionalLightObjectIDs())
-    {
-        GObject* light_object = scene.objectOf(light_id);
-        if (!light_object || !light_object->visible())
-            continue;
-        const auto* directional_light = light_object->getComponent<DirectionalLightComponent>();
-        if (!directional_light)
-            continue;
-        render_dir_lights.emplace_back(RenderDirectionalLightData{
-            directional_light->luminousColor,
-            directional_light->direction,
-            directional_light->lightViewMatrix(),
-            directional_light->lightProjMatrix()});
-    }
-    if (render_dir_lights.empty())
-    {
-        DirectionalLightComponent fallback_light(nullptr);
-        fallback_light.luminousColor = Color3(0.0f);
-        render_dir_lights.emplace_back(RenderDirectionalLightData{
-            fallback_light.luminousColor,
-            fallback_light.direction,
-            fallback_light.lightViewMatrix(),
-            fallback_light.lightProjMatrix()});
-    }
+    m_render_scene.rebuildLightListsAndData();
+    m_frame_data.directional_lights = m_render_scene.directionalLightData();
+    m_frame_data.point_lights = m_render_scene.pointLightData();
 
-    struct PointLightInstData
+    const auto& point_light_instance_data = m_render_scene.pointLightInstanceData();
+    m_frame_data.point_light_inst_amount = static_cast<int>(point_light_instance_data.size());
+    if (m_render_scene.pointLightInstanceDataDirty())
     {
-        Mat4 inst_matrix;
-        Color3 inst_color;
-    };
-
-    std::vector<GObject*> active_point_light_objects;
-    active_point_light_objects.reserve(scene.pointLightObjectIDs().size());
-    for (const GObjectID& light_id : scene.pointLightObjectIDs())
-    {
-        GObject* light_object = scene.objectOf(light_id);
-        if (!light_object || !light_object->visible())
-            continue;
-        if (!light_object->getComponent<PointLightComponent>() || !light_object->getComponent<TransformComponent>())
-            continue;
-        active_point_light_objects.push_back(light_object);
-    }
-
-    m_frame_data.point_light_inst_amount = static_cast<int>(active_point_light_objects.size());
-    if (m_builtin_resources.point_light_inst_mesh && !active_point_light_objects.empty())
-    {
-        static std::vector<PointLightInstData> point_light_inst_data;
-        point_light_inst_data.resize(active_point_light_objects.size());
-        for (size_t i = 0; i < active_point_light_objects.size(); ++i)
+        if (m_builtin_resources.point_light_inst_mesh && !point_light_instance_data.empty())
         {
-            auto* light_object = active_point_light_objects[i];
-            const auto* transform = light_object->getComponent<TransformComponent>();
-            const auto* point_light = light_object->getComponent<PointLightComponent>();
-            point_light_inst_data[i].inst_matrix = Math::Translate(transform->translation);
-            point_light_inst_data[i].inst_color = point_light->luminousColor;
+            m_builtin_resources.point_light_inst_mesh->update_instancing(
+                const_cast<RenderPointLightInstanceData*>(point_light_instance_data.data()),
+                static_cast<int>(point_light_instance_data.size() * sizeof(RenderPointLightInstanceData)));
         }
-        m_builtin_resources.point_light_inst_mesh->update_instancing(
-            point_light_inst_data.data(),
-            static_cast<int>(point_light_inst_data.size() * sizeof(PointLightInstData)));
-    }
-
-    auto& render_point_lights = m_frame_data.point_lights;
-    render_point_lights.reserve(std::min(MAX_CUBE_SHADOW_MAP_COUNT, active_point_light_objects.size()));
-    int next_shadow_index = 0;
-    for (auto* light_object : active_point_light_objects)
-    {
-        if (render_point_lights.size() >= MAX_CUBE_SHADOW_MAP_COUNT)
-            break;
-
-        const auto* transform = light_object->getComponent<TransformComponent>();
-        const auto* point_light = light_object->getComponent<PointLightComponent>();
-        const Vec3 position = transform->translation;
-        int shadow_index = -1;
-        if (point_light->castShadow && next_shadow_index < static_cast<int>(MAX_CUBE_SHADOW_MAP_COUNT))
-            shadow_index = next_shadow_index++;
-        render_point_lights.emplace_back(RenderPointLightData{
-            light_object->ID().value(),
-            point_light->luminousColor,
-            position,
-            point_light->radius,
-            shadow_index,
-            point_light->lightViewMatrix(position),
-            point_light->lightProjMatrix()});
+        m_render_scene.clearPointLightInstanceDataDirty();
     }
 
     for (const auto& object : scene.getPickedObjects())
