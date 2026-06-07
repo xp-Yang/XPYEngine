@@ -252,6 +252,7 @@ void GcodePreview::renderGui()
         {
             rebuildMeshRange(m_gcode_trace->linesBatches());
             m_gcode_trace->setDirty(false);
+            m_scene->markDirty(m_gcodes_object->ID(), SceneDirtyFlagBit(SceneDirtyFlag::Mesh));
         }
     }
     ImGui::End();
